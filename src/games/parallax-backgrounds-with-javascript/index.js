@@ -7,4 +7,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   props,
 ) {
   const appId = `app-${Math.random().toString(32)}`;
+
+  console.log("___ props", props);
+  console.log("___ appId", appId);
 }

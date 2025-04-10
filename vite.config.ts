@@ -52,6 +52,7 @@ export default defineConfig(async (config) => {
   }
 
   return {
+    base: "js-games",
     build: {
       assetsDir: "assets", // Folder to output assets during build
       rollupOptions,

@@ -57,7 +57,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       id="vanillaJavascriptSpriteAnimationTechniques"
       width="600"
       height="600"
-      class="border border-solid border-black w-full aspect-square max-size-[37.5rem] mx-auto"
+      class="border border-solid border-black aspect-square size-[37.5rem] max-w-full mx-auto"
     ></canvas>
     <div
       class="flex flex-col gap-4 mt-8 grow overflow-y-auto text-center"
