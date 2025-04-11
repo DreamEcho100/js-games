@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-/** @import { ScreenHandlerParams } from "#utils/types.js"; */
+/** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
 const appElem = /**@type {HTMLDivElement} */ (document.querySelector("#app"));
 
@@ -8,8 +8,8 @@ if (!appElem) {
   throw new Error("Couldn't find the app element!");
 }
 
-if (false && process.env.NODE_ENV === "development") {
-  (await import("./games/parallax-backgrounds-with-javascript")).default({
+if (process.env.NODE_ENV === "development") {
+  (await import("./games/enemy-movement-patterns/index.js")).default({
     appElem,
   });
 } else {
@@ -44,6 +44,11 @@ if (false && process.env.NODE_ENV === "development") {
         lazyLoad(() =>
           import("./games/parallax-backgrounds-with-javascript/index.js"),
         ),
+    },
+    enemyMovementPatterns: {
+      title: "Enemy movement patterns",
+      cb: () =>
+        lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
     },
   };
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment

@@ -11,7 +11,7 @@ export default defineConfig(async (config) => {
   const rollupOptions: BuildEnvironmentOptions["rollupOptions"] = {
     input: {},
     output: {
-      chunkFileNames: "[name].[ext]",
+      // chunkFileNames: "[name].[ext]",
       entryFileNames: "[name].js",
       // assetFileNames: "[name].[ext]",
       assetFileNames: ({ names, ...chunkInfo }) => {
@@ -33,8 +33,10 @@ export default defineConfig(async (config) => {
     // Use `glob` to find all files in the `src/games` directory
     const filesPaths = await Promise.all([
       glob("./src/games/**/*.*"),
-      glob("./src/utils/**/*.*"),
+      glob("./src/libs/**/*.*"),
     ]).then((values) => values.flat());
+
+    console.log("___ filesPaths", filesPaths);
 
     const input = (rollupOptions.input = {
       main: resolve(__dirname, "index.html"),
@@ -52,7 +54,7 @@ export default defineConfig(async (config) => {
   }
 
   return {
-    base: "js-games",
+    base: "/js-games",
     build: {
       assetsDir: "assets", // Folder to output assets during build
       rollupOptions,

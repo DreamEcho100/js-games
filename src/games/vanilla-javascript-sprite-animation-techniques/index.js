@@ -1,10 +1,13 @@
-/** @import { ScreenHandlerParams } from "#utils/types.js"; */
+/** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
+import { CleanUpManager } from "#libs/cleanup.js";
 import {
-  addStyleSheetLinkToHead,
-  buildSpriteAnimationsStates,
-  createImage,
-} from "#utils/index.js";
+  adjustCanvasDimensions,
+  injectStylesheetLink,
+  loadManyImageElement,
+} from "#libs/dom.js";
+import { generateSpriteAnimationStates } from "#libs/sprite.js";
+import { reduceToString } from "#libs/string.js";
 
 /** @param {ScreenHandlerParams} props */
 export default async function vanillaJavascriptSpriteAnimationTechniques(
@@ -15,21 +18,63 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   const animationsControlId = `animations-${appId}`;
   const animationsControlGroupId = `animations-group-${appId}`;
 
-  const stylesheetLink = addStyleSheetLinkToHead(
+  function goBack() {
+    props.handleGoPrevScreen?.();
+    cleanUpManager.cleanUp();
+  }
+
+  const cleanUpManager = new CleanUpManager();
+
+  injectStylesheetLink(
     import.meta.resolve("./__style.css", new URL(import.meta.url)),
+    cleanUpManager,
   );
 
-  const {
-    image: playerImage,
-    sourceWidth: playerImageSourceWidth,
-    sourceHeight: playerImageSourceHeight,
-  } = await createImage(
-    import.meta.resolve("./shadow_dog.png", new URL(import.meta.url)),
+  props.appElem.innerHTML = `
+  <section class="flex justify-center items-center p-12 text-lg">
+    Loading assets...
+  </section>
+`;
+
+  const [assetsError, assets] = await loadManyImageElement(
+    /** @type {const} */ ([
+      import.meta.resolve("./shadow_dog.png", new URL(import.meta.url)),
+    ]),
   );
 
+  if (assetsError) {
+    console.error(assetsError);
+    props.appElem.innerHTML = /* HTML */ `<section
+      class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
+    >
+      ${props.handleGoPrevScreen
+        ? `<button id="${goBackButtonId}">Go Back</button><br /><br />`
+        : ""}
+      <p class="text-center">Couldn't load the image!</p>
+      <button id="reload">Reload</button>
+    </section>`;
+    cleanUpManager.registerEventListener({
+      elem: document.getElementById(goBackButtonId),
+      type: "click",
+      listener: goBack,
+    });
+    cleanUpManager.registerEventListener({
+      elem: document.getElementById("reload"),
+      type: "click",
+      listener: () => {
+        props.appElem.innerHTML = "";
+        vanillaJavascriptSpriteAnimationTechniques(props);
+      },
+    });
+    return;
+  }
+
+  const [playerImage] = assets;
+  const playerImageSourceWidth = playerImage.naturalWidth;
+  const playerImageSourceHeight = playerImage.naturalHeight;
   const playerImageDW = playerImageSourceWidth / 12 + 2;
   const playerImageDH = playerImageSourceHeight / 10;
-  const playerAnimationsStates = buildSpriteAnimationsStates(
+  const playerAnimationsStates = generateSpriteAnimationStates(
     [
       { name: "idle", frames: 7 },
       { name: "jump", frames: 7 },
@@ -46,18 +91,17 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   );
   /** @type {keyof typeof playerAnimationsStates} */
   let currentAnimation = "idle";
-
   props.appElem.innerHTML = /* HTML */ `<section
     class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
     ${props.handleGoPrevScreen
-      ? `<button id="${goBackButtonId}">Go Back</button><br /><br />`
+      ? `<button id="${goBackButtonId}">Go Back</button>`
       : ""}
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
       width="600"
       height="600"
-      class="border border-solid border-black aspect-square size-[37.5rem] max-w-full mx-auto"
+      class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
     ></canvas>
     <div
       class="flex flex-col gap-4 mt-8 grow overflow-y-auto text-center"
@@ -79,38 +123,41 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       <div
         class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 capitalize"
       >
-        ${Object.keys(playerAnimationsStates)
-          .map(
-            (animation) => `<div class="flex items-center w-fit">
-				<input type="radio" name="animations" id="${animation}" value="${animation}" ${
-              currentAnimation === animation ? "checked" : ""
-            } />
-					<label for="${animation}" class='ps-2'>${animation}</label>
-					</div>`,
-          )
-          .join("")}
+        ${reduceToString(
+          Object.keys(playerAnimationsStates),
+          (animation) => `<div class="flex items-center w-fit">
+						<input type="radio" name="animations" id="${animation}" value="${animation}" ${
+            currentAnimation === animation ? "checked" : ""
+          } />
+							<label for="${animation}" class='ps-2'>${animation}</label>
+							</div>`,
+        )}
       </div>
     </div>
   </section>`;
+
+  cleanUpManager.registerEventListener({
+    elem: document.getElementById(goBackButtonId),
+    type: "click",
+    listener: goBack,
+  });
 
   document
     .getElementById(animationsControlGroupId)
     ?.querySelectorAll("input[type='radio']")
     .forEach((radio) => {
-      // /** @type {HTMLSelectElement|null} */
-      // (document.getElementById(animationsControlId)) ?
-      radio.addEventListener("change", (e) => {
-        currentAnimation = /** @type {keyof typeof playerAnimationsStates} */ (
-          /** @type {HTMLInputElement} */ (e.target).value
-        );
-        frameAcc = 0;
+      cleanUpManager.registerEventListener({
+        elem: radio,
+        type: "change",
+        listener: (e) => {
+          currentAnimation =
+            /** @type {keyof typeof playerAnimationsStates} */ (
+              /** @type {HTMLInputElement} */ (e.target).value
+            );
+          frameAcc = 0;
+        },
       });
     });
-
-  document.getElementById(goBackButtonId)?.addEventListener("click", () => {
-    props.handleGoPrevScreen?.();
-    stylesheetLink.remove();
-  });
 
   const canvas = /** @type {HTMLCanvasElement|null} */ (
     document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
@@ -121,15 +168,18 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   }
 
   const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
-  const CANVAS_WIDTH = (canvas.width = 600);
-  const CANVAS_HEIGHT = (canvas.height = 600);
-
-  if (!ctx) {
-    throw new Error("Couldn't find the `ctx`!");
-  }
+  const [CANVAS_WIDTH, CANVAS_HEIGHT] = adjustCanvasDimensions(
+    canvas,
+    ctx,
+    600,
+    600,
+  );
 
   let staggerFrame = 5;
   let frameAcc = 0;
+
+  /** @type {number|undefined} */
+  let animateId;
 
   function animate() {
     let positionX =
@@ -152,20 +202,17 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       CANVAS_HEIGHT,
     );
 
-    // if (frameAcc % staggerFrame === 0) {
-    //   frameX++;
-    //   if (frameX > 5) {
-    //     frameX = 0;
-    //     frameY++;
-    //     if (frameY > 5) {
-    //       frameY = 0;
-    //     }
-    //   }
-    // }
     frameAcc++;
 
-    requestAnimationFrame(animate);
+    animateId = requestAnimationFrame(animate);
   }
+
+  cleanUpManager.register(() => {
+    if (!animateId) {
+      return;
+    }
+    cancelAnimationFrame(animateId);
+  });
 
   animate();
 }
