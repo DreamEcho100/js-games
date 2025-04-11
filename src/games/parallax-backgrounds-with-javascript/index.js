@@ -193,7 +193,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       // /*
       // Approach 2
 
-      if (this.x1 < -this.width) {
+      if (this.x1 <= -this.width) {
         this.x1 = 0;
       }
 
