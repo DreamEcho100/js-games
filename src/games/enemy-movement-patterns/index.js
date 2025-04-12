@@ -73,7 +73,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     ${props.handleGoPrevScreen
       ? `<button id="${goBackButtonId}">Go Back</button>`
       : ""}
-    <small><em>In Progress</em></small>
+    <small class="text-center"><em>In Progress</em></small>
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
       width="${canvasConfig.width}"
@@ -105,7 +105,6 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     canvasConfig.height,
   );
   let gameFrame = 0;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [enemyImg1, enemyImg2, enemyImg3, enemyImg4] = assets;
 
   /**
