@@ -1,0 +1,1 @@
+function a({containerWidth:r,containerHeight:n,sourceWidth:i,sourceHeight:u}){let e,t;const o=i/u;if(typeof r=="number")return e=r,t=e/o,{width:e,height:t};if(typeof n=="number")return t=n,e=t*o,{width:e,height:t};throw new Error("Container dimensions are required.")}function f(r,n,i){return Math.max(n,Math.min(r,i))}export{f as clamp,a as scale2dSizeToFit};

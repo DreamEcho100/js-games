@@ -1,21 +1,22 @@
-import{CleanUpManager as m}from"../../libs/cleanup.js";import{loadManyImageElement as u,adjustCanvasDimensions as g}from"../../libs/dom.js";async function p(e){const n=`go-back-${`app-${Math.random().toString(32)}`}`;function r(){e.handleGoPrevScreen?.(),t.cleanUp()}const t=new m;e.appElem.innerHTML=`
+import{CleanUpManager as x}from"../../libs/cleanup.js";import{loadManyImageElement as M,adjustCanvasDimensions as A}from"../../libs/dom.js";import{scale2dSizeToFit as b}from"../../libs/math.js";import{generateSpriteAnimationStates as I}from"../../libs/sprite.js";async function E(t){const n=`go-back-${`app-${Math.random().toString(32)}`}`;function h(){t.handleGoPrevScreen?.(),a.cleanUp()}const a=new x;t.appElem.innerHTML=`
 	<section class="flex justify-center items-center p-12 text-lg">
 		Loading assets...
 	</section>
-`;const[i,v]=await u([import.meta.resolve("./shadow_dog.png",new URL(import.meta.url))]);if(i){console.error(i),e.appElem.innerHTML=`<section
+`;const[c,S]=await M([import.meta.resolve("./enemies/enemy1.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy2.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy3.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy4.png",new URL(import.meta.url))]);if(c){console.error(c),t.appElem.innerHTML=`<section
       class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
     >
-      ${e.handleGoPrevScreen?`<button id="${n}">Go Back</button><br /><br />`:""}
+      ${t.handleGoPrevScreen?`<button id="${n}">Go Back</button><br /><br />`:""}
       <p class="text-center">Couldn't load the image!</p>
       <button id="reload">Reload</button>
-    </section>`,t.registerEventListener({elem:document.getElementById(n),type:"click",listener:r}),t.registerEventListener({elem:document.getElementById("reload"),type:"click",listener:()=>{e.appElem.innerHTML="",p(e)}});return}e.appElem.innerHTML=`<section
+    </section>`,a.registerEventListener({elem:document.getElementById(n),type:"click",listener:h,silent:!1}),a.registerEventListener({elem:document.getElementById("reload"),type:"click",listener:()=>{t.appElem.innerHTML="",E(t)}});return}const r={width:600,height:600};t.appElem.innerHTML=`<section
     class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
-    ${e.handleGoPrevScreen?`<button id="${n}">Go Back</button>`:""}
+    ${t.handleGoPrevScreen?`<button id="${n}">Go Back</button>`:""}
+    <small><em>In Progress</em></small>
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
-      width="600"
-      height="600"
+      width="${r.width}"
+      height="${r.height}"
       class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
     ></canvas>
-  </section>`,t.registerEventListener({elem:document.getElementById(n),type:"click",listener:r});const a=document.getElementById("vanillaJavascriptSpriteAnimationTechniques");if(!a)throw new Error("Couldn't find the canvas!");const o=a.getContext("2d"),[c,d]=g(a,o,600,600);let l;function s(){o.clearRect(0,0,c,d),l=requestAnimationFrame(s)}t.register(()=>{l&&cancelAnimationFrame(l)}),s()}export{p as default};
+  </section>`,a.registerEventListener({elem:document.getElementById(n),type:"click",listener:h,silent:!1});const m=document.getElementById("vanillaJavascriptSpriteAnimationTechniques");if(!m)throw new Error("Couldn't find the canvas!");const s=m.getContext("2d"),[d,g]=A(m,s,r.width,r.height);let p=0;const[o,L,B,H]=S;class v{constructor(e){this.x=Math.random()*d,this.y=Math.random()*g,this.img=e.img;const y=b({containerWidth:e.spriteScalingBaseWidth,sourceWidth:e.spriteMeta.width,sourceHeight:e.spriteMeta.height});this.width=y.width,this.height=y.height,this.spriteWidth=e.spriteMeta.width,this.spriteHeight=e.spriteMeta.height,this.currentFrameX=0,this.spriteAnimationStates=I(e.spriteAnimationStates,e.spriteMeta),this.currentAnimationState=e.currentAnimationState,this.speed=Math.random()*4-2,this.speedModifier=Math.floor(Math.random()*3+1)}update(){this.x+=this.speed,this.y+=this.speed;const e=this.spriteAnimationStates[this.currentAnimationState];p%this.speedModifier==0&&(this.currentFrameX=this.currentFrameX>=e.locations.length-1?0:this.currentFrameX+1)}draw(){s.drawImage(this.img,this.spriteWidth*this.currentFrameX,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height),s.strokeRect(this.x,this.y,this.width,this.height)}}const u=20,f=new Array(u);for(let i=0;i<u;i++)f[i]=new v({img:o,spriteAnimationStates:[{name:"default",frames:6}],spriteMeta:{width:o.naturalWidth/6,height:o.naturalHeight},currentAnimationState:"default",spriteScalingBaseWidth:120});let l;function w(){s.clearRect(0,0,d,g);for(const i of f)i.update(),i.draw();p++,l=requestAnimationFrame(w)}a.register(()=>{l&&cancelAnimationFrame(l)}),w()}export{E as default};
