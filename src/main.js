@@ -46,7 +46,7 @@ if (process.env.NODE_ENV === "development") {
         ),
     },
     enemyMovementPatterns: {
-      title: "Enemy movement patterns",
+      title: "Enemy movement patterns <small><em>In Progress</em></small>",
       cb: () =>
         lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
     },

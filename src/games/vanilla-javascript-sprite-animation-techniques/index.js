@@ -57,6 +57,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       elem: document.getElementById(goBackButtonId),
       type: "click",
       listener: goBack,
+      silent: process.env.NODE_ENV !== "production",
     });
     cleanUpManager.registerEventListener({
       elem: document.getElementById("reload"),
@@ -91,6 +92,8 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   );
   /** @type {keyof typeof playerAnimationsStates} */
   let currentAnimation = "idle";
+  const canvasConfig = { width: 600, height: 600 };
+
   props.appElem.innerHTML = /* HTML */ `<section
     class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
@@ -99,8 +102,8 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       : ""}
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
-      width="600"
-      height="600"
+      width="${canvasConfig.width}"
+      height="${canvasConfig.height}"
       class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
     ></canvas>
     <div
@@ -140,6 +143,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     elem: document.getElementById(goBackButtonId),
     type: "click",
     listener: goBack,
+    silent: process.env.NODE_ENV !== "production",
   });
 
   document
@@ -171,8 +175,8 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   const [CANVAS_WIDTH, CANVAS_HEIGHT] = adjustCanvasDimensions(
     canvas,
     ctx,
-    600,
-    600,
+    canvasConfig.width,
+    canvasConfig.height,
   );
 
   let staggerFrame = 5;

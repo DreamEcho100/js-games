@@ -2,7 +2,7 @@
 
 import { CleanUpManager } from "#libs/cleanup.js";
 import { adjustCanvasDimensions, loadManyImageElement } from "#libs/dom.js";
-import { clampValue } from "#libs/number.js";
+import { clamp } from "#libs/math.js";
 
 /** @param {ScreenHandlerParams} props */
 export default async function vanillaJavascriptSpriteAnimationTechniques(
@@ -65,6 +65,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       elem: document.getElementById(goBackButtonId),
       type: "click",
       listener: goBack,
+      silent: process.env.NODE_ENV !== "production",
     });
     cleanUpManager.registerEventListener({
       elem: document.getElementById("reload"),
@@ -83,6 +84,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   const speedIndicatorId = `showGameSpeed-${appId}`;
   const gameSpeedInputId = `gameSpeed-${appId}`;
 
+  const canvasConfig = { width: 800, height: 700 };
   props.appElem.innerHTML = /* html */ `
 	<section class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
@@ -91,8 +93,11 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
         ? `<button id="${goBackButtonId}">Go Back</button>`
         : ""
     }
-		<canvas id="${canvasId}" width="800" height="700" class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
-		style="aspect-ratio: 800 / 700; width: 800px; height: 700px"
+		<canvas
+			id="${canvasId}"
+			width="${canvasConfig.width}"
+			height="${canvasConfig.height}"
+			class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>
 		<div class="flex flex-col gap-4">
 			<label>Game speed: <span id="${speedIndicatorId}">${gameSpeed}</span></label>
@@ -111,7 +116,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     elem: gameSpeedInput,
     type: "input",
     listener: (event) => {
-      const value = clampValue(
+      const value = clamp(
         Number(/** @type {HTMLInputElement} */ (event.target).value),
         minGameSpeed,
         maxGameSpeed,
@@ -140,9 +145,9 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     elem: document.getElementById(goBackButtonId),
     type: "click",
     listener: goBack,
+    silent: process.env.NODE_ENV !== "production",
   });
 
-  const canvasConfig = { width: 800, height: 700 };
   const [CANVAS_WIDTH, CANVAS_HEIGHT] = adjustCanvasDimensions(
     canvas,
     ctx,

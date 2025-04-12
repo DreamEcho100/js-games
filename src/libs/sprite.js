@@ -1,17 +1,26 @@
-/**
- * @import { TSprintAnimationState } from "#libs/types/core.js";
- */
-import * as _commonTypes from "#libs/types/common.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+/** @import { TSprintAnimationState } from "#libs/types/core.js"; */
 
 /**
  * @template {string} TSpriteAnimationName
- * @param {{ name: TSpriteAnimationName; frames: number }[]} states
- * @param {{
+ *
+ * @typedef {{ name: TSpriteAnimationName; frames: number }} SprintAnimationStatesParamItem
+ */
+
+/**
+ * @typedef {{
  * 	width: number;
  * 	height: number;
  *  offsetX?: number; // Horizontal gap between frames (default: 0)
  *  offsetY?: number; // Vertical gap between frames (default: 0)
- * }} spriteMeta
+ * }} SpriteMetaParam
+ */
+
+/**
+ * @template {string} TSpriteAnimationName
+ * @param {SprintAnimationStatesParamItem<TSpriteAnimationName>[]} states
+ * @param {SpriteMetaParam} spriteMeta
  */
 export function generateSpriteAnimationStates(states, spriteMeta) {
   /** @type {Partial<TSprintAnimationState<TSpriteAnimationName>>} */

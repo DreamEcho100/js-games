@@ -121,8 +121,8 @@ export function adjustCanvasDimensions(canvas, ctx, width, height) {
   canvas.height = height * dpr;
 
   // Optional: Set CSS size to maintain physical size on screen
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
+  // canvas.style.width = `${width}px`;
+  // canvas.style.height = `${height}px`;
   canvas.style.aspectRatio = `${width} / ${height}`;
 
   // Scale context
