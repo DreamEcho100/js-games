@@ -9,7 +9,9 @@ if (!appElem) {
 }
 
 if (process.env.NODE_ENV === "development") {
-  (await import("./games/enemy-movement-patterns/index.js")).default({
+  (
+    await import("./games/collision-animations-from-a-sprite-sheet/index.js")
+  ).default({
     appElem,
   });
 } else {
@@ -46,9 +48,17 @@ if (process.env.NODE_ENV === "development") {
         ),
     },
     enemyMovementPatterns: {
-      title: "Enemy movement patterns <small><em>In Progress</em></small>",
+      title: "Enemy movement patterns",
       cb: () =>
         lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
+    },
+    collisionAnimationsFromASpriteSheet: {
+      title:
+        "Collision animations from a sprite sheet <small><em>In Progress</em></small>",
+      cb: () =>
+        lazyLoad(() =>
+          import("./games/collision-animations-from-a-sprite-sheet/index.js"),
+        ),
     },
   };
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment

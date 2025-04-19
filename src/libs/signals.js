@@ -80,7 +80,8 @@ export function reactive(obj) {
 /** @type {(() => void)|null} */
 let subscriber = null;
 let batchingEnabled = false;
-const batchedEffects = new Set();
+/** @type {Set<() => void>} */
+const batchedSignals = new Set();
 
 /**
  * Other names: observable, atom, subject, ref, event-emitters, pull-model, etc.
@@ -109,7 +110,7 @@ export function createSignal(value) {
 
     if (batchingEnabled) {
       for (const subscriber of subscribers) {
-        batchedEffects.add(() => subscriber(value));
+        batchedSignals.add(() => subscriber(value));
       }
       return;
     }
@@ -171,11 +172,11 @@ export function createComputed(fn) {
 /**
  * Run all pending effects that were collected during batching
  */
-function runBatchedEffects() {
-  for (const effect of batchedEffects) {
+function runBatchedSignals() {
+  for (const effect of batchedSignals) {
     effect();
   }
-  batchedEffects.clear();
+  batchedSignals.clear();
 }
 
 /**
@@ -193,7 +194,7 @@ export function createSignalsBatch(fn) {
       batchingEnabled = false;
 
       // Run batched effects regardless of previous batching state
-      runBatchedEffects();
+      runBatchedSignals();
 
       // Restore previous batching state if needed
       batchingEnabled = wasBatching;
