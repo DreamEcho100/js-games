@@ -3,27 +3,42 @@ import { clamp } from "#libs/math.js";
 import initGameScreen from "#libs/core/dom.js";
 
 const gameScreen = await initGameScreen({
-  assetsUrls: /** @type {const} */ ([
-    import.meta.resolve(
-      "./backgroundLayers/layer-1.png",
-      new URL(import.meta.url),
-    ),
-    import.meta.resolve(
-      "./backgroundLayers/layer-2.png",
-      new URL(import.meta.url),
-    ),
-    import.meta.resolve(
-      "./backgroundLayers/layer-3.png",
-      new URL(import.meta.url),
-    ),
-    import.meta.resolve(
-      "./backgroundLayers/layer-4.png",
-      new URL(import.meta.url),
-    ),
-    import.meta.resolve(
-      "./backgroundLayers/layer-5.png",
-      new URL(import.meta.url),
-    ),
+  assetsInfo: /** @type {const} */ ([
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./backgroundLayers/layer-1.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./backgroundLayers/layer-2.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./backgroundLayers/layer-3.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./backgroundLayers/layer-4.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./backgroundLayers/layer-5.png",
+        new URL(import.meta.url),
+      ),
+    },
   ]),
   cb: ({ appId, assets, cleanUpManager, createLayout }) => {
     const canvasId = `canvas-${appId}`;

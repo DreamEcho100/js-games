@@ -1,21 +1,21 @@
 /**
  * @import { ScreenHandlerParams } from "#libs/types/core.js";
- * @import { MirrorTupleWith } from "#libs/types/common.js";
+ * @import {  TLoadAsset, TElementTypeMapperForAssets } from "#libs/types/common.js";
  */
 
 import { buttonPrimaryClassName } from "#libs/class-names.js";
 import { CleanUpManager } from "#libs/cleanup.js";
-import { injectStylesheetLink, loadManyImageElement } from "#libs/dom.js";
+import { injectStylesheetLink, loadManyAssets } from "#libs/dom.js";
 // import { generateSpriteAnimationStates } from "#libs/sprite.js";
 // import { reduceToString } from "#libs/string.js";
 
 /**
- * @template {string[]|undefined} TAssetPaths
+ * @template {TLoadAsset[]|undefined} TAssetPaths
  * @param {{
  *  stylesheetLink?: string;
- *  assetsUrls?: TAssetPaths;
+ *  assetsInfo?: TAssetPaths;
  *  cb: (props: {
- * 		assets: MirrorTupleWith<NonNullable<TAssetPaths>, HTMLImageElement, []>;
+ * 		assets: TAssetPaths extends TLoadAsset[] ? TElementTypeMapperForAssets<TAssetPaths> : never;
  *    cleanUpManager: CleanUpManager;
  * 		appId: string;
  * 		goBackButtonId: string;
@@ -26,6 +26,8 @@ import { injectStylesheetLink, loadManyImageElement } from "#libs/dom.js";
  * @returns {Promise<(props: ScreenHandlerParams) => Promise<void>>}
  */
 export default async function initGameScreen(initOptions) {
+  /** @typedef {TAssetPaths extends TLoadAsset[] ? TElementTypeMapperForAssets<TAssetPaths> : never} TCurrentAssets */
+
   const appId = `app-${Math.random().toString(32)}`;
   const goBackButtonId = `go-back-${appId}`;
   const cleanUpManager = new CleanUpManager();
@@ -39,13 +41,10 @@ export default async function initGameScreen(initOptions) {
       cleanUpManager.cleanUp();
     }
 
-    let assets =
-      /** @type {MirrorTupleWith<NonNullable<TAssetPaths>, HTMLImageElement, []>} */ (
-        undefined
-      );
-    if (initOptions.assetsUrls) {
-      const [assetsError, _assets] = await loadManyImageElement(
-        initOptions.assetsUrls,
+    let assets = /** @type {TCurrentAssets} */ (undefined);
+    if (initOptions.assetsInfo) {
+      const [assetsError, _assets] = await loadManyAssets(
+        initOptions.assetsInfo,
       );
       props.appElem.innerHTML = `
 			<section class="flex justify-center items-center p-12 text-lg">
@@ -82,12 +81,12 @@ export default async function initGameScreen(initOptions) {
         });
         return;
       }
-      assets = _assets;
+      assets = /** @type {TCurrentAssets} */ (_assets);
     }
 
     /** @param {string} children */
-    const createLayout = (children) =>
-      (props.appElem.innerHTML = /* html */ `<section
+    const createLayout = (children) => {
+      props.appElem.innerHTML = /* html */ `<section
 		class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
 	>
 		${
@@ -96,20 +95,18 @@ export default async function initGameScreen(initOptions) {
         : ""
     }
 		${children}
-	</section>`);
+	</section>`;
 
-    cleanUpManager.registerEventListener({
-      elem: document.getElementById(goBackButtonId),
-      type: "click",
-      listener: goBack,
-      silent: process.env.NODE_ENV !== "production",
-    });
+      cleanUpManager.registerEventListener({
+        elem: document.getElementById(goBackButtonId),
+        type: "click",
+        listener: goBack,
+        silent: process.env.NODE_ENV !== "production",
+      });
+    };
 
     return initOptions.cb({
-      assets:
-        /** @type {MirrorTupleWith<NonNullable<TAssetPaths>, HTMLImageElement, []>} */ (
-          assets
-        ),
+      assets: /** @type {TCurrentAssets} */ (assets),
       cleanUpManager,
       appId,
       goBackButtonId,
@@ -117,55 +114,4 @@ export default async function initGameScreen(initOptions) {
       createLayout,
     });
   };
-
-  // const canvas = /** @type {HTMLCanvasElement|null} */ (
-  //   document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
-  // );
-
-  // if (!canvas) {
-  //   throw new Error("Couldn't find the canvas!");
-  // }
-
-  // const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
-
-  // let staggerFrame = 5;
-  // let frameAcc = 0;
-
-  // /** @type {number|undefined} */
-  // let animateId;
-
-  // function animate() {
-  //   let positionX =
-  //     Math.floor(frameAcc / staggerFrame) %
-  //     playerAnimationsStates[currentAnimation].locations.length;
-  //   const frameX = playerImageDW * positionX;
-  //   const frameY =
-  //     playerAnimationsStates[currentAnimation].locations[positionX].y;
-
-  //   ctx.clearRect(0, 0, canvasSizes.width, canvasSizes.height);
-  //   ctx.drawImage(
-  //     playerImage,
-  //     frameX,
-  //     frameY,
-  //     playerImageDW,
-  //     playerImageDH,
-  //     0,
-  //     0,
-  //     canvasSizes.width,
-  //     canvasSizes.height,
-  //   );
-
-  //   frameAcc++;
-
-  //   animateId = requestAnimationFrame(animate);
-  // }
-
-  // cleanUpManager.register(() => {
-  //   if (!animateId) {
-  //     return;
-  //   }
-  //   cancelAnimationFrame(animateId);
-  // });
-
-  // animate();
 }

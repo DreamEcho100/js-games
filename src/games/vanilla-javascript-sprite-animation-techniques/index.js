@@ -3,21 +3,17 @@ import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { reduceToString } from "#libs/string.js";
 
 const gameScreen = await initGameScreen({
-  assetsUrls: /** @type {const} */ ([
-    import.meta.resolve("./shadow_dog.png", new URL(import.meta.url)),
+  assetsInfo: /** @type {const} */ ([
+    {
+      type: "image",
+      src: import.meta.resolve("./shadow_dog.png", new URL(import.meta.url)),
+    },
   ]),
   stylesheetLink: import.meta.resolve(
     "./__style.css",
     new URL(import.meta.url),
   ),
-  cb: ({
-    appId,
-    assets,
-    cleanUpManager,
-    createLayout,
-    goBack,
-    goBackButtonId,
-  }) => {
+  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
     const animationsControlId = `animations-${appId}`;
     const animationsControlGroupId = `animations-group-${appId}`;
 

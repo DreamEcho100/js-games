@@ -2,6 +2,8 @@
 // @ts-ignore
 /** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
+import { buttonPrimaryClassName } from "#libs/class-names.js";
+
 const appElem = /**@type {HTMLDivElement} */ (document.querySelector("#app"));
 
 if (!appElem) {
@@ -30,8 +32,8 @@ if (process.env.NODE_ENV === "development") {
     );
   }
 
-  const pathsCB = {
-    vanillaJavascriptSpriteAnimationTechniques: {
+  const gameScreens = [
+    {
       title: "Vanilla JavaScript sprite animation techniques",
       cb: () =>
         lazyLoad(() =>
@@ -40,19 +42,19 @@ if (process.env.NODE_ENV === "development") {
           ),
         ),
     },
-    parallaxBackgroundsWithJavascript: {
+    {
       title: "Parallax backgrounds with JavaScript",
       cb: () =>
         lazyLoad(() =>
           import("./games/parallax-backgrounds-with-javascript/index.js"),
         ),
     },
-    enemyMovementPatterns: {
+    {
       title: "Enemy movement patterns",
       cb: () =>
         lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
     },
-    collisionAnimationsFromASpriteSheet: {
+    {
       title:
         "Collision animations from a sprite sheet <small><em>In Progress</em></small>",
       cb: () =>
@@ -60,19 +62,20 @@ if (process.env.NODE_ENV === "development") {
           import("./games/collision-animations-from-a-sprite-sheet/index.js"),
         ),
     },
-  };
+  ];
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
-  window.pathsCB = pathsCB;
+  window.pathsCB = gameScreens;
 
   let listItemsStr = "";
-  for (const [key, value] of Object.entries(pathsCB)) {
-    listItemsStr += `<li><button onclick="pathsCB.${key}.cb()">${value.title}</button></li>`;
+  for (let i = 0; gameScreens.length > i; i++) {
+    const { title } = gameScreens[i];
+    listItemsStr += `<li><button onclick="pathsCB[${i}].cb()" class="${buttonPrimaryClassName}">${title}</button></li>`;
   }
 
   const baseScreen = /* html */ `
 <section class="grid place-items-center min-h-[100dvh] max-w-screen-xl mx-auto p-8 text-center overflow-y-auto">
-  <ul>
+  <ul class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(300px,1fr))] w-full">
     ${listItemsStr}
   </ul>
 </section>

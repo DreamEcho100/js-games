@@ -8,11 +8,35 @@ import { roundToPrecision } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 
 const gameScreen = await initGameScreen({
-  assetsUrls: /** @type {const} */ ([
-    import.meta.resolve("./enemies/enemy1.png", new URL(import.meta.url)),
-    import.meta.resolve("./enemies/enemy2.png", new URL(import.meta.url)),
-    import.meta.resolve("./enemies/enemy3.png", new URL(import.meta.url)),
-    import.meta.resolve("./enemies/enemy4.png", new URL(import.meta.url)),
+  assetsInfo: /** @type {const} */ ([
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./enemies/enemy1.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./enemies/enemy2.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./enemies/enemy3.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./enemies/enemy4.png",
+        new URL(import.meta.url),
+      ),
+    },
   ]),
   cb: ({ assets, cleanUpManager, createLayout }) => {
     const canvasSizes = {
@@ -127,7 +151,7 @@ const gameScreen = await initGameScreen({
        * 	spriteAnimationStates: SprintAnimationStatesParamItem<TSpriteAnimationName>[];
        * 	spriteMeta: SpriteMetaParam
        * 	currentAnimationState: TSpriteAnimationName;
-       * 	spriteScalingBaseWidth: number;
+       * 	spriteRenderBaseWidth: number;
        *  movePatternHandler: (enemy: Enemy<TSpriteAnimationName, TMovePatternMeta>) => void
        * 	onInitEnd?: (enemy: Enemy<TSpriteAnimationName, TMovePatternMeta>) => void
        *  createMovePatternMeta?: ((basicEnemy: BasicEnemy<TSpriteAnimationName>) => TMovePatternMeta)
@@ -136,7 +160,7 @@ const gameScreen = await initGameScreen({
       constructor(options) {
         this.img = options.img;
         const dimensions = scale2dSizeToFit({
-          containerWidth: options.spriteScalingBaseWidth,
+          containerWidth: options.spriteRenderBaseWidth,
           sourceWidth: options.spriteMeta.width,
           sourceHeight: options.spriteMeta.height,
         });
@@ -386,7 +410,7 @@ const gameScreen = await initGameScreen({
           .../** @type {typeof enemiesMeta['enemy1']} */ (
             /** @type {unknown} */ (enemyMeta)
           ),
-          spriteScalingBaseWidth: 120,
+          spriteRenderBaseWidth: 120,
         });
       }
     }
