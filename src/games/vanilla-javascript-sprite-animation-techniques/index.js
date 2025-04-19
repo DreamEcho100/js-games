@@ -1,5 +1,6 @@
 /** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
+import { buttonPrimaryClassName } from "#libs/class-names.js";
 import { CleanUpManager } from "#libs/cleanup.js";
 import { injectStylesheetLink, loadManyImageElement } from "#libs/dom.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
@@ -40,14 +41,16 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
 
   if (assetsError) {
     console.error(assetsError);
-    props.appElem.innerHTML = /* HTML */ `<section
+    props.appElem.innerHTML = /* html */ `<section
       class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
     >
-      ${props.handleGoPrevScreen
-        ? `<button id="${goBackButtonId}">Go Back</button><br /><br />`
-        : ""}
+      ${
+        props.handleGoPrevScreen
+          ? `<button id="${goBackButtonId}" class="${buttonPrimaryClassName}">Go Back</button><br /><br />`
+          : ""
+      }
       <p class="text-center">Couldn't load the image!</p>
-      <button id="reload">Reload</button>
+      <button id="reload" class="${buttonPrimaryClassName}">Reload</button>
     </section>`;
     cleanUpManager.registerEventListener({
       elem: document.getElementById(goBackButtonId),
@@ -90,12 +93,14 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   let currentAnimation = "idle";
   const canvasSizes = { width: 600, height: 600 };
 
-  props.appElem.innerHTML = /* HTML */ `<section
+  props.appElem.innerHTML = /* html */ `<section
     class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
-    ${props.handleGoPrevScreen
-      ? `<button id="${goBackButtonId}">Go Back</button>`
-      : ""}
+    ${
+      props.handleGoPrevScreen
+        ? `<button id="${goBackButtonId}" class="${buttonPrimaryClassName}">Go Back</button>`
+        : ""
+    }
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
       width="${canvasSizes.width}"
@@ -113,10 +118,11 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
         class="border border-solid border-black"
       >
         ${Object.keys(playerAnimationsStates)
-        .map(
-          (animation) => `<option value="${animation}" >${animation}</option>`,
-        )
-        .join("")}
+          .map(
+            (animation) =>
+              `<option value="${animation}" >${animation}</option>`,
+          )
+          .join("")}
       </select>
 			-->
       <div

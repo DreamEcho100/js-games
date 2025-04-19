@@ -3,6 +3,7 @@
  * @import { SpriteMetaParam, SprintAnimationStatesParamItem } from "#libs/sprite.js";
  */
 
+import { buttonPrimaryClassName } from "#libs/class-names.js";
 import { CleanUpManager } from "#libs/cleanup.js";
 import { loadManyImageElement } from "#libs/dom.js";
 import { scale2dSizeToFit } from "#libs/math.js";
@@ -40,14 +41,16 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
 
   if (assetsError) {
     console.error(assetsError);
-    props.appElem.innerHTML = /* HTML */ `<section
+    props.appElem.innerHTML = /* html */ `<section
       class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
     >
-      ${props.handleGoPrevScreen
-        ? `<button id="${goBackButtonId}">Go Back</button><br /><br />`
-        : ""}
+      ${
+        props.handleGoPrevScreen
+          ? `<button id="${goBackButtonId}" class="${buttonPrimaryClassName}">Go Back</button><br /><br />`
+          : ""
+      }
       <p class="text-center">Couldn't load the image!</p>
-      <button id="reload">Reload</button>
+      <button id="reload" class="${buttonPrimaryClassName}">Reload</button>
     </section>`;
     cleanUpManager.registerEventListener({
       elem: document.getElementById(goBackButtonId),
@@ -78,13 +81,14 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     blockEnd: canvasSizes.height,
   };
 
-  props.appElem.innerHTML = /* HTML */ `<section
+  props.appElem.innerHTML = /* html */ `<section
     class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
-    ${props.handleGoPrevScreen
-      ? `<button id="${goBackButtonId}">Go Back</button>`
-      : ""}
-    <small class="text-center"><em>In Progress</em></small>
+    ${
+      props.handleGoPrevScreen
+        ? `<button id="${goBackButtonId}" class="${buttonPrimaryClassName}">Go Back</button>`
+        : ""
+    }
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
       width="${canvasSizes.width}"
