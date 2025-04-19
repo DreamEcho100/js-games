@@ -1,66 +1,52 @@
-import{CleanUpManager as L}from"../../libs/cleanup.js";import{loadManyImageElement as B}from"../../libs/dom.js";import{scale2dSizeToFit as W}from"../../libs/math.js";import{roundToPrecision as $}from"../../libs/number.js";import{generateSpriteAnimationStates as R}from"../../libs/sprite.js";async function Y(i){const h=`go-back-${`app-${Math.random().toString(32)}`}`;function u(){i.handleGoPrevScreen?.(),r.cleanUp()}const r=new L;i.appElem.innerHTML=`
-	<section class="flex justify-center items-center p-12 text-lg">
-		Loading assets...
-	</section>
-`;const[M,y]=await B([import.meta.resolve("./enemies/enemy1.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy2.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy3.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy4.png",new URL(import.meta.url))]);if(M){console.error(M),i.appElem.innerHTML=`<section
-      class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
-    >
-      ${i.handleGoPrevScreen?`<button id="${h}">Go Back</button><br /><br />`:""}
-      <p class="text-center">Couldn't load the image!</p>
-      <button id="reload">Reload</button>
-    </section>`,r.registerEventListener({elem:document.getElementById(h),type:"click",listener:u,silent:!1}),r.registerEventListener({elem:document.getElementById("reload"),type:"click",listener:()=>{i.appElem.innerHTML="",Y(i)}});return}const t={width:600,height:600},s={inlineStart:0,inlineEnd:t.width};i.appElem.innerHTML=`<section
-    class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
-  >
-    ${i.handleGoPrevScreen?`<button id="${h}">Go Back</button>`:""}
-    <canvas
-      id="vanillaJavascriptSpriteAnimationTechniques"
-      width="${t.width}"
-      height="${t.height}"
-      class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
-    ></canvas>
-
-    <fieldset class="flex flex-wrap gap-4 justify-center items-center">
-      <legend class="text-center font-medium">Choose Enemy Type</legend>
-
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          type="radio"
-          name="enemyType"
-          value="enemy1"
-          class="accent-blue-500"
-          checked
-        />
-        <span>Enemy 1</span>
-      </label>
-
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          type="radio"
-          name="enemyType"
-          value="enemy2"
-          class="accent-blue-500"
-        />
-        <span>Enemy 2</span>
-      </label>
-
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          type="radio"
-          name="enemyType"
-          value="enemy3"
-          class="accent-blue-500"
-        />
-        <span>Enemy 3</span>
-      </label>
-
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          type="radio"
-          name="enemyType"
-          value="enemy4"
-          class="accent-blue-500"
-        />
-        <span>Enemy 4</span>
-      </label>
-    </fieldset>
-  </section>`,r.registerEventListener({elem:document.getElementById(h),type:"click",listener:u,silent:!1});const p=document.getElementById("vanillaJavascriptSpriteAnimationTechniques"),b=document.querySelectorAll("input[name='enemyType']");if(!p)throw new Error("Couldn't find the canvas!");const o=p.getContext("2d");o.imageSmoothingEnabled=!0,o.imageSmoothingQuality="high";let m=0;const[A,I,H,F]=y;class T{constructor(a){this.img=a.img;const n=W({containerWidth:a.spriteScalingBaseWidth,sourceWidth:a.spriteMeta.width,sourceHeight:a.spriteMeta.height});this.width=n.width,this.height=n.height,this.spriteWidth=a.spriteMeta.width,this.spriteHeight=a.spriteMeta.height,this.x=Math.random()*(t.width-this.width),this.y=Math.random()*(t.height-this.height),this.currentFrameX=0,this.spriteAnimationStates=R(a.spriteAnimationStates,a.spriteMeta),this.currentAnimationState=a.currentAnimationState,this.speed=0,this.speedModifier=0,this.movePatternHandler=a.movePatternHandler,this.movePatternMeta=a.createMovePatternMeta?.({img:this.img,width:this.width,height:this.height,spriteWidth:this.spriteWidth,spriteHeight:this.spriteHeight,currentFrameX:this.currentFrameX,x:this.x,y:this.y})??{},a.onInitEnd?.(this)}update(){this.movePatternHandler(this);const a=this.spriteAnimationStates[this.currentAnimationState];m%this.speedModifier===0&&(this.currentFrameX=this.currentFrameX>=a.locations.length-1?0:this.currentFrameX+1)}draw(){o.drawImage(this.img,this.spriteWidth*this.currentFrameX,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height),o.strokeRect(this.x,this.y,this.width,this.height)}}const f=6,v=6,w=6,x=9;function l(e){const a=e.spriteMeta??{width:$(e.img.naturalWidth/e.frames,2),height:e.img.naturalHeight};return{img:e.img,frames:e.frames,spriteAnimationStates:e.spriteAnimationStates,spriteMeta:a,currentAnimationState:e.currentAnimationState,createMovePatternMeta:e.createMovePatternMeta,movePatternHandler:e.movePatternHandler,onInitEnd:e.onInitEnd}}const d={enemy1:l({img:A,frames:f,spriteAnimationStates:[{name:"default",frames:f}],currentAnimationState:"default",createMovePatternMeta:()=>({}),movePatternHandler:e=>{e.x+=Math.random()*5-2.5,e.y+=Math.random()*5-2.5},onInitEnd:e=>{e.speed=Math.random()*4+1,e.speedModifier=Math.floor(Math.random()*3+1)}}),enemy2:l({img:I,frames:v,spriteAnimationStates:[{name:"default",frames:v}],currentAnimationState:"default",createMovePatternMeta:()=>({angle:Math.random()*0,angleSpeed:Math.random()*.2,curveY:Math.random()*.7-.35,curveX:Math.random()*.7-.35}),movePatternHandler:e=>{e.x-=e.speed,e.y+=e.movePatternMeta.curveY*Math.sin(e.movePatternMeta.angle),e.movePatternMeta.angle+=e.movePatternMeta.angleSpeed,e.x+e.width<s.inlineStart&&(e.x=s.inlineEnd,e.x=t.width,e.y=Math.random()*t.height)},onInitEnd:e=>{e.speed=Math.random()*4+1,e.speedModifier=Math.floor(Math.random()*3+1)}}),enemy3:l({img:H,frames:w,spriteAnimationStates:[{name:"default",frames:w}],currentAnimationState:"default",createMovePatternMeta:()=>({angle:Math.random()*500,angleSpeed:Math.random()*.5+.5,curveY:t.width/2,curveX:t.height/2}),movePatternHandler:e=>{e.x=e.movePatternMeta.curveX*Math.sin(e.movePatternMeta.angle*Math.PI/45)+(t.width/2-e.width/2),e.y=e.movePatternMeta.curveY*Math.cos(e.movePatternMeta.angle*Math.PI/135)+(t.height/2-e.height/2),e.movePatternMeta.angle+=e.movePatternMeta.angleSpeed,e.x+e.width<s.inlineStart&&(e.x=s.inlineEnd,e.x=t.width,e.y=Math.random()*t.height)},onInitEnd:e=>{e.speed=Math.random()*4+1,e.speedModifier=Math.floor(Math.random()*3+1)}}),enemy4:l({img:F,frames:x,spriteAnimationStates:[{name:"default",frames:x}],currentAnimationState:"default",createMovePatternMeta:e=>({destinationX:Math.random()*(t.height-e.height),destinationY:Math.random()*(t.width-e.width),destinationFrameMoveInterval:Math.floor(Math.random()*30+10)}),movePatternHandler:e=>{m%e.movePatternMeta.destinationFrameMoveInterval===0&&(e.movePatternMeta.destinationX=Math.random()*(t.width-e.width),e.movePatternMeta.destinationY=Math.random()*(t.height-e.height));let a=e.movePatternMeta.destinationX-e.x,n=e.movePatternMeta.destinationY-e.y;e.x+=a*.05,e.y+=n*.05,e.x+e.width<s.inlineStart&&(e.x=s.inlineEnd,e.x=t.width,e.y=Math.random()*t.height)},onInitEnd:e=>{e.speed=Math.random()*4+1,e.speedModifier=Math.floor(Math.random()*3+1),e.movePatternMeta.destinationFrameMoveInterval=Math.floor(Math.random()*30+10),e.movePatternMeta.destinationX=Math.random()*(t.width-e.width),e.movePatternMeta.destinationY=Math.random()*(t.height-e.height)}})},c=20,S=new Array(c);let k="enemy2";function P(e,a){for(let n=0;n<a;n++)S[n]=new T({...e,spriteScalingBaseWidth:120})}P(d[k],c),b.forEach(e=>{r.registerEventListener({elem:e,type:"change",listener:a=>{const n=a.target.value;if(!(n in d))throw new Error(`Enemy type "${n}" not found!`);const X=d[n];P(X,c)}})});let g;function E(){o.clearRect(0,0,t.width,t.height);for(const e of S)e.update(),e.draw();m++,g=requestAnimationFrame(E)}r.register(()=>{g&&cancelAnimationFrame(g)}),E()}export{Y as default};
+import X from"../../libs/core/dom.js";import{roundToPrecision as T,scale2dSizeToFit as W}from"../../libs/math.js";import{generateSpriteAnimationStates as Y}from"../../libs/sprite.js";import"../../libs/class-names.js";import"../../libs/cleanup.js";import"../../libs/dom.js";const B=await X({assetsUrls:[import.meta.resolve("./enemies/enemy1.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy2.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy3.png",new URL(import.meta.url)),import.meta.resolve("./enemies/enemy4.png",new URL(import.meta.url))],cb:({assets:S,cleanUpManager:l,createLayout:P})=>{const e={width:600,height:600},n={inlineStart:0,inlineEnd:e.width};P(`
+			<canvas
+				id="vanillaJavascriptSpriteAnimationTechniques"
+				width="${e.width}"
+				height="${e.height}"
+				class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
+			></canvas>
+	
+			<fieldset class="flex flex-wrap gap-4 justify-center items-center">
+				<legend class="text-center font-medium">Choose Enemy Type</legend>
+	
+				<label class="flex items-center gap-2 cursor-pointer">
+					<input
+						type="radio"
+						name="enemyType"
+						value="enemy1"
+						class="accent-blue-500"
+						checked
+					/>
+					<span>Enemy 1</span>
+				</label>
+	
+				<label class="flex items-center gap-2 cursor-pointer">
+					<input
+						type="radio"
+						name="enemyType"
+						value="enemy2"
+						class="accent-blue-500"
+					/>
+					<span>Enemy 2</span>
+				</label>
+	
+				<label class="flex items-center gap-2 cursor-pointer">
+					<input
+						type="radio"
+						name="enemyType"
+						value="enemy3"
+						class="accent-blue-500"
+					/>
+					<span>Enemy 3</span>
+				</label>
+	
+				<label class="flex items-center gap-2 cursor-pointer">
+					<input
+						type="radio"
+						name="enemyType"
+						value="enemy4"
+						class="accent-blue-500"
+					/>
+					<span>Enemy 4</span>
+				</label>
+			</fieldset>`);const c=document.getElementById("vanillaJavascriptSpriteAnimationTechniques"),x=document.querySelectorAll("input[name='enemyType']");if(!c)throw new Error("Couldn't find the canvas!");const r=c.getContext("2d");r.imageSmoothingEnabled=!0,r.imageSmoothingQuality="high";let h=0;const[E,A,y,I]=S;class F{constructor(a){this.img=a.img;const i=W({containerWidth:a.spriteScalingBaseWidth,sourceWidth:a.spriteMeta.width,sourceHeight:a.spriteMeta.height});this.width=i.width,this.height=i.height,this.spriteWidth=a.spriteMeta.width,this.spriteHeight=a.spriteMeta.height,this.x=Math.random()*(e.width-this.width),this.y=Math.random()*(e.height-this.height),this.currentFrameX=0,this.spriteAnimationStates=Y(a.spriteAnimationStates,a.spriteMeta),this.currentAnimationState=a.currentAnimationState,this.speed=0,this.speedModifier=0,this.movePatternHandler=a.movePatternHandler,this.movePatternMeta=a.createMovePatternMeta?.({img:this.img,width:this.width,height:this.height,spriteWidth:this.spriteWidth,spriteHeight:this.spriteHeight,currentFrameX:this.currentFrameX,x:this.x,y:this.y})??{},a.onInitEnd?.(this)}update(){this.movePatternHandler(this);const a=this.spriteAnimationStates[this.currentAnimationState];h%this.speedModifier===0&&(this.currentFrameX=this.currentFrameX>=a.locations.length-1?0:this.currentFrameX+1)}draw(){r.drawImage(this.img,this.spriteWidth*this.currentFrameX,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height),r.strokeRect(this.x,this.y,this.width,this.height)}}const M=6,g=6,p=6,u=9;function s(t){const a=t.spriteMeta??{width:T(t.img.naturalWidth/t.frames,2),height:t.img.naturalHeight};return{img:t.img,frames:t.frames,spriteAnimationStates:t.spriteAnimationStates,spriteMeta:a,currentAnimationState:t.currentAnimationState,createMovePatternMeta:t.createMovePatternMeta,movePatternHandler:t.movePatternHandler,onInitEnd:t.onInitEnd}}const o={enemy1:s({img:E,frames:M,spriteAnimationStates:[{name:"default",frames:M}],currentAnimationState:"default",createMovePatternMeta:()=>({}),movePatternHandler:t=>{t.x+=Math.random()*5-2.5,t.y+=Math.random()*5-2.5},onInitEnd:t=>{t.speed=Math.random()*4+1,t.speedModifier=Math.floor(Math.random()*3+1)}}),enemy2:s({img:A,frames:g,spriteAnimationStates:[{name:"default",frames:g}],currentAnimationState:"default",createMovePatternMeta:()=>({angle:Math.random()*0,angleSpeed:Math.random()*.2,curveY:Math.random()*.7-.35,curveX:Math.random()*.7-.35}),movePatternHandler:t=>{t.x-=t.speed,t.y+=t.movePatternMeta.curveY*Math.sin(t.movePatternMeta.angle),t.movePatternMeta.angle+=t.movePatternMeta.angleSpeed,t.x+t.width<n.inlineStart&&(t.x=n.inlineEnd,t.x=e.width,t.y=Math.random()*e.height)},onInitEnd:t=>{t.speed=Math.random()*4+1,t.speedModifier=Math.floor(Math.random()*3+1)}}),enemy3:s({img:y,frames:p,spriteAnimationStates:[{name:"default",frames:p}],currentAnimationState:"default",createMovePatternMeta:()=>({angle:Math.random()*500,angleSpeed:Math.random()*.5+.5,curveY:e.width/2,curveX:e.height/2}),movePatternHandler:t=>{t.x=t.movePatternMeta.curveX*Math.sin(t.movePatternMeta.angle*Math.PI/45)+(e.width/2-t.width/2),t.y=t.movePatternMeta.curveY*Math.cos(t.movePatternMeta.angle*Math.PI/135)+(e.height/2-t.height/2),t.movePatternMeta.angle+=t.movePatternMeta.angleSpeed,t.x+t.width<n.inlineStart&&(t.x=n.inlineEnd,t.x=e.width,t.y=Math.random()*e.height)},onInitEnd:t=>{t.speed=Math.random()*4+1,t.speedModifier=Math.floor(Math.random()*3+1)}}),enemy4:s({img:I,frames:u,spriteAnimationStates:[{name:"default",frames:u}],currentAnimationState:"default",createMovePatternMeta:t=>({destinationX:Math.random()*(e.height-t.height),destinationY:Math.random()*(e.width-t.width),destinationFrameMoveInterval:Math.floor(Math.random()*30+10)}),movePatternHandler:t=>{h%t.movePatternMeta.destinationFrameMoveInterval===0&&(t.movePatternMeta.destinationX=Math.random()*(e.width-t.width),t.movePatternMeta.destinationY=Math.random()*(e.height-t.height));let a=t.movePatternMeta.destinationX-t.x,i=t.movePatternMeta.destinationY-t.y;t.x+=a*.05,t.y+=i*.05,t.x+t.width<n.inlineStart&&(t.x=n.inlineEnd,t.x=e.width,t.y=Math.random()*e.height)},onInitEnd:t=>{t.speed=Math.random()*4+1,t.speedModifier=Math.floor(Math.random()*3+1),t.movePatternMeta.destinationFrameMoveInterval=Math.floor(Math.random()*30+10),t.movePatternMeta.destinationX=Math.random()*(e.width-t.width),t.movePatternMeta.destinationY=Math.random()*(e.height-t.height)}})},m=20,v=new Array(m);let b="enemy2";function f(t,a){for(let i=0;i<a;i++)v[i]=new F({...t,spriteScalingBaseWidth:120})}f(o[b],m),x.forEach(t=>{l.registerEventListener({elem:t,type:"change",listener:a=>{const i=a.target.value;if(!(i in o))throw new Error(`Enemy type "${i}" not found!`);const H=o[i];f(H,m)}})});let d;function w(){r.clearRect(0,0,e.width,e.height);for(const t of v)t.update(),t.draw();h++,d=requestAnimationFrame(w)}l.register(()=>{d&&cancelAnimationFrame(d)}),w()}});export{B as default};
