@@ -10,4 +10,4 @@
  * }} ScreenHandlerParams
  */
 
-export {};
+export default {};

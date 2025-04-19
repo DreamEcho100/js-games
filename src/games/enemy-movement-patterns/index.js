@@ -315,8 +315,8 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       currentAnimationState: /** @type {const} */ ("default"),
       createMovePatternMeta: () => ({}),
       movePatternHandler: (enemy) => {
-        enemy.x += Math.random() * 5 + 2.5; // (random * rangeX) - offsetX
-        enemy.y += Math.random() * 5 + 2.5; // (random * rangeY) - offsetY
+        enemy.x += Math.random() * 5 - 2.5; // (random * rangeX) - offsetX
+        enemy.y += Math.random() * 5 - 2.5; // (random * rangeY) - offsetY
       },
       onInitEnd: (enemy) => {
         enemy.speed = Math.random() * 4 + 1; // 1 to 5

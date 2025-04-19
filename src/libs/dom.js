@@ -2,8 +2,6 @@
  * @import { MirrorTupleWith, TResult } from "#libs/types/common.js";
  * @import { CleanUpManager } from "./cleanup";
  */
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import _commonTypes from "#libs/types/common.js";
 
