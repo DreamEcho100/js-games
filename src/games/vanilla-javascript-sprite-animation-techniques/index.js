@@ -1,11 +1,7 @@
 /** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
 import { CleanUpManager } from "#libs/cleanup.js";
-import {
-  adjustCanvasDimensions,
-  injectStylesheetLink,
-  loadManyImageElement,
-} from "#libs/dom.js";
+import { injectStylesheetLink, loadManyImageElement } from "#libs/dom.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { reduceToString } from "#libs/string.js";
 
@@ -45,7 +41,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   if (assetsError) {
     console.error(assetsError);
     props.appElem.innerHTML = /* HTML */ `<section
-      class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
+      class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
     >
       ${props.handleGoPrevScreen
         ? `<button id="${goBackButtonId}">Go Back</button><br /><br />`
@@ -92,18 +88,18 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   );
   /** @type {keyof typeof playerAnimationsStates} */
   let currentAnimation = "idle";
-  const canvasConfig = { width: 600, height: 600 };
+  const canvasSizes = { width: 600, height: 600 };
 
   props.appElem.innerHTML = /* HTML */ `<section
-    class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
+    class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
     ${props.handleGoPrevScreen
       ? `<button id="${goBackButtonId}">Go Back</button>`
       : ""}
     <canvas
       id="vanillaJavascriptSpriteAnimationTechniques"
-      width="${canvasConfig.width}"
-      height="${canvasConfig.height}"
+      width="${canvasSizes.width}"
+      height="${canvasSizes.height}"
       class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
     ></canvas>
     <div
@@ -172,12 +168,6 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   }
 
   const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
-  const [CANVAS_WIDTH, CANVAS_HEIGHT] = adjustCanvasDimensions(
-    canvas,
-    ctx,
-    canvasConfig.width,
-    canvasConfig.height,
-  );
 
   let staggerFrame = 5;
   let frameAcc = 0;
@@ -193,7 +183,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     const frameY =
       playerAnimationsStates[currentAnimation].locations[positionX].y;
 
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.clearRect(0, 0, canvasSizes.width, canvasSizes.height);
     ctx.drawImage(
       playerImage,
       frameX,
@@ -202,8 +192,8 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
       playerImageDH,
       0,
       0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
+      canvasSizes.width,
+      canvasSizes.height,
     );
 
     frameAcc++;

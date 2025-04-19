@@ -1,7 +1,7 @@
 /** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
 import { CleanUpManager } from "#libs/cleanup.js";
-import { adjustCanvasDimensions, loadManyImageElement } from "#libs/dom.js";
+import { loadManyImageElement } from "#libs/dom.js";
 import { clamp } from "#libs/math.js";
 
 /** @param {ScreenHandlerParams} props */
@@ -53,7 +53,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   if (assetsError) {
     console.error(assetsError);
     props.appElem.innerHTML = /* HTML */ `<section
-      class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
+      class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
     >
       ${props.handleGoPrevScreen
         ? `<button id="${goBackButtonId}">Go Back</button><br /><br />`
@@ -84,9 +84,9 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   const speedIndicatorId = `showGameSpeed-${appId}`;
   const gameSpeedInputId = `gameSpeed-${appId}`;
 
-  const canvasConfig = { width: 800, height: 700 };
+  const canvasSizes = { width: 800, height: 700 };
   props.appElem.innerHTML = /* html */ `
-	<section class="p-8 bg-slate-50 dark:bg-slate-900 size-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
+	<section class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
   >
     ${
       props.handleGoPrevScreen
@@ -95,8 +95,8 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     }
 		<canvas
 			id="${canvasId}"
-			width="${canvasConfig.width}"
-			height="${canvasConfig.height}"
+			width="${canvasSizes.width}"
+			height="${canvasSizes.height}"
 			class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>
 		<div class="flex flex-col gap-4">
@@ -148,12 +148,6 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
     silent: process.env.NODE_ENV !== "production",
   });
 
-  const [CANVAS_WIDTH, CANVAS_HEIGHT] = adjustCanvasDimensions(
-    canvas,
-    ctx,
-    canvasConfig.width,
-    canvasConfig.height,
-  );
   /*
 	// Approach 3
 	let gameFrame = 0;
@@ -237,7 +231,7 @@ export default async function vanillaJavascriptSpriteAnimationTechniques(
   /** @type {number|undefined} */
   let animateId;
   function animate() {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.clearRect(0, 0, canvasSizes.width, canvasSizes.height);
 
     for (const layer of layers) {
       layer.update();

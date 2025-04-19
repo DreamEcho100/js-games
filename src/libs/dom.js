@@ -1,8 +1,11 @@
 /**
- * @import { TResult, MirrorTupleWith } from "#libs/types/common.js";
- * @import { CleanUpManager } from "#libs/cleanup";
+ * @import { MirrorTupleWith, TResult } from "#libs/types/common.js";
+ * @import { CleanUpManager } from "./cleanup";
  */
-import * as _commonTypes from "#libs/types/common.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import _commonTypes from "#libs/types/common.js";
 
 /**
  * Loads an image from a given source and returns its dimensions.
@@ -102,31 +105,4 @@ export function injectStylesheetLink(stylesPath, cleanUpManager) {
     link.remove();
   });
   return link;
-}
-
-/**
- * @description Adjusts the canvas's pixel and display size to match the device's pixel ratio.
- *
- * @param {HTMLCanvasElement} canvas - The canvas to resize.
- * @param {CanvasRenderingContext2D} ctx - The 2D context of the canvas.
- * @param {number} width - The desired CSS/display width.
- * @param {number} height - The desired CSS/display height.
- * @returns {[width: number, height: number]} The actual canvas resolution in device pixels.
- */
-export function adjustCanvasDimensions(canvas, ctx, width, height) {
-  const dpr = window.devicePixelRatio || 1;
-
-  // Set internal canvas resolution
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-
-  // Optional: Set CSS size to maintain physical size on screen
-  // canvas.style.width = `${width}px`;
-  // canvas.style.height = `${height}px`;
-  canvas.style.aspectRatio = `${width} / ${height}`;
-
-  // Scale context
-  ctx.scale(dpr, dpr);
-
-  return [canvas.width, canvas.height];
 }
