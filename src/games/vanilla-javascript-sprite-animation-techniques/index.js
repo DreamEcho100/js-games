@@ -41,20 +41,21 @@ const gameScreen = await initGameScreen({
     /** @type {keyof typeof playerAnimationsStates} */
     let currentAnimation = "idle";
 
-    const canvasBoundingBox = {
-      // render.width: 600,
-      // render.height: 600,
+    const canvasConfig = {
       render: {
-        width: 500,
-        height: 700,
+        width: 600,
+        height: 600,
       },
+      // The canvas bounding box is the bounding box of the canvas element
+      // in the DOM. It is used to calculate the position of the canvas element
+      // in the DOM and to adjust its size.
       dom: {
-        width: 500,
-        height: 700,
+        width: 600,
+        height: 600,
         top: 0,
         left: 0,
-        right: 500,
-        bottom: 700,
+        right: 0,
+        bottom: 0,
         x: 0,
         y: 0,
       },
@@ -62,8 +63,8 @@ const gameScreen = await initGameScreen({
 
     createLayout(/* html */ `<canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasBoundingBox.render.width}"
-			height="${canvasBoundingBox.render.height}"
+			width="${canvasConfig.render.width}"
+			height="${canvasConfig.render.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>
 		<div
@@ -134,7 +135,7 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox.dom = boundingBox;
+        canvasConfig.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -156,8 +157,8 @@ const gameScreen = await initGameScreen({
       ctx.clearRect(
         0,
         0,
-        canvasBoundingBox.render.width,
-        canvasBoundingBox.render.height,
+        canvasConfig.render.width,
+        canvasConfig.render.height,
       );
       ctx.drawImage(
         playerImage,
@@ -167,8 +168,8 @@ const gameScreen = await initGameScreen({
         playerImageDH,
         0,
         0,
-        canvasBoundingBox.render.width,
-        canvasBoundingBox.render.height,
+        canvasConfig.render.width,
+        canvasConfig.render.height,
       );
 
       frameAcc++;

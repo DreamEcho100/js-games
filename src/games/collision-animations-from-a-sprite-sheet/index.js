@@ -57,13 +57,14 @@ const gameScreen = await initGameScreen({
       { width: explosionImageDW, height: explosionImageDH },
     );
 
-    const canvasBoundingBox = {
-      // render.width: 500,
-      // render.height: 700,
+    const canvasConfig = {
       render: {
         width: 500,
         height: 700,
       },
+      // The canvas bounding box is the bounding box of the canvas element
+      // in the DOM. It is used to calculate the position of the canvas element
+      // in the DOM and to adjust its size.
       dom: {
         width: 500,
         height: 700,
@@ -78,8 +79,8 @@ const gameScreen = await initGameScreen({
 
     createLayout(/* html */ `<canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasBoundingBox.render.width}"
-			height="${canvasBoundingBox.render.height}"
+			width="${canvasConfig.render.width}"
+			height="${canvasConfig.render.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>`);
 
@@ -101,7 +102,7 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox.dom = boundingBox;
+        canvasConfig.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -188,8 +189,8 @@ const gameScreen = await initGameScreen({
     function handleAddExplosion(e) {
       const renderBaseWidth = 100;
       ctx.fillStyle = "white";
-      const posX = e.pageX - canvasBoundingBox.dom.x;
-      const posY = e.pageY - canvasBoundingBox.dom.y;
+      const posX = e.pageX - canvasConfig.dom.x;
+      const posY = e.pageY - canvasConfig.dom.y;
       const explosion = new Explosion({
         x: posX,
         y: posY,
@@ -228,8 +229,8 @@ const gameScreen = await initGameScreen({
       ctx.clearRect(
         0,
         0,
-        canvasBoundingBox.render.width,
-        canvasBoundingBox.render.height,
+        canvasConfig.render.width,
+        canvasConfig.render.height,
       );
 
       // for (let i = 0; i < explosions.length; i++) {

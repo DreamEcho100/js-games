@@ -173,13 +173,13 @@ export function adjustCanvas({
   canvas,
   ctx,
   onUpdateCanvasSize,
-  debounce = 100,
+  debounce = 10,
   approach,
 }) {
   let isResizeManual = false;
   /** @type {(() => void)[]} */
   const cleanupItems = [];
-  const canvasBoundingBox = {
+  const canvasDOMConfig = {
     width: 0,
     height: 0,
     top: 0,
@@ -234,25 +234,25 @@ export function adjustCanvas({
     // 		}
     // 	`;
 
-    canvasBoundingBox.width = roundToPrecision(boundingBox.width, 2);
-    canvasBoundingBox.height = roundToPrecision(boundingBox.height, 2);
-    canvasBoundingBox.top = roundToPrecision(boundingBox.top, 2);
-    canvasBoundingBox.left = roundToPrecision(boundingBox.left, 2);
-    canvasBoundingBox.right = roundToPrecision(boundingBox.right, 2);
-    canvasBoundingBox.bottom = roundToPrecision(boundingBox.bottom, 2);
-    canvasBoundingBox.x = roundToPrecision(boundingBox.x, 2);
-    canvasBoundingBox.y = roundToPrecision(boundingBox.y, 2);
+    canvasDOMConfig.width = roundToPrecision(boundingBox.width, 2);
+    canvasDOMConfig.height = roundToPrecision(boundingBox.height, 2);
+    canvasDOMConfig.top = roundToPrecision(boundingBox.top, 2);
+    canvasDOMConfig.left = roundToPrecision(boundingBox.left, 2);
+    canvasDOMConfig.right = roundToPrecision(boundingBox.right, 2);
+    canvasDOMConfig.bottom = roundToPrecision(boundingBox.bottom, 2);
+    canvasDOMConfig.x = roundToPrecision(boundingBox.x, 2);
+    canvasDOMConfig.y = roundToPrecision(boundingBox.y, 2);
 
-    onUpdateCanvasSize(canvasBoundingBox);
+    onUpdateCanvasSize(canvasDOMConfig);
   };
   updateCanvasSize();
 
   styleSheet.innerHTML = `
     		[data-${canvasDataId}] {
-    			width: ${canvasBoundingBox.width}px;
-    			/* height: ${canvasBoundingBox.height}px; */
+    			width: ${canvasDOMConfig.width}px;
+    			/* height: ${canvasDOMConfig.height}px; */
     			aspect-ratio: ${roundToPrecision(
-            canvasBoundingBox.width / canvasBoundingBox.height,
+            canvasDOMConfig.width / canvasDOMConfig.height,
             2,
           )};
     		}

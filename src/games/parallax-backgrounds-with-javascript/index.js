@@ -50,17 +50,20 @@ const gameScreen = await initGameScreen({
     const speedIndicatorId = `showGameSpeed-${appId}`;
     const gameSpeedInputId = `gameSpeed-${appId}`;
 
-    const canvasBoundingBox = {
+    const canvasConfig = {
       render: {
         width: 800,
         height: 700,
       },
+      // The canvas bounding box is the bounding box of the canvas element
+      // in the DOM. It is used to calculate the position of the canvas element
+      // in the DOM and to adjust its size.
       dom: {
         width: 800,
         height: 700,
         top: 0,
         left: 0,
-        right: 500,
+        right: 800,
         bottom: 700,
         x: 0,
         y: 0,
@@ -69,8 +72,8 @@ const gameScreen = await initGameScreen({
 
     createLayout(/* html */ `<canvas
 				id="${canvasId}"
-				width="${canvasBoundingBox.render.width}"
-				height="${canvasBoundingBox.render.height}"
+				width="${canvasConfig.render.width}"
+				height="${canvasConfig.render.height}"
 				class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 			></canvas>
 			<div class="flex flex-col gap-4">
@@ -117,7 +120,7 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox.dom = boundingBox;
+        canvasConfig.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -208,8 +211,8 @@ const gameScreen = await initGameScreen({
       ctx.clearRect(
         0,
         0,
-        canvasBoundingBox.render.width,
-        canvasBoundingBox.render.height,
+        canvasConfig.render.width,
+        canvasConfig.render.height,
       );
 
       for (const layer of layers) {

@@ -83,11 +83,14 @@ const gameScreen = await initGameScreen({
       },
     );
 
-    const canvasBoundingBox = {
+    const canvasConfig = {
       render: {
         width: 500,
         height: 700,
       },
+      // The canvas bounding box is the bounding box of the canvas element
+      // in the DOM. It is used to calculate the position of the canvas element
+      // in the DOM and to adjust its size.
       dom: {
         width: 500,
         height: 700,
@@ -102,8 +105,8 @@ const gameScreen = await initGameScreen({
 
     createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasBoundingBox.render.width}"
-			height="${canvasBoundingBox.render.height}"
+			width="${canvasConfig.render.width}"
+			height="${canvasConfig.render.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>`);
 
@@ -125,7 +128,7 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox.dom = boundingBox;
+        canvasConfig.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -161,8 +164,8 @@ const gameScreen = await initGameScreen({
         this.width = dimensions.width;
         this.height = dimensions.height;
 
-        this.x = canvasBoundingBox.render.width;
-        this.y = 0; // Math.random() * (canvasBoundingBox.height - this.height);
+        this.x = canvasConfig.render.width;
+        this.y = 0; // Math.random() * (canvasConfig.height - this.height);
 
         this.dx = Math.random() * 5 + 3;
         this.dy = Math.random() * 5 - 2.5;
@@ -183,13 +186,10 @@ const gameScreen = await initGameScreen({
         );
 
         if (this.x < -this.width) {
-          this.x = canvasBoundingBox.render.width;
+          this.x = canvasConfig.render.width;
         }
 
-        if (
-          this.y < 0 ||
-          this.y > canvasBoundingBox.render.height - this.height
-        ) {
+        if (this.y < 0 || this.y > canvasConfig.render.height - this.height) {
           this.dy *= -1;
         }
       }
@@ -219,8 +219,8 @@ const gameScreen = await initGameScreen({
       ctx.clearRect(
         0,
         0,
-        canvasBoundingBox.render.width,
-        canvasBoundingBox.render.height,
+        canvasConfig.render.width,
+        canvasConfig.render.height,
       );
 
       testRaven.draw();
