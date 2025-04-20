@@ -3,128 +3,9 @@
  */
 
 import initGameScreen from "#libs/core/dom.js";
-import { roundToPrecision, scale2dSizeToFit } from "#libs/math.js";
+import { adjustCanvas } from "#libs/dom.js";
+import { scale2dSizeToFit } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
-
-/**
- * @param {{
- * canvas:HTMLCanvasElement;
- * ctx:CanvasTransform;
- * onUpdateCanvasSize: (boundingBox: {
- *   width: number;
- *   height: number;
- *   top: number;
- *   left: number;
- *   right: number;
- *   bottom: number;
- *   x: number;
- *   y: number;
- *  }) => void;
- *  debounce?: number;
- * }} props
- */
-function adjustCanvas({ canvas, ctx, onUpdateCanvasSize, debounce = 100 }) {
-  const initialCanvasBoundingBox = canvas.getBoundingClientRect();
-
-  const canvasBoundingBox = {
-    width: roundToPrecision(initialCanvasBoundingBox.width, 2),
-    height: roundToPrecision(initialCanvasBoundingBox.height, 2),
-    top: roundToPrecision(initialCanvasBoundingBox.top, 2),
-    left: roundToPrecision(initialCanvasBoundingBox.left, 2),
-    right: roundToPrecision(initialCanvasBoundingBox.right, 2),
-    bottom: roundToPrecision(initialCanvasBoundingBox.bottom, 2),
-    x: roundToPrecision(initialCanvasBoundingBox.x, 2),
-    y: roundToPrecision(initialCanvasBoundingBox.y, 2),
-  };
-
-  const updateCanvasSize = () => {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-
-    canvas.width = roundToPrecision(rect.width * dpr, 2);
-    canvas.height = roundToPrecision(rect.height * dpr, 2);
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-    ctx.scale(dpr, dpr);
-
-    const boundingBox = canvas.getBoundingClientRect();
-    canvasBoundingBox.width = roundToPrecision(boundingBox.width, 2);
-    canvasBoundingBox.height = roundToPrecision(boundingBox.height, 2);
-    canvasBoundingBox.top = roundToPrecision(boundingBox.top, 2);
-    canvasBoundingBox.left = roundToPrecision(boundingBox.left, 2);
-    canvasBoundingBox.right = roundToPrecision(boundingBox.right, 2);
-    canvasBoundingBox.bottom = roundToPrecision(boundingBox.bottom, 2);
-    canvasBoundingBox.x = roundToPrecision(boundingBox.x, 2);
-    canvasBoundingBox.y = roundToPrecision(boundingBox.y, 2);
-
-    onUpdateCanvasSize(canvasBoundingBox);
-  };
-  updateCanvasSize();
-
-  canvas.style.width = `${roundToPrecision(
-    initialCanvasBoundingBox.width / 16,
-    2,
-  )}rem`;
-  // `${initialCanvasBoundingBox.width}px`;
-  // canvas.style.height = `${initialCanvasBoundingBox.height}px`; // This will make the browser respect te aspect ratio based on te width
-  canvas.style.aspectRatio = `${roundToPrecision(
-    canvasBoundingBox.width / canvasBoundingBox.height,
-    2,
-  )}`;
-
-  /** @type {(() => void)[]} */
-  const cleanupItems = [];
-  /** @type {NodeJS.Timeout|undefined} */
-  let resizeObserverTimeoutId;
-  cleanupItems.push(() => {
-    if (resizeObserverTimeoutId) {
-      clearTimeout(resizeObserverTimeoutId);
-      resizeObserverTimeoutId = undefined;
-    }
-  });
-
-  const debouncedOnUpdateCanvasSize = () => {
-    if (resizeObserverTimeoutId) {
-      clearTimeout(resizeObserverTimeoutId);
-    }
-
-    resizeObserverTimeoutId = setTimeout(updateCanvasSize, debounce);
-  };
-
-  const canvasResizeObserver = new ResizeObserver(debouncedOnUpdateCanvasSize);
-  cleanupItems.push(() => canvasResizeObserver.disconnect());
-
-  canvas.addEventListener("resize", debouncedOnUpdateCanvasSize);
-  cleanupItems.push(() => {
-    canvas.removeEventListener("resize", debouncedOnUpdateCanvasSize);
-  });
-
-  const canvasBoxSizing = /** @type {"border-box"|"content-box"} */ (
-    /** @type {{ value?: CanvasRenderingContext2D }} */ (
-      canvas.computedStyleMap().get("box-sizing")
-    )?.value ??
-      getComputedStyle(canvas).boxSizing ??
-      canvas.style.boxSizing
-  );
-  canvasResizeObserver.observe(canvas, {
-    box: canvasBoxSizing,
-  });
-  const bodyBoxSizing = /** @type {"border-box"|"content-box"} */ (
-    /** @type {{ value?: CanvasRenderingContext2D }} */ (
-      document.body.computedStyleMap().get("box-sizing")
-    )?.value ??
-      getComputedStyle(document.body).boxSizing ??
-      document.body.style.boxSizing
-  );
-  canvasResizeObserver.observe(document.body, {
-    box: bodyBoxSizing,
-  });
-
-  return () => {
-    for (const cleanupItem of cleanupItems) {
-      cleanupItem();
-    }
-  };
-}
 
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
@@ -204,7 +85,6 @@ const gameScreen = await initGameScreen({
     const canvas = /** @type {HTMLCanvasElement|null} */ (
       document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
     );
-
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");
     }
@@ -212,6 +92,9 @@ const gameScreen = await initGameScreen({
     const ctx = /** @type {CanvasRenderingContext2D} */ (
       canvas.getContext("2d")
     );
+    if (!ctx) {
+      throw new Error("Couldn't get the canvas context!");
+    }
 
     const adjustCanvasCleanup = adjustCanvas({
       canvas,
@@ -402,3 +285,17 @@ const gameScreen = await initGameScreen({
 });
 
 export default gameScreen;
+
+/*
+🤯 Optional Cool Touch
+💥 Particle Sparks on Explosion?
+When triggering an explosion, you could also add:
+
+js
+Copy
+Edit
+for (let i = 0; i < 5; i++) {
+  addSparkParticle({ x: posX, y: posY, direction: i * 45 + Math.random() * 30 });
+}
+With some tiny particles fading out — gives it a lot more juice.
+*/
