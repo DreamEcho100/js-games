@@ -170,6 +170,9 @@ export function injectStylesheetLink(stylesPath, cleanUpManager) {
  */
 export function adjustCanvas({
   canvas,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ctx,
   onUpdateCanvasSize,
   debounce = 100,
@@ -177,6 +180,8 @@ export function adjustCanvas({
   const initialCanvasBoundingBox = canvas.getBoundingClientRect();
 
   const canvasBoundingBox = {
+    defaultWidth: canvas.width,
+    defaultHeight: canvas.height,
     width: roundToPrecision(initialCanvasBoundingBox.width, 2),
     height: roundToPrecision(initialCanvasBoundingBox.height, 2),
     top: roundToPrecision(initialCanvasBoundingBox.top, 2),
@@ -187,16 +192,19 @@ export function adjustCanvas({
     y: roundToPrecision(initialCanvasBoundingBox.y, 2),
   };
 
+  canvas.width = canvasBoundingBox.defaultWidth;
+  canvas.height = canvasBoundingBox.defaultHeight;
+
   const updateCanvasSize = () => {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-
-    canvas.width = roundToPrecision(rect.width * dpr, 2);
-    canvas.height = roundToPrecision(rect.height * dpr, 2);
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-    ctx.scale(dpr, dpr);
-
     const boundingBox = canvas.getBoundingClientRect();
+    // The following line is commented out because it was causing issues with the canvas size
+    // Particularly when the canvas gets smaller it's cropping from the rendered canvas and not working will on resizing
+    // const dpr = window.devicePixelRatio || 1;
+    // canvas.width = roundToPrecision(boundingBox.width * dpr, 2);
+    // canvas.height = roundToPrecision(boundingBox.height * dpr, 2);
+    // ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+    // ctx.scale(dpr, dpr);
+
     canvasBoundingBox.width = roundToPrecision(boundingBox.width, 2);
     canvasBoundingBox.height = roundToPrecision(boundingBox.height, 2);
     canvasBoundingBox.top = roundToPrecision(boundingBox.top, 2);
@@ -210,11 +218,9 @@ export function adjustCanvas({
   };
   updateCanvasSize();
 
-  canvas.style.width = `${roundToPrecision(
-    initialCanvasBoundingBox.width / 16,
-    2,
-  )}rem`;
-  // `${initialCanvasBoundingBox.width}px`;
+  // The following line is commented out because it was causing issues with the canvas size
+  // Particularly when the canvas gets smaller it's cropping from the rendered canvas and not working will on resizing
+  // canvas.style.width = `${initialCanvasBoundingBox.width}px`;
   // canvas.style.height = `${initialCanvasBoundingBox.height}px`; // This will make the browser respect te aspect ratio based on te width
   canvas.style.aspectRatio = `${roundToPrecision(
     canvasBoundingBox.width / canvasBoundingBox.height,

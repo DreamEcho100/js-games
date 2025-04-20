@@ -94,7 +94,7 @@ const gameScreen = await initGameScreen({
     });
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
-      document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
+      document.getElementById(canvasId)
     );
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");
