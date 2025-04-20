@@ -55,7 +55,8 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+    const canvasId = `${appId}-canvas`;
     const [ravenImage, explosionImage, ...sfxs] = assets;
 
     const ravenMetadata = {
@@ -104,14 +105,14 @@ const gameScreen = await initGameScreen({
     };
 
     createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
-			id="vanillaJavascriptSpriteAnimationTechniques"
+			id="${canvasId}"
 			width="${canvasConfig.render.width}"
 			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
+			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
 		></canvas>`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
-      document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
+      document.getElementById(canvasId)
     );
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");

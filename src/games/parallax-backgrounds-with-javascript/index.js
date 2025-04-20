@@ -42,13 +42,13 @@ const gameScreen = await initGameScreen({
     },
   ]),
   cb: ({ appId, assets, cleanUpManager, createLayout }) => {
-    const canvasId = `canvas-${appId}`;
+    const canvasId = `${appId}-canvas`;
 
     const minGameSpeed = 1;
     const maxGameSpeed = 20;
     let gameSpeed = 5;
-    const speedIndicatorId = `showGameSpeed-${appId}`;
-    const gameSpeedInputId = `gameSpeed-${appId}`;
+    const speedIndicatorId = `${appId}-show-game-speed`;
+    const gameSpeedInputId = `${appId}-game-speed`;
 
     const canvasConfig = {
       render: {
@@ -74,7 +74,7 @@ const gameScreen = await initGameScreen({
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
+				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
 			></canvas>
 			<div class="flex flex-col gap-4">
 				<label>Game speed: <span id="${speedIndicatorId}">${gameSpeed}</span></label>

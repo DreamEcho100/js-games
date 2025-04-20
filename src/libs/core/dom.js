@@ -29,7 +29,7 @@ export default async function initGameScreen(initOptions) {
   /** @typedef {TAssetPaths extends TLoadAsset[] ? TElementTypeMapperForAssets<TAssetPaths> : never} TCurrentAssets */
 
   const appId = `app-${Math.random().toString(36).slice(2)}`;
-  const goBackButtonId = `go-back-${appId}`;
+  const goBackButtonId = `${appId}-go-back-button`;
   const cleanUpManager = new CleanUpManager();
   if (initOptions.stylesheetLink) {
     injectStylesheetLink(initOptions.stylesheetLink, cleanUpManager);

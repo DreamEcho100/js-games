@@ -46,7 +46,8 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+    const canvasId = `${appId}-canvas`;
     const [explosionImage, ...sfxs] = assets;
 
     const explosionFramesSize = 5;
@@ -78,14 +79,14 @@ const gameScreen = await initGameScreen({
     };
 
     createLayout(/* html */ `<canvas
-			id="vanillaJavascriptSpriteAnimationTechniques"
+			id="${canvasId}"
 			width="${canvasConfig.render.width}"
 			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
+			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
 		></canvas>`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
-      document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
+      document.getElementById(canvasId)
     );
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");
@@ -103,6 +104,8 @@ const gameScreen = await initGameScreen({
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
         canvasConfig.dom = boundingBox;
+        canvasConfig.render.width = boundingBox.width;
+        canvasConfig.render.height = boundingBox.height;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -191,6 +194,7 @@ const gameScreen = await initGameScreen({
       ctx.fillStyle = "white";
       const posX = e.pageX - canvasConfig.dom.x;
       const posY = e.pageY - canvasConfig.dom.y;
+
       const explosion = new Explosion({
         x: posX,
         y: posY,
@@ -225,6 +229,13 @@ const gameScreen = await initGameScreen({
     /** @type {number|undefined} */
     let animateId;
 
+    setTimeout(() => {
+      ctx.fillStyle = "red";
+      ctx.fillRect(0, 0, canvasConfig.render.width, canvasConfig.render.height);
+    }, 1000);
+
+    let hexColorCounter = 0;
+
     function animate() {
       ctx.clearRect(
         0,
@@ -233,6 +244,9 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height,
       );
 
+      hexColorCounter = (hexColorCounter + 1) % 360;
+      ctx.fillStyle = `hsl(${hexColorCounter}, 100%, 50%)`;
+      ctx.fillRect(0, 0, canvasConfig.render.width, canvasConfig.render.height);
       // for (let i = 0; i < explosions.length; i++) {
       //   const explosion = explosions[i];
       //   if (!explosion) {

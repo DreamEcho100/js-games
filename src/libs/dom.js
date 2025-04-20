@@ -243,6 +243,11 @@ export function adjustCanvas({
     canvasDOMConfig.x = roundToPrecision(boundingBox.x, 2);
     canvasDOMConfig.y = roundToPrecision(boundingBox.y, 2);
 
+    canvas.width = canvasDOMConfig.width;
+    canvas.height = canvasDOMConfig.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+    ctx.scale(1, 1);
+
     onUpdateCanvasSize(canvasDOMConfig);
   };
   updateCanvasSize();
@@ -279,6 +284,11 @@ export function adjustCanvas({
 
     resizeObserverTimeoutId = setTimeout(updateCanvasSize, debounce);
   };
+
+  window.addEventListener("resize", debouncedOnUpdateCanvasSize);
+  cleanupItems.push(() => {
+    window.removeEventListener("resize", debouncedOnUpdateCanvasSize);
+  });
 
   const canvasResizeObserver = new ResizeObserver(debouncedOnUpdateCanvasSize);
   cleanupItems.push(() => canvasResizeObserver.disconnect());

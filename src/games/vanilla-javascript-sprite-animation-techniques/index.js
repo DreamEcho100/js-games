@@ -15,8 +15,9 @@ const gameScreen = await initGameScreen({
     new URL(import.meta.url),
   ),
   cb: ({ appId, assets, cleanUpManager, createLayout }) => {
-    const animationsControlId = `animations-${appId}`;
-    const animationsControlGroupId = `animations-group-${appId}`;
+    const canvasId = `${appId}-canvas`;
+    const animationsControlId = `${appId}-animations`;
+    const animationsControlGroupId = `${appId}-animations-group`;
 
     const [playerImage] = assets;
     const playerImageSourceWidth = playerImage.naturalWidth;
@@ -62,10 +63,10 @@ const gameScreen = await initGameScreen({
     };
 
     createLayout(/* html */ `<canvas
-			id="vanillaJavascriptSpriteAnimationTechniques"
+			id="${canvasId}"
 			width="${canvasConfig.render.width}"
 			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
+			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
 		></canvas>
 		<div
 			class="flex flex-col gap-4 mt-8 grow overflow-y-auto text-center"
@@ -118,7 +119,7 @@ const gameScreen = await initGameScreen({
       });
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
-      document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
+      document.getElementById(canvasId)
     );
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");

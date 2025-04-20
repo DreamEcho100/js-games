@@ -39,7 +39,8 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+    const canvasId = `${appId}-canvas`;
     const canvasConfig = {
       render: {
         width: 500,
@@ -62,10 +63,10 @@ const gameScreen = await initGameScreen({
 
     createLayout(/* html */ `
 			<canvas
-				id="vanillaJavascriptSpriteAnimationTechniques"
+				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
+				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
 			></canvas>
 	
 			<fieldset class="flex flex-wrap gap-4 justify-center items-center">
@@ -114,7 +115,7 @@ const gameScreen = await initGameScreen({
 			</fieldset>`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
-      document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
+      document.getElementById(canvasId)
     );
 
     const enemyTypeRadios = /** @type {NodeListOf<HTMLInputElement>} */ (

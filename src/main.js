@@ -11,7 +11,9 @@ if (!appElem) {
 }
 
 if (process.env.NODE_ENV === "development") {
-  (await import("./games/point-and-shoot-game/index.js")).default({
+  (
+    await import("./games/collision-animations-from-a-sprite-sheet/index.js")
+  ).default({
     appElem,
   });
 } else {
