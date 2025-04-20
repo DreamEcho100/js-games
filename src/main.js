@@ -11,9 +11,7 @@ if (!appElem) {
 }
 
 if (process.env.NODE_ENV === "development") {
-  (
-    await import("./games/collision-animations-from-a-sprite-sheet/index.js")
-  ).default({
+  (await import("./games/enemy-movement-patterns/index.js")).default({
     appElem,
   });
 } else {
@@ -34,7 +32,7 @@ if (process.env.NODE_ENV === "development") {
 
   const gameScreens = [
     {
-      title: "Vanilla JavaScript sprite animation techniques",
+      title: "🕹 Project 1: Vanilla JavaScript sprite animation techniques",
       cb: () =>
         lazyLoad(() =>
           import(
@@ -43,20 +41,19 @@ if (process.env.NODE_ENV === "development") {
         ),
     },
     {
-      title: "Parallax backgrounds with JavaScript",
+      title: "🕹 Project 2: Parallax backgrounds with JavaScript",
       cb: () =>
         lazyLoad(() =>
           import("./games/parallax-backgrounds-with-javascript/index.js"),
         ),
     },
     {
-      title: "Enemy movement patterns",
+      title: "🕹 Project 3: Enemy movement patterns",
       cb: () =>
         lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
     },
     {
-      title:
-        "Collision animations from a sprite sheet <small><em>In Progress</em></small>",
+      title: "🕹 Project 4: Collision animations from a sprite sheet ",
       cb: () =>
         lazyLoad(() =>
           import("./games/collision-animations-from-a-sprite-sheet/index.js"),

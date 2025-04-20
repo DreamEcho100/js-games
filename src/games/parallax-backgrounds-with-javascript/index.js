@@ -1,6 +1,7 @@
 import { clamp } from "#libs/math.js";
 
 import initGameScreen from "#libs/core/dom.js";
+import { adjustCanvas } from "#libs/dom.js";
 
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
@@ -49,11 +50,21 @@ const gameScreen = await initGameScreen({
     const speedIndicatorId = `showGameSpeed-${appId}`;
     const gameSpeedInputId = `gameSpeed-${appId}`;
 
-    const canvasSizes = { width: 800, height: 700 };
+    let canvasBoundingBox = {
+      width: 800,
+      height: 700,
+      top: 0,
+      left: 0,
+      right: 500,
+      bottom: 700,
+      x: 0,
+      y: 0,
+    };
+
     createLayout(/* html */ `<canvas
 				id="${canvasId}"
-				width="${canvasSizes.width}"
-				height="${canvasSizes.height}"
+				width="${canvasBoundingBox.width}"
+				height="${canvasBoundingBox.height}"
 				class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 			></canvas>
 			<div class="flex flex-col gap-4">
@@ -82,21 +93,28 @@ const gameScreen = await initGameScreen({
       },
     });
 
-    const canvas = /** @type {HTMLCanvasElement} */ (
-      document.getElementById(canvasId)
+    const canvas = /** @type {HTMLCanvasElement|null} */ (
+      document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
     );
-
     if (!canvas) {
-      throw new Error("Couldn't find the canvas element!");
+      throw new Error("Couldn't find the canvas!");
     }
 
     const ctx = /** @type {CanvasRenderingContext2D} */ (
       canvas.getContext("2d")
     );
-
     if (!ctx) {
       throw new Error("Couldn't get the canvas context!");
     }
+
+    const adjustCanvasCleanup = adjustCanvas({
+      canvas,
+      ctx,
+      onUpdateCanvasSize: (boundingBox) => {
+        canvasBoundingBox = boundingBox;
+      },
+    });
+    cleanUpManager.register(adjustCanvasCleanup);
 
     /*
 		// Approach 3
@@ -181,7 +199,7 @@ const gameScreen = await initGameScreen({
     /** @type {number|undefined} */
     let animateId;
     function animate() {
-      ctx.clearRect(0, 0, canvasSizes.width, canvasSizes.height);
+      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
 
       for (const layer of layers) {
         layer.update();

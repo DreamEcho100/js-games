@@ -75,7 +75,7 @@ const gameScreen = await initGameScreen({
       y: 0,
     };
 
-    createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
+    createLayout(/* html */ `<canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
 			width="${canvasBoundingBox.width}"
 			height="${canvasBoundingBox.height}"

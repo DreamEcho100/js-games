@@ -39,23 +39,22 @@ const gameScreen = await initGameScreen({
     },
   ]),
   cb: ({ assets, cleanUpManager, createLayout }) => {
-    const canvasSizes = {
-      width: 600,
-      height: 600,
-    };
-
-    const canvasDimensions = {
-      inlineStart: 0,
-      inlineEnd: canvasSizes.width,
-      blockStart: 0,
-      blockEnd: canvasSizes.height,
+    let canvasBoundingBox = {
+      width: 500,
+      height: 700,
+      top: 0,
+      left: 0,
+      right: 500,
+      bottom: 700,
+      x: 0,
+      y: 0,
     };
 
     createLayout(/* html */ `
 			<canvas
 				id="vanillaJavascriptSpriteAnimationTechniques"
-				width="${canvasSizes.width}"
-				height="${canvasSizes.height}"
+				width="${canvasBoundingBox.width}"
+				height="${canvasBoundingBox.height}"
 				class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 			></canvas>
 	
@@ -169,8 +168,8 @@ const gameScreen = await initGameScreen({
         this.spriteWidth = options.spriteMeta.width;
         this.spriteHeight = options.spriteMeta.height;
 
-        this.x = Math.random() * (canvasSizes.width - this.width); // To prevent initial overflow
-        this.y = Math.random() * (canvasSizes.height - this.height); // To prevent initial overflow
+        this.x = Math.random() * (canvasBoundingBox.width - this.width); // To prevent initial overflow
+        this.y = Math.random() * (canvasBoundingBox.height - this.height); // To prevent initial overflow
 
         this.currentFrameX = 0;
         this.spriteAnimationStates = generateSpriteAnimationStates(
@@ -302,10 +301,10 @@ const gameScreen = await initGameScreen({
             Math.sin(enemy.movePatternMeta.angle);
           enemy.movePatternMeta.angle += enemy.movePatternMeta.angleSpeed;
 
-          if (enemy.x + enemy.width < canvasDimensions.inlineStart) {
-            enemy.x = canvasDimensions.inlineEnd;
-            enemy.x = canvasSizes.width;
-            enemy.y = Math.random() * canvasSizes.height;
+          if (enemy.x + enemy.width < 0) {
+            enemy.x = canvasBoundingBox.width;
+            enemy.x = canvasBoundingBox.width;
+            enemy.y = Math.random() * canvasBoundingBox.height;
           }
         },
         onInitEnd: (enemy) => {
@@ -321,24 +320,24 @@ const gameScreen = await initGameScreen({
         createMovePatternMeta: () => ({
           angle: Math.random() * 500,
           angleSpeed: Math.random() * 0.5 + 0.5,
-          curveY: canvasSizes.width / 2,
-          curveX: canvasSizes.height / 2,
+          curveY: canvasBoundingBox.width / 2,
+          curveX: canvasBoundingBox.height / 2,
         }),
         movePatternHandler: (enemy) => {
           enemy.x =
             enemy.movePatternMeta.curveX *
               Math.sin((enemy.movePatternMeta.angle * Math.PI) / 45) +
-            (canvasSizes.width / 2 - enemy.width / 2);
+            (canvasBoundingBox.width / 2 - enemy.width / 2);
           enemy.y =
             enemy.movePatternMeta.curveY *
               Math.cos((enemy.movePatternMeta.angle * Math.PI) / 135) +
-            (canvasSizes.height / 2 - enemy.height / 2);
+            (canvasBoundingBox.height / 2 - enemy.height / 2);
           enemy.movePatternMeta.angle += enemy.movePatternMeta.angleSpeed;
 
-          if (enemy.x + enemy.width < canvasDimensions.inlineStart) {
-            enemy.x = canvasDimensions.inlineEnd;
-            enemy.x = canvasSizes.width;
-            enemy.y = Math.random() * canvasSizes.height;
+          if (enemy.x + enemy.width < 0) {
+            enemy.x = canvasBoundingBox.width;
+            enemy.x = canvasBoundingBox.width;
+            enemy.y = Math.random() * canvasBoundingBox.height;
           }
         },
         onInitEnd: (enemy) => {
@@ -353,8 +352,9 @@ const gameScreen = await initGameScreen({
         currentAnimationState: /** @type {const} */ ("default"),
         createMovePatternMeta: (basicEnemy) => ({
           destinationX:
-            Math.random() * (canvasSizes.height - basicEnemy.height),
-          destinationY: Math.random() * (canvasSizes.width - basicEnemy.width),
+            Math.random() * (canvasBoundingBox.height - basicEnemy.height),
+          destinationY:
+            Math.random() * (canvasBoundingBox.width - basicEnemy.width),
           destinationFrameMoveInterval: Math.floor(Math.random() * 30 + 10),
         }),
         movePatternHandler: (enemy) => {
@@ -363,9 +363,9 @@ const gameScreen = await initGameScreen({
             0
           ) {
             enemy.movePatternMeta.destinationX =
-              Math.random() * (canvasSizes.width - enemy.width);
+              Math.random() * (canvasBoundingBox.width - enemy.width);
             enemy.movePatternMeta.destinationY =
-              Math.random() * (canvasSizes.height - enemy.height);
+              Math.random() * (canvasBoundingBox.height - enemy.height);
           }
 
           let dx = enemy.movePatternMeta.destinationX - enemy.x;
@@ -374,10 +374,10 @@ const gameScreen = await initGameScreen({
           enemy.x += dx * 0.05;
           enemy.y += dy * 0.05;
 
-          if (enemy.x + enemy.width < canvasDimensions.inlineStart) {
-            enemy.x = canvasDimensions.inlineEnd;
-            enemy.x = canvasSizes.width;
-            enemy.y = Math.random() * canvasSizes.height;
+          if (enemy.x + enemy.width < 0) {
+            enemy.x = canvasBoundingBox.width;
+            enemy.x = canvasBoundingBox.width;
+            enemy.y = Math.random() * canvasBoundingBox.height;
           }
         },
         onInitEnd: (enemy) => {
@@ -388,17 +388,18 @@ const gameScreen = await initGameScreen({
             Math.random() * 30 + 10,
           ); // 10 to 40
           enemy.movePatternMeta.destinationX =
-            Math.random() * (canvasSizes.width - enemy.width);
+            Math.random() * (canvasBoundingBox.width - enemy.width);
           enemy.movePatternMeta.destinationY =
-            Math.random() * (canvasSizes.height - enemy.height);
+            Math.random() * (canvasBoundingBox.height - enemy.height);
         },
       }),
     });
 
     const enemiesSize = 20;
     const enemies = new Array(enemiesSize);
+    // If this default changed, don't forget to change it's corresponding HTML
     /** @type {keyof typeof enemiesMeta} */
-    let selectedEnemyMeta = "enemy2";
+    let selectedEnemyMeta = "enemy1";
     /**
      *
      * @param {typeof enemiesMeta[keyof typeof enemiesMeta]} enemyMeta
@@ -441,7 +442,7 @@ const gameScreen = await initGameScreen({
     let animateId;
 
     function animate() {
-      ctx.clearRect(0, 0, canvasSizes.width, canvasSizes.height);
+      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
 
       for (const enemy of enemies) {
         enemy.update();

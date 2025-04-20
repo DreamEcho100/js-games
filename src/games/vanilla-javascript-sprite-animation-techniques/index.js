@@ -1,4 +1,5 @@
 import initGameScreen from "#libs/core/dom.js";
+import { adjustCanvas } from "#libs/dom.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { reduceToString } from "#libs/string.js";
 
@@ -39,12 +40,22 @@ const gameScreen = await initGameScreen({
     );
     /** @type {keyof typeof playerAnimationsStates} */
     let currentAnimation = "idle";
-    const canvasSizes = { width: 600, height: 600 };
+
+    let canvasBoundingBox = {
+      width: 600,
+      height: 600,
+      top: 0,
+      left: 0,
+      right: 500,
+      bottom: 700,
+      x: 0,
+      y: 0,
+    };
 
     createLayout(/* html */ `<canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasSizes.width}"
-			height="${canvasSizes.height}"
+			width="${canvasBoundingBox.width}"
+			height="${canvasBoundingBox.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>
 		<div
@@ -100,7 +111,6 @@ const gameScreen = await initGameScreen({
     const canvas = /** @type {HTMLCanvasElement|null} */ (
       document.getElementById("vanillaJavascriptSpriteAnimationTechniques")
     );
-
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");
     }
@@ -108,6 +118,18 @@ const gameScreen = await initGameScreen({
     const ctx = /** @type {CanvasRenderingContext2D} */ (
       canvas.getContext("2d")
     );
+    if (!ctx) {
+      throw new Error("Couldn't get the canvas context!");
+    }
+
+    const adjustCanvasCleanup = adjustCanvas({
+      canvas,
+      ctx,
+      onUpdateCanvasSize: (boundingBox) => {
+        canvasBoundingBox = boundingBox;
+      },
+    });
+    cleanUpManager.register(adjustCanvasCleanup);
 
     let staggerFrame = 5;
     let frameAcc = 0;
@@ -123,7 +145,7 @@ const gameScreen = await initGameScreen({
       const frameY =
         playerAnimationsStates[currentAnimation].locations[positionX].y;
 
-      ctx.clearRect(0, 0, canvasSizes.width, canvasSizes.height);
+      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
       ctx.drawImage(
         playerImage,
         frameX,
@@ -132,8 +154,8 @@ const gameScreen = await initGameScreen({
         playerImageDH,
         0,
         0,
-        canvasSizes.width,
-        canvasSizes.height,
+        canvasBoundingBox.width,
+        canvasBoundingBox.height,
       );
 
       frameAcc++;
