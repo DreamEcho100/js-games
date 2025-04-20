@@ -130,6 +130,8 @@ const gameScreen = await initGameScreen({
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
         canvasConfig.dom = boundingBox;
+        canvasConfig.render.width = boundingBox.width;
+        canvasConfig.render.height = boundingBox.height;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
