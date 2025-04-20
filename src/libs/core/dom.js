@@ -87,7 +87,7 @@ export default async function initGameScreen(initOptions) {
     /** @param {string} children */
     const createLayout = (children) => {
       props.appElem.innerHTML = /* html */ `<section
-		class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
+		class="p-8 bg-slate-50 dark:bg-slate-900 w-full h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
 	>
 		${
       props.handleGoPrevScreen
