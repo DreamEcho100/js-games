@@ -5,7 +5,7 @@
 /**
  * @template {string} TSpriteAnimationName
  *
- * @typedef {{ name: TSpriteAnimationName; frames: number }} SprintAnimationStatesParamItem
+ * @typedef {{ name: TSpriteAnimationName; frames: number; width?: number; height?: number; }} SprintAnimationStatesParamItem
  */
 
 /**
@@ -31,16 +31,20 @@ export function generateSpriteAnimationStates(states, spriteMeta) {
     /** @type {TSprintAnimationState<TSpriteAnimationName>[TSpriteAnimationName]} */
     const spriteAnimationState = (sprintAnimationState[state.name] = {
       locations: new Array(state.frames),
+      size: state.frames,
     });
 
-    if (spriteMeta.width <= 0 || spriteMeta.height <= 0) {
+    const width = spriteMeta.width ?? state.width;
+    const height = spriteMeta.height ?? state.height;
+
+    if (width <= 0 || height <= 0) {
       throw new Error("Sprite dimensions must be positive numbers.");
     }
 
     for (let j = 0; j < state.frames; j++) {
       spriteAnimationState.locations[j] = {
-        x: (spriteMeta.width + (spriteMeta.offsetX ?? 0)) * j,
-        y: (spriteMeta.height + (spriteMeta.offsetY ?? 0)) * i,
+        x: (width + (spriteMeta.offsetX ?? 0)) * j,
+        y: (height + (spriteMeta.offsetY ?? 0)) * i,
       };
     }
   }

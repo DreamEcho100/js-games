@@ -41,21 +41,29 @@ const gameScreen = await initGameScreen({
     /** @type {keyof typeof playerAnimationsStates} */
     let currentAnimation = "idle";
 
-    let canvasBoundingBox = {
-      width: 600,
-      height: 600,
-      top: 0,
-      left: 0,
-      right: 500,
-      bottom: 700,
-      x: 0,
-      y: 0,
+    const canvasBoundingBox = {
+      // render.width: 600,
+      // render.height: 600,
+      render: {
+        width: 500,
+        height: 700,
+      },
+      dom: {
+        width: 500,
+        height: 700,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 700,
+        x: 0,
+        y: 0,
+      },
     };
 
     createLayout(/* html */ `<canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasBoundingBox.width}"
-			height="${canvasBoundingBox.height}"
+			width="${canvasBoundingBox.render.width}"
+			height="${canvasBoundingBox.render.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>
 		<div
@@ -126,7 +134,7 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox = boundingBox;
+        canvasBoundingBox.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -140,12 +148,17 @@ const gameScreen = await initGameScreen({
     function animate() {
       let positionX =
         Math.floor(frameAcc / staggerFrame) %
-        playerAnimationsStates[currentAnimation].locations.length;
+        playerAnimationsStates[currentAnimation].size;
       const frameX = playerImageDW * positionX;
       const frameY =
         playerAnimationsStates[currentAnimation].locations[positionX].y;
 
-      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvasBoundingBox.render.width,
+        canvasBoundingBox.render.height,
+      );
       ctx.drawImage(
         playerImage,
         frameX,
@@ -154,8 +167,8 @@ const gameScreen = await initGameScreen({
         playerImageDH,
         0,
         0,
-        canvasBoundingBox.width,
-        canvasBoundingBox.height,
+        canvasBoundingBox.render.width,
+        canvasBoundingBox.render.height,
       );
 
       frameAcc++;

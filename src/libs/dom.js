@@ -166,44 +166,73 @@ export function injectStylesheetLink(stylesPath, cleanUpManager) {
  *   y: number;
  *  }) => void;
  *  debounce?: number;
+ *  approach?: "preserve-dpr" // | "preserve-size"
  * }} props
  */
 export function adjustCanvas({
   canvas,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ctx,
   onUpdateCanvasSize,
   debounce = 100,
+  approach,
 }) {
-  const initialCanvasBoundingBox = canvas.getBoundingClientRect();
-
+  let isResizeManual = false;
+  /** @type {(() => void)[]} */
+  const cleanupItems = [];
   const canvasBoundingBox = {
-    defaultWidth: canvas.width,
-    defaultHeight: canvas.height,
-    width: roundToPrecision(initialCanvasBoundingBox.width, 2),
-    height: roundToPrecision(initialCanvasBoundingBox.height, 2),
-    top: roundToPrecision(initialCanvasBoundingBox.top, 2),
-    left: roundToPrecision(initialCanvasBoundingBox.left, 2),
-    right: roundToPrecision(initialCanvasBoundingBox.right, 2),
-    bottom: roundToPrecision(initialCanvasBoundingBox.bottom, 2),
-    x: roundToPrecision(initialCanvasBoundingBox.x, 2),
-    y: roundToPrecision(initialCanvasBoundingBox.y, 2),
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    x: 0,
+    y: 0,
   };
-
-  canvas.width = canvasBoundingBox.defaultWidth;
-  canvas.height = canvasBoundingBox.defaultHeight;
+  const canvasDataId = Math.random().toString(36).slice(2);
+  const styleSheet = document.createElement("style");
+  styleSheet.id = `style-${canvasDataId}`;
+  document.head.appendChild(styleSheet);
+  cleanupItems.push(() => {
+    styleSheet.remove();
+  });
+  canvas.setAttribute(`data-${canvasDataId}`, "true");
 
   const updateCanvasSize = () => {
+    isResizeManual = true;
     const boundingBox = canvas.getBoundingClientRect();
-    // The following line is commented out because it was causing issues with the canvas size
-    // Particularly when the canvas gets smaller it's cropping from the rendered canvas and not working will on resizing
+
     // const dpr = window.devicePixelRatio || 1;
     // canvas.width = roundToPrecision(boundingBox.width * dpr, 2);
     // canvas.height = roundToPrecision(boundingBox.height * dpr, 2);
     // ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
     // ctx.scale(dpr, dpr);
+
+    if (approach === "preserve-dpr") {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = roundToPrecision(boundingBox.width * dpr, 2);
+      canvas.height = roundToPrecision(boundingBox.height * dpr, 2);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+      ctx.scale(dpr, dpr);
+    }
+    // else if (approach === "preserve-size") {
+    //   canvas.width = roundToPrecision(boundingBox.width, 2);
+    //   canvas.height = roundToPrecision(boundingBox.height, 2);
+    //   ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+    //   ctx.scale(1, 1);
+    // }
+
+    // // update the canvas stylesheet
+    // styleSheet.innerHTML = `
+    // 		[data-${canvasDataId}] {
+    // 			width: ${boundingBox.width}px;
+    // 			/* height: ${boundingBox.height}px; */
+    // 			aspect-ratio: ${roundToPrecision(
+    //         boundingBox.width / boundingBox.height,
+    //         2,
+    //       )};
+    // 		}
+    // 	`;
 
     canvasBoundingBox.width = roundToPrecision(boundingBox.width, 2);
     canvasBoundingBox.height = roundToPrecision(boundingBox.height, 2);
@@ -218,17 +247,17 @@ export function adjustCanvas({
   };
   updateCanvasSize();
 
-  // The following line is commented out because it was causing issues with the canvas size
-  // Particularly when the canvas gets smaller it's cropping from the rendered canvas and not working will on resizing
-  // canvas.style.width = `${initialCanvasBoundingBox.width}px`;
-  // canvas.style.height = `${initialCanvasBoundingBox.height}px`; // This will make the browser respect te aspect ratio based on te width
-  canvas.style.aspectRatio = `${roundToPrecision(
-    canvasBoundingBox.width / canvasBoundingBox.height,
-    2,
-  )}`;
+  styleSheet.innerHTML = `
+    		[data-${canvasDataId}] {
+    			width: ${canvasBoundingBox.width}px;
+    			/* height: ${canvasBoundingBox.height}px; */
+    			aspect-ratio: ${roundToPrecision(
+            canvasBoundingBox.width / canvasBoundingBox.height,
+            2,
+          )};
+    		}
+    	`;
 
-  /** @type {(() => void)[]} */
-  const cleanupItems = [];
   /** @type {NodeJS.Timeout|undefined} */
   let resizeObserverTimeoutId;
   cleanupItems.push(() => {
@@ -243,16 +272,16 @@ export function adjustCanvas({
       clearTimeout(resizeObserverTimeoutId);
     }
 
+    if (isResizeManual) {
+      isResizeManual = false;
+      return;
+    }
+
     resizeObserverTimeoutId = setTimeout(updateCanvasSize, debounce);
   };
 
   const canvasResizeObserver = new ResizeObserver(debouncedOnUpdateCanvasSize);
   cleanupItems.push(() => canvasResizeObserver.disconnect());
-
-  canvas.addEventListener("resize", debouncedOnUpdateCanvasSize);
-  cleanupItems.push(() => {
-    canvas.removeEventListener("resize", debouncedOnUpdateCanvasSize);
-  });
 
   const canvasBoxSizing = /** @type {"border-box"|"content-box"} */ (
     /** @type {{ value?: CanvasRenderingContext2D }} */ (
@@ -263,16 +292,6 @@ export function adjustCanvas({
   );
   canvasResizeObserver.observe(canvas, {
     box: canvasBoxSizing,
-  });
-  const bodyBoxSizing = /** @type {"border-box"|"content-box"} */ (
-    /** @type {{ value?: CanvasRenderingContext2D }} */ (
-      document.body.computedStyleMap().get("box-sizing")
-    )?.value ??
-      getComputedStyle(document.body).boxSizing ??
-      document.body.style.boxSizing
-  );
-  canvasResizeObserver.observe(document.body, {
-    box: bodyBoxSizing,
   });
 
   return () => {

@@ -1,5 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
+/** @import { SpriteInfoInput, SpriteInfo } from "#libs/types/core.js"; */
+
 import initGameScreen from "#libs/core/dom.js";
 import { adjustCanvas } from "#libs/dom.js";
+import { scale2dSizeToFit } from "#libs/math.js";
+import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { resolveBaseImportUrl } from "#libs/urls.js";
 
 const gameScreen = await initGameScreen({
@@ -9,6 +16,12 @@ const gameScreen = await initGameScreen({
       src: import.meta.resolve(
         "./assets/images/raven.png",
         new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "image",
+      src: resolveBaseImportUrl(
+        "#games/collision-animations-from-a-sprite-sheet/assets/images/boom.png",
       ),
     },
     {
@@ -42,37 +55,55 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({
-    // assets,
-    cleanUpManager,
-    createLayout,
-  }) => {
-    // const [explosionImage, ...sfxs] = assets;
-    // const explosionImageSourceWidth = explosionImage.naturalWidth;
-    // const explosionImageSourceHeight = explosionImage.naturalHeight;
-    // const explosionFramesSize = 5;
-    // const explosionImageDW = explosionImageSourceWidth / explosionFramesSize;
-    // const explosionImageDH = explosionImageSourceHeight;
-    // const explosionAnimationsStates = generateSpriteAnimationStates(
-    // 	[{ name: "default", frames: 5 }],
-    // 	{ width: explosionImageDW, height: explosionImageDH },
-    // );
+  cb: ({ assets, cleanUpManager, createLayout }) => {
+    const [ravenImage, explosionImage, ...sfxs] = assets;
 
-    let canvasBoundingBox = {
-      width: 500,
-      height: 700,
-      top: 0,
-      left: 0,
-      right: 500,
-      bottom: 700,
-      x: 0,
-      y: 0,
+    const ravenMetadata = {
+      framesX: 6,
+      width: ravenImage.naturalWidth / 6,
+      height: ravenImage.naturalHeight,
+    };
+    const ravenAnimationsStates = generateSpriteAnimationStates(
+      [{ name: "default", frames: ravenMetadata.framesX }],
+      {
+        width: ravenMetadata.width,
+        height: ravenMetadata.height,
+      },
+    );
+    const explosionAnimationsMetadata = {
+      framesX: 5,
+      width: explosionImage.naturalWidth / 5,
+      height: explosionImage.naturalHeight,
+    };
+    const explosionAnimationsStates = generateSpriteAnimationStates(
+      [{ name: "default", frames: explosionAnimationsMetadata.framesX }],
+      {
+        width: explosionAnimationsMetadata.width,
+        height: explosionAnimationsMetadata.height,
+      },
+    );
+
+    const canvasBoundingBox = {
+      render: {
+        width: 500,
+        height: 700,
+      },
+      dom: {
+        width: 500,
+        height: 700,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 700,
+        x: 0,
+        y: 0,
+      },
     };
 
     createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasBoundingBox.width}"
-			height="${canvasBoundingBox.height}"
+			width="${canvasBoundingBox.render.width}"
+			height="${canvasBoundingBox.render.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>`);
 
@@ -94,16 +125,106 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox = boundingBox;
+        canvasBoundingBox.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
+
+    /** @template {string} TSpriteAnimationName */
+    class Raven {
+      /**
+       *
+       * @param {{
+       * 	x: number,
+       * 	y: number,
+       *  sprite: SpriteInfoInput<TSpriteAnimationName>
+       *  sfx: HTMLAudioElement;
+       * }} props
+       */
+      constructor(props) {
+        const dimensions = scale2dSizeToFit({
+          containerWidth: props.sprite.renderBaseWidth,
+          containerHeight: props.sprite.renderBaseHeight,
+          sourceWidth: props.sprite.width,
+          sourceHeight: props.sprite.height,
+        });
+        /** @type {SpriteInfo<TSpriteAnimationName>} */
+        this.sprite = {
+          animationStates: props.sprite.animationStates,
+          currentAnimationState: props.sprite.currentAnimationState,
+          img: props.sprite.img,
+          currentFrameX: 0,
+          currentFrameY: 0,
+          width: props.sprite.width,
+          height: props.sprite.height,
+        };
+        this.width = dimensions.width;
+        this.height = dimensions.height;
+
+        this.x = canvasBoundingBox.render.width;
+        this.y = 0; // Math.random() * (canvasBoundingBox.height - this.height);
+
+        this.dx = Math.random() * 5 + 3;
+        this.dy = Math.random() * 5 - 2.5;
+      }
+      draw() {
+        ctx.fillStyle = "black";
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        ctx.drawImage(
+          this.sprite.img,
+          this.sprite.currentFrameX * this.sprite.width,
+          this.sprite.currentFrameY * this.sprite.height,
+          this.sprite.width,
+          this.sprite.height,
+          this.x,
+          this.y,
+          this.width,
+          this.height,
+        );
+
+        if (this.x < -this.width) {
+          this.x = canvasBoundingBox.render.width;
+        }
+
+        if (
+          this.y < 0 ||
+          this.y > canvasBoundingBox.render.height - this.height
+        ) {
+          this.dy *= -1;
+        }
+      }
+      update() {
+        this.x -= this.dx;
+      }
+    }
+
+    const testRaven = new Raven({
+      x: 0,
+      y: 0,
+      sprite: {
+        img: ravenImage,
+        animationStates: ravenAnimationsStates,
+        currentAnimationState: "default",
+        renderBaseWidth: 150,
+        width: ravenMetadata.width,
+        height: ravenMetadata.height,
+      },
+      sfx: sfxs[0],
+    });
 
     /** @type {number|undefined} */
     let animateId;
 
     function animate() {
-      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvasBoundingBox.render.width,
+        canvasBoundingBox.render.height,
+      );
+
+      testRaven.draw();
+      testRaven.update();
 
       animateId = requestAnimationFrame(animate);
     }

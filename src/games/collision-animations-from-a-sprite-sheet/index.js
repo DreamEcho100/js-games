@@ -1,6 +1,4 @@
-/**
- * @import { TSprintAnimationState } from "#libs/types/core.js";
- */
+/** @import { SpriteInfoInput, SpriteInfo } from "#libs/types/core.js"; */
 
 import initGameScreen from "#libs/core/dom.js";
 import { adjustCanvas } from "#libs/dom.js";
@@ -50,31 +48,38 @@ const gameScreen = await initGameScreen({
   ]),
   cb: ({ assets, cleanUpManager, createLayout }) => {
     const [explosionImage, ...sfxs] = assets;
-    const explosionImageSourceWidth = explosionImage.naturalWidth;
-    const explosionImageSourceHeight = explosionImage.naturalHeight;
+
     const explosionFramesSize = 5;
-    const explosionImageDW = explosionImageSourceWidth / explosionFramesSize;
-    const explosionImageDH = explosionImageSourceHeight;
+    const explosionImageDW = explosionImage.naturalWidth / explosionFramesSize;
+    const explosionImageDH = explosionImage.naturalHeight;
     const explosionAnimationsStates = generateSpriteAnimationStates(
-      [{ name: "default", frames: 5 }],
+      [{ name: "default", frames: explosionFramesSize }],
       { width: explosionImageDW, height: explosionImageDH },
     );
 
-    let canvasBoundingBox = {
-      width: 500,
-      height: 700,
-      top: 0,
-      left: 0,
-      right: 500,
-      bottom: 700,
-      x: 0,
-      y: 0,
+    const canvasBoundingBox = {
+      // render.width: 500,
+      // render.height: 700,
+      render: {
+        width: 500,
+        height: 700,
+      },
+      dom: {
+        width: 500,
+        height: 700,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 700,
+        x: 0,
+        y: 0,
+      },
     };
 
     createLayout(/* html */ `<canvas
 			id="vanillaJavascriptSpriteAnimationTechniques"
-			width="${canvasBoundingBox.width}"
-			height="${canvasBoundingBox.height}"
+			width="${canvasBoundingBox.render.width}"
+			height="${canvasBoundingBox.render.height}"
 			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 		></canvas>`);
 
@@ -96,29 +101,20 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox = boundingBox;
+        canvasBoundingBox.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
 
     let gameFrame = 0;
 
-    /**
-     * @template {string} TSpriteAnimationName
-     */
+    /** @template {string} TSpriteAnimationName */
     class Explosion {
       /**
        * @param {{
        * 	x: number,
        * 	y: number,
-       *  sprite: {
-       *   animationStates: TSprintAnimationState<TSpriteAnimationName>;
-       *   currentAnimationState: TSpriteAnimationName;
-       *   img: HTMLImageElement;
-       *   renderBaseWidth: number;
-       *   width: number;
-       *   height: number;
-       * 	}
+       *  sprite: SpriteInfoInput<TSpriteAnimationName>
        *  sfx: HTMLAudioElement;
        * }} props
        */
@@ -128,9 +124,11 @@ const gameScreen = await initGameScreen({
 
         const dimensions = scale2dSizeToFit({
           containerWidth: props.sprite.renderBaseWidth,
+          containerHeight: props.sprite.renderBaseHeight,
           sourceWidth: props.sprite.width,
           sourceHeight: props.sprite.height,
         });
+        /** @type {SpriteInfo<TSpriteAnimationName>} */
         this.sprite = {
           animationStates: props.sprite.animationStates,
           currentAnimationState: props.sprite.currentAnimationState,
@@ -142,6 +140,7 @@ const gameScreen = await initGameScreen({
         };
         this.width = dimensions.width;
         this.height = dimensions.height;
+
         this.speedModifier = 8;
         this.angle = Math.random() * Math.PI * 2;
         this.sfx = props.sfx;
@@ -173,7 +172,7 @@ const gameScreen = await initGameScreen({
 
         if (gameFrame % this.speedModifier === 0) {
           this.sprite.currentFrameX =
-            this.sprite.currentFrameX >= animationState.locations.length - 1
+            this.sprite.currentFrameX >= animationState.size - 1
               ? 0
               : this.sprite.currentFrameX + 1;
         }
@@ -189,8 +188,8 @@ const gameScreen = await initGameScreen({
     function handleAddExplosion(e) {
       const renderBaseWidth = 100;
       ctx.fillStyle = "white";
-      const posX = e.pageX - canvasBoundingBox.x;
-      const posY = e.pageY - canvasBoundingBox.y;
+      const posX = e.pageX - canvasBoundingBox.dom.x;
+      const posY = e.pageY - canvasBoundingBox.dom.y;
       const explosion = new Explosion({
         x: posX,
         y: posY,
@@ -226,7 +225,12 @@ const gameScreen = await initGameScreen({
     let animateId;
 
     function animate() {
-      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvasBoundingBox.render.width,
+        canvasBoundingBox.render.height,
+      );
 
       // for (let i = 0; i < explosions.length; i++) {
       //   const explosion = explosions[i];
@@ -240,7 +244,7 @@ const gameScreen = await initGameScreen({
       //     explosion.sprite.currentFrameX >=
       //     explosion.sprite.animationStates[
       //       explosion.sprite.currentAnimationState
-      //     ].locations.length -
+      //     ].size -
       //       1
       //   ) {
       //     explosions[i] = null;
@@ -258,7 +262,7 @@ const gameScreen = await initGameScreen({
           explosion.sprite.currentFrameX >=
           explosion.sprite.animationStates[
             explosion.sprite.currentAnimationState
-          ].locations.length -
+          ].size -
             1
         ) {
           explosions.delete(explosion);

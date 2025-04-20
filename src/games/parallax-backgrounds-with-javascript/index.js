@@ -50,21 +50,27 @@ const gameScreen = await initGameScreen({
     const speedIndicatorId = `showGameSpeed-${appId}`;
     const gameSpeedInputId = `gameSpeed-${appId}`;
 
-    let canvasBoundingBox = {
-      width: 800,
-      height: 700,
-      top: 0,
-      left: 0,
-      right: 500,
-      bottom: 700,
-      x: 0,
-      y: 0,
+    const canvasBoundingBox = {
+      render: {
+        width: 800,
+        height: 700,
+      },
+      dom: {
+        width: 800,
+        height: 700,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 700,
+        x: 0,
+        y: 0,
+      },
     };
 
     createLayout(/* html */ `<canvas
 				id="${canvasId}"
-				width="${canvasBoundingBox.width}"
-				height="${canvasBoundingBox.height}"
+				width="${canvasBoundingBox.render.width}"
+				height="${canvasBoundingBox.render.height}"
 				class="border-2 border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 			></canvas>
 			<div class="flex flex-col gap-4">
@@ -111,7 +117,7 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasBoundingBox = boundingBox;
+        canvasBoundingBox.dom = boundingBox;
       },
     });
     cleanUpManager.register(adjustCanvasCleanup);
@@ -199,7 +205,12 @@ const gameScreen = await initGameScreen({
     /** @type {number|undefined} */
     let animateId;
     function animate() {
-      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvasBoundingBox.render.width,
+        canvasBoundingBox.render.height,
+      );
 
       for (const layer of layers) {
         layer.update();

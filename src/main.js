@@ -10,7 +10,7 @@ if (!appElem) {
   throw new Error("Couldn't find the app element!");
 }
 
-if (process.env.NODE_ENV === "development") {
+if (false && process.env.NODE_ENV === "development") {
   (await import("./games/point-and-shoot-game/index.js")).default({
     appElem,
   });

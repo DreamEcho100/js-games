@@ -28,7 +28,7 @@ import { injectStylesheetLink, loadManyAssets } from "#libs/dom.js";
 export default async function initGameScreen(initOptions) {
   /** @typedef {TAssetPaths extends TLoadAsset[] ? TElementTypeMapperForAssets<TAssetPaths> : never} TCurrentAssets */
 
-  const appId = `app-${Math.random().toString(32)}`;
+  const appId = `app-${Math.random().toString(36).slice(2)}`;
   const goBackButtonId = `go-back-${appId}`;
   const cleanUpManager = new CleanUpManager();
   if (initOptions.stylesheetLink) {

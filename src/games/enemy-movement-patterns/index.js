@@ -3,6 +3,7 @@
  */
 
 import initGameScreen from "#libs/core/dom.js";
+import { adjustCanvas } from "#libs/dom.js";
 import { scale2dSizeToFit } from "#libs/math.js";
 import { roundToPrecision } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
@@ -12,49 +13,58 @@ const gameScreen = await initGameScreen({
     {
       type: "image",
       src: import.meta.resolve(
-        "./enemies/enemy1.png",
+        "./assets/images/enemies/1.png",
         new URL(import.meta.url),
       ),
     },
     {
       type: "image",
       src: import.meta.resolve(
-        "./enemies/enemy2.png",
+        "./assets/images/enemies/2.png",
         new URL(import.meta.url),
       ),
     },
     {
       type: "image",
       src: import.meta.resolve(
-        "./enemies/enemy3.png",
+        "./assets/images/enemies/3.png",
         new URL(import.meta.url),
       ),
     },
     {
       type: "image",
       src: import.meta.resolve(
-        "./enemies/enemy4.png",
+        "./assets/images/enemies/4.png",
         new URL(import.meta.url),
       ),
     },
   ]),
   cb: ({ assets, cleanUpManager, createLayout }) => {
-    let canvasBoundingBox = {
-      width: 500,
-      height: 700,
-      top: 0,
-      left: 0,
-      right: 500,
-      bottom: 700,
-      x: 0,
-      y: 0,
+    const canvasBoundingBox = {
+      render: {
+        width: 500,
+        height: 700,
+      },
+      // The canvas bounding box is the bounding box of the canvas element
+      // in the DOM. It is used to calculate the position of the canvas element
+      // in the DOM and to adjust its size.
+      dom: {
+        width: 500,
+        height: 700,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 700,
+        x: 0,
+        y: 0,
+      },
     };
 
     createLayout(/* html */ `
 			<canvas
 				id="vanillaJavascriptSpriteAnimationTechniques"
-				width="${canvasBoundingBox.width}"
-				height="${canvasBoundingBox.height}"
+				width="${canvasBoundingBox.render.width}"
+				height="${canvasBoundingBox.render.height}"
 				class="border border-solid border-gray-300 dark:border-gray-700 max-w-full mx-auto"
 			></canvas>
 	
@@ -118,6 +128,15 @@ const gameScreen = await initGameScreen({
     const ctx = /** @type {CanvasRenderingContext2D} */ (
       canvas.getContext("2d")
     );
+
+    const adjustCanvasCleanup = adjustCanvas({
+      canvas,
+      ctx,
+      onUpdateCanvasSize: (boundingBox) => {
+        canvasBoundingBox.dom = boundingBox;
+      },
+    });
+    cleanUpManager.register(adjustCanvasCleanup);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     let gameFrame = 0;
@@ -127,14 +146,14 @@ const gameScreen = await initGameScreen({
      * @template {string} TSpriteAnimationName
      *
      * @typedef {{
-     * img: HTMLImageElement
-     * width: number
-     * height: number
-     * spriteWidth: number
-     * spriteHeight: number
-     * x: number
-     * y: number
-     * currentFrameX: number;
+     *  img: HTMLImageElement
+     *  width: number
+     *  height: number
+     *  spriteWidth: number
+     *  spriteHeight: number
+     *  x: number
+     *  y: number
+     *  currentFrameX: number;
      * }} BasicEnemy
      */
 
@@ -168,8 +187,9 @@ const gameScreen = await initGameScreen({
         this.spriteWidth = options.spriteMeta.width;
         this.spriteHeight = options.spriteMeta.height;
 
-        this.x = Math.random() * (canvasBoundingBox.width - this.width); // To prevent initial overflow
-        this.y = Math.random() * (canvasBoundingBox.height - this.height); // To prevent initial overflow
+        this.x = Math.random() * (canvasBoundingBox.render.width - this.width); // To prevent initial overflow
+        this.y =
+          Math.random() * (canvasBoundingBox.render.height - this.height); // To prevent initial overflow
 
         this.currentFrameX = 0;
         this.spriteAnimationStates = generateSpriteAnimationStates(
@@ -206,7 +226,7 @@ const gameScreen = await initGameScreen({
 
         if (gameFrame % this.speedModifier === 0) {
           this.currentFrameX =
-            this.currentFrameX >= animationState.locations.length - 1
+            this.currentFrameX >= animationState.size - 1
               ? 0
               : this.currentFrameX + 1;
         }
@@ -302,9 +322,9 @@ const gameScreen = await initGameScreen({
           enemy.movePatternMeta.angle += enemy.movePatternMeta.angleSpeed;
 
           if (enemy.x + enemy.width < 0) {
-            enemy.x = canvasBoundingBox.width;
-            enemy.x = canvasBoundingBox.width;
-            enemy.y = Math.random() * canvasBoundingBox.height;
+            enemy.x = canvasBoundingBox.render.width;
+            enemy.x = canvasBoundingBox.render.width;
+            enemy.y = Math.random() * canvasBoundingBox.render.height;
           }
         },
         onInitEnd: (enemy) => {
@@ -320,24 +340,24 @@ const gameScreen = await initGameScreen({
         createMovePatternMeta: () => ({
           angle: Math.random() * 500,
           angleSpeed: Math.random() * 0.5 + 0.5,
-          curveY: canvasBoundingBox.width / 2,
-          curveX: canvasBoundingBox.height / 2,
+          curveY: canvasBoundingBox.render.width / 2,
+          curveX: canvasBoundingBox.render.height / 2,
         }),
         movePatternHandler: (enemy) => {
           enemy.x =
             enemy.movePatternMeta.curveX *
               Math.sin((enemy.movePatternMeta.angle * Math.PI) / 45) +
-            (canvasBoundingBox.width / 2 - enemy.width / 2);
+            (canvasBoundingBox.render.width / 2 - enemy.width / 2);
           enemy.y =
             enemy.movePatternMeta.curveY *
               Math.cos((enemy.movePatternMeta.angle * Math.PI) / 135) +
-            (canvasBoundingBox.height / 2 - enemy.height / 2);
+            (canvasBoundingBox.render.height / 2 - enemy.height / 2);
           enemy.movePatternMeta.angle += enemy.movePatternMeta.angleSpeed;
 
           if (enemy.x + enemy.width < 0) {
-            enemy.x = canvasBoundingBox.width;
-            enemy.x = canvasBoundingBox.width;
-            enemy.y = Math.random() * canvasBoundingBox.height;
+            enemy.x = canvasBoundingBox.render.width;
+            enemy.x = canvasBoundingBox.render.width;
+            enemy.y = Math.random() * canvasBoundingBox.render.height;
           }
         },
         onInitEnd: (enemy) => {
@@ -352,9 +372,10 @@ const gameScreen = await initGameScreen({
         currentAnimationState: /** @type {const} */ ("default"),
         createMovePatternMeta: (basicEnemy) => ({
           destinationX:
-            Math.random() * (canvasBoundingBox.height - basicEnemy.height),
+            Math.random() *
+            (canvasBoundingBox.render.height - basicEnemy.height),
           destinationY:
-            Math.random() * (canvasBoundingBox.width - basicEnemy.width),
+            Math.random() * (canvasBoundingBox.render.width - basicEnemy.width),
           destinationFrameMoveInterval: Math.floor(Math.random() * 30 + 10),
         }),
         movePatternHandler: (enemy) => {
@@ -363,9 +384,9 @@ const gameScreen = await initGameScreen({
             0
           ) {
             enemy.movePatternMeta.destinationX =
-              Math.random() * (canvasBoundingBox.width - enemy.width);
+              Math.random() * (canvasBoundingBox.render.width - enemy.width);
             enemy.movePatternMeta.destinationY =
-              Math.random() * (canvasBoundingBox.height - enemy.height);
+              Math.random() * (canvasBoundingBox.render.height - enemy.height);
           }
 
           let dx = enemy.movePatternMeta.destinationX - enemy.x;
@@ -375,9 +396,9 @@ const gameScreen = await initGameScreen({
           enemy.y += dy * 0.05;
 
           if (enemy.x + enemy.width < 0) {
-            enemy.x = canvasBoundingBox.width;
-            enemy.x = canvasBoundingBox.width;
-            enemy.y = Math.random() * canvasBoundingBox.height;
+            enemy.x = canvasBoundingBox.render.width;
+            enemy.x = canvasBoundingBox.render.width;
+            enemy.y = Math.random() * canvasBoundingBox.render.height;
           }
         },
         onInitEnd: (enemy) => {
@@ -388,9 +409,9 @@ const gameScreen = await initGameScreen({
             Math.random() * 30 + 10,
           ); // 10 to 40
           enemy.movePatternMeta.destinationX =
-            Math.random() * (canvasBoundingBox.width - enemy.width);
+            Math.random() * (canvasBoundingBox.render.width - enemy.width);
           enemy.movePatternMeta.destinationY =
-            Math.random() * (canvasBoundingBox.height - enemy.height);
+            Math.random() * (canvasBoundingBox.render.height - enemy.height);
         },
       }),
     });
@@ -442,7 +463,12 @@ const gameScreen = await initGameScreen({
     let animateId;
 
     function animate() {
-      ctx.clearRect(0, 0, canvasBoundingBox.width, canvasBoundingBox.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvasBoundingBox.render.width,
+        canvasBoundingBox.render.height,
+      );
 
       for (const enemy of enemies) {
         enemy.update();
