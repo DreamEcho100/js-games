@@ -1,4 +1,4 @@
-import{buttonPrimaryClassName as r}from"../class-names.js";import{CleanUpManager as d}from"../cleanup.js";import{injectStylesheetLink as u,loadManyAssets as f}from"../dom.js";import"../math.js";async function g(t){const c=`app-${Math.random().toString(36).slice(2)}`,l=`go-back-${c}`,a=new d;return t.stylesheetLink&&u(t.stylesheetLink,a),async e=>{function s(){e.handleGoPrevScreen?.(),a.cleanUp()}let o;if(t.assetsInfo){e.appElem.innerHTML=`
+import{buttonPrimaryClassName as r}from"../class-names.js";import{CleanUpManager as d}from"../cleanup.js";import{injectStylesheetLink as u,loadManyAssets as f}from"../dom.js";import"../math.js";async function g(t){const c=`app-${Math.random().toString(36).slice(2)}`,l=`${c}-go-back-button`,a=new d;return t.stylesheetLink&&u(t.stylesheetLink,a),async e=>{function s(){e.handleGoPrevScreen?.(),a.cleanUp()}let o;if(t.assetsInfo){e.appElem.innerHTML=`
 			<section class="flex justify-center items-center p-12 text-lg">
 			Loading assets...
 			</section>
