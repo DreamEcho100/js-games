@@ -11,7 +11,9 @@ if (!appElem) {
 }
 
 if (process.env.NODE_ENV === "development") {
-  (await import("./games/enemy-movement-patterns/index.js")).default({
+  (
+    await import("./games/collision-animations-from-a-sprite-sheet/index.js")
+  ).default({
     appElem,
   });
 } else {

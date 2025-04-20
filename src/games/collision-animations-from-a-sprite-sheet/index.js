@@ -6,6 +6,7 @@ import initGameScreen from "#libs/core/dom.js";
 import { adjustCanvas } from "#libs/dom.js";
 import { scale2dSizeToFit } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
+import { resolveBaseImportUrl } from "#libs/urls.js";
 
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
@@ -18,37 +19,32 @@ const gameScreen = await initGameScreen({
     },
     {
       type: "audio",
-      src: import.meta.resolve(
-        "./assets/audios/Magic SFX Preview Pack/Fire impact 1.wav",
-        new URL(import.meta.url),
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Fire impact 1.wav",
       ),
     },
     {
       type: "audio",
-      src: import.meta.resolve(
-        "./assets/audios/Magic SFX Preview Pack/Healing Full.wav",
-        new URL(import.meta.url),
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Healing Full.wav",
       ),
     },
     {
       type: "audio",
-      src: import.meta.resolve(
-        "./assets/audios/Magic SFX Preview Pack/Ice attack 2.wav",
-        new URL(import.meta.url),
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Ice attack 2.wav",
       ),
     },
     {
       type: "audio",
-      src: import.meta.resolve(
-        "./assets/audios/Magic SFX Preview Pack/Misc 02.wav",
-        new URL(import.meta.url),
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Misc 02.wav",
       ),
     },
     {
       type: "audio",
-      src: import.meta.resolve(
-        "./assets/audios/Magic SFX Preview Pack/Wind effects 5.wav",
-        new URL(import.meta.url),
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Wind effects 5.wav",
       ),
     },
   ]),

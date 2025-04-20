@@ -34,9 +34,8 @@ export default defineConfig(async (config) => {
     const filesPaths = await Promise.all([
       glob("./src/games/**/*.*"),
       glob("./src/libs/**/*.*"),
+      glob("./src/assets/**/*.*"),
     ]).then((values) => values.flat());
-
-    console.log("___ filesPaths", filesPaths);
 
     const input = (rollupOptions.input = {
       main: resolve(__dirname, "index.html"),

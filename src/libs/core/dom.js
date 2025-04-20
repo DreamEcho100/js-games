@@ -43,14 +43,15 @@ export default async function initGameScreen(initOptions) {
 
     let assets = /** @type {TCurrentAssets} */ (undefined);
     if (initOptions.assetsInfo) {
-      const [assetsError, _assets] = await loadManyAssets(
-        initOptions.assetsInfo,
-      );
       props.appElem.innerHTML = `
 			<section class="flex justify-center items-center p-12 text-lg">
 			Loading assets...
 			</section>
 			`;
+
+      const [assetsError, _assets] = await loadManyAssets(
+        initOptions.assetsInfo,
+      );
 
       if (assetsError) {
         console.error(assetsError);

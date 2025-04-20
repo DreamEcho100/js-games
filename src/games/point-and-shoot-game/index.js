@@ -1,51 +1,47 @@
 import initGameScreen from "#libs/core/dom.js";
 import { adjustCanvas } from "#libs/dom.js";
+import { resolveBaseImportUrl } from "#libs/urls.js";
 
 const gameScreen = await initGameScreen({
-  // assetsInfo: /** @type {const} */ ([
-  // 	{
-  // 		type: "image",
-  // 		src: import.meta.resolve(
-  // 			"./assets/images/boom.png",
-  // 			new URL(import.meta.url),
-  // 		),
-  // 	},
-  // 	{
-  // 		type: "audio",
-  // 		src: import.meta.resolve(
-  // 			"./assets/audios/Magic SFX Preview Pack/Fire impact 1.wav",
-  // 			new URL(import.meta.url),
-  // 		),
-  // 	},
-  // 	{
-  // 		type: "audio",
-  // 		src: import.meta.resolve(
-  // 			"./assets/audios/Magic SFX Preview Pack/Healing Full.wav",
-  // 			new URL(import.meta.url),
-  // 		),
-  // 	},
-  // 	{
-  // 		type: "audio",
-  // 		src: import.meta.resolve(
-  // 			"./assets/audios/Magic SFX Preview Pack/Ice attack 2.wav",
-  // 			new URL(import.meta.url),
-  // 		),
-  // 	},
-  // 	{
-  // 		type: "audio",
-  // 		src: import.meta.resolve(
-  // 			"./assets/audios/Magic SFX Preview Pack/Misc 02.wav",
-  // 			new URL(import.meta.url),
-  // 		),
-  // 	},
-  // 	{
-  // 		type: "audio",
-  // 		src: import.meta.resolve(
-  // 			"./assets/audios/Magic SFX Preview Pack/Wind effects 5.wav",
-  // 			new URL(import.meta.url),
-  // 		),
-  // 	},
-  // ]),
+  assetsInfo: /** @type {const} */ ([
+    {
+      type: "image",
+      src: import.meta.resolve(
+        "./assets/images/raven.png",
+        new URL(import.meta.url),
+      ),
+    },
+    {
+      type: "audio",
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Fire impact 1.wav",
+      ),
+    },
+    {
+      type: "audio",
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Healing Full.wav",
+      ),
+    },
+    {
+      type: "audio",
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Ice attack 2.wav",
+      ),
+    },
+    {
+      type: "audio",
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Misc 02.wav",
+      ),
+    },
+    {
+      type: "audio",
+      src: resolveBaseImportUrl(
+        "#assets/audios/Magic SFX Preview Pack/Wind effects 5.wav",
+      ),
+    },
+  ]),
   cb: ({
     // assets,
     cleanUpManager,
