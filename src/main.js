@@ -53,11 +53,16 @@ if (process.env.NODE_ENV === "development") {
         lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
     },
     {
-      title: "🕹 Project 4: Collision animations from a sprite sheet ",
+      title: "🕹 Project 4: Collision animations from a sprite sheet",
       cb: () =>
         lazyLoad(() =>
           import("./games/collision-animations-from-a-sprite-sheet/index.js"),
         ),
+    },
+    {
+      title:
+        "🕹 Project 5: Point & shoot game <small><em>In Progress</em></small>",
+      cb: () => lazyLoad(() => import("./games/point-and-shoot-game/index.js")),
     },
   ];
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
