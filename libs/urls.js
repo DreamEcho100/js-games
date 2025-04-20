@@ -1,0 +1,1 @@
+const r=import.meta.resolve("../",new URL(import.meta.url));window.importMeta=import.meta;const t="#",o=new RegExp(`^${t}\\w+`);function m(e){if(o.test(e))return e=r+e.slice(1),import.meta.resolve(e,new URL(import.meta.url));throw new Error(`${m.name}: url must start with "${t}", passed url: "${e}"`)}export{r as importBaseUrl,m as resolveBaseImportUrl};
