@@ -31,7 +31,7 @@ function isCanvasReadBlocked() {
 
 TODO:
 - [x] Add another canvas to be used as a per raven hit-box color detection
-- [ ] On hit-box/raven click:
+- [x] On hit-box/raven click:
  	- [x] Play the sound.
 	- [x] Show the explosion animation.
 	- [x] increase the score.
