@@ -495,19 +495,19 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height,
       );
 
-      drawScore();
-      drawLives();
       for (const raven of ravens) {
         raven.update();
         raven.draw();
       }
 
-      gameFrame++;
+      drawScore();
+      drawLives();
       if (lives <= 0) {
         drawGameOver();
-      } else {
-        animateId = requestAnimationFrame(animate);
+        return;
       }
+      gameFrame++;
+      animateId = requestAnimationFrame(animate);
     }
 
     cleanupManager.register(() => {

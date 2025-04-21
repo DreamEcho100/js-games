@@ -10,9 +10,8 @@ const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
     {
       type: "image",
-      src: import.meta.resolve(
-        "./assets/images/boom.png",
-        new URL(import.meta.url),
+      src: resolveBaseImportUrl(
+        "#games/collision-animations-from-a-sprite-sheet/assets/images/boom.png",
       ),
     },
     {
