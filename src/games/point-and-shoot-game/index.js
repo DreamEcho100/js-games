@@ -9,6 +9,16 @@ import { scale2dSizeToFit } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { resolveBaseImportUrl } from "#libs/urls.js";
 
+/*
+
+TODO:
+- [ ] Add another canvas to be used as a per raven hit-box color detection
+- [ ] On hit-box/raven click, play the sound and show the explosion animation, increase the score, and off the raven to be reused
+- [ ] Add a score counter
+- [ ] Add a timer to spawn new ravens
+- [ ] Add a raven spawn rate
+*/
+
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
     {
@@ -61,6 +71,7 @@ const gameScreen = await initGameScreen({
   ),
   cb: ({ appId, assets, cleanUpManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
+    const canvas2Id = `${appId}-canvas2`;
     const [ravenImage, explosionImage, ...sfxs] = assets;
 
     const ravenMetadata = {
@@ -108,12 +119,16 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
-			id="${canvasId}"
-			width="${canvasConfig.render.width}"
-			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
-		></canvas>`);
+    createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small>
+			<div class=" mx-auto max-w-full w-5xl relative">
+				<canvas
+				id="${canvasId}"
+				width="${canvasConfig.render.width}"
+				height="${canvasConfig.render.height}"
+				class="border border-solid border-gray-300 dark:border-gray-700 max-w-full"
+			></canvas>
+			</div>
+		`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
       document.getElementById(canvasId)
@@ -141,6 +156,31 @@ const gameScreen = await initGameScreen({
     cleanUpManager.register(adjustCanvasCleanup);
 
     let gameFrame = 0;
+    let score = 0;
+
+    console.log("___ canvasConfig", canvasConfig, canvas);
+    cleanUpManager.registerEventListener({
+      elem: canvas,
+      type: "click",
+      listener: (e) => {
+        const posX = e.pageX - canvasConfig.dom.x;
+        const posY = e.pageY - canvasConfig.dom.y;
+
+        console.log("___ posX", posX);
+        console.log("___ posY", posY);
+        const detectPixelColor = ctx.getImageData(posX, posY, 1, 1);
+        console.log("___ detectPixelColor", detectPixelColor);
+      },
+    });
+
+    function drawScore() {
+      ctx.fillStyle = "white";
+      ctx.font = "14px Impact";
+      ctx.fillText(`Score: ${score}`, 7, 21);
+      ctx.fillStyle = "black";
+      ctx.font = "14px Impact";
+      ctx.fillText(`Score: ${score}`, 5, 20);
+    }
 
     /** @template {string} TSpriteAnimationName */
     class Raven {
@@ -179,11 +219,11 @@ const gameScreen = await initGameScreen({
         this.frameInterval = 0;
         this.dx = 0;
         this.dy = 0;
-        this.reCalc();
+        this.recalculateMotionParameters();
         /** @type {"not-in-screen" | "in-screen" | "was-in-screen"} */
         this.state = "not-in-screen";
       }
-      reCalc() {
+      recalculateMotionParameters() {
         this.frameInterval = Math.floor(Math.random() * 5 + 2.5);
         this.dx = Math.random() * 1.24 + (8 - this.frameInterval) * 0.5;
         this.dy = Math.random() * 1.24 + (8 - this.frameInterval) * 0.5;
@@ -191,7 +231,6 @@ const gameScreen = await initGameScreen({
       draw() {
         ctx.fillStyle = "black";
         ctx.strokeRect(this.x, this.y, this.width, this.height);
-        console.log(this.sprite.currentFrameX);
         ctx.drawImage(
           this.sprite.img,
           this.sprite.currentFrameX * this.sprite.width,
@@ -210,8 +249,8 @@ const gameScreen = await initGameScreen({
 
         if (this.state === "in-screen") {
           if (
-            this.y < this.height * 0.25 ||
-            this.y > canvasConfig.render.height * 0.75
+            this.y < this.height * 0.1 ||
+            this.y > canvasConfig.render.height * 0.9
           ) {
             this.dy = -this.dy;
           }
@@ -231,7 +270,7 @@ const gameScreen = await initGameScreen({
             this.y =
               canvasConfig.render.height * 0.25 +
               Math.random() * canvasConfig.render.height * 0.4;
-            this.reCalc();
+            this.recalculateMotionParameters();
           } else {
             this.state = "not-in-screen";
           }
@@ -309,6 +348,7 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height,
       );
 
+      drawScore();
       for (const raven of ravens) {
         raven.update();
         raven.draw();

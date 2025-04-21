@@ -36,11 +36,12 @@ export class CleanUpManager {
    */
   registerEventListener(options) {
     if (!options.elem) {
-      if (options.silent) {
-        console.error("Element is required");
-        return;
-      }
-      throw new Error("Element is required");
+      // if (options.silent) {
+      //   console.error("Element is required");
+      //   return;
+      // }
+      // throw new Error("Element is required");
+      return;
     }
 
     /** @type {HTMLElement}*/ (
