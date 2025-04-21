@@ -1,6 +1,6 @@
 /**
  * @import { TLoadAsset, TElementTypeMapperForAssets, TResult } from "#libs/types/common.js";
- * @import { CleanUpManager } from "./cleanup";
+ * @import { CleanupManager } from "./cleanup";
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import _commonTypes from "#libs/types/common.js";
@@ -130,7 +130,7 @@ export async function loadManyAssets(assetsInfo) {
 
 /**
  * @param {string} stylesPath
- * @param {CleanUpManager} [cleanUpManager]
+ * @param {CleanupManager} [cleanupManager]
  *
  * @example
  * ```js
@@ -139,13 +139,13 @@ export async function loadManyAssets(assetsInfo) {
  * )
  *```
  */
-export function injectStylesheetLink(stylesPath, cleanUpManager) {
+export function injectStylesheetLink(stylesPath, cleanupManager) {
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.type = "text/css";
   link.href = stylesPath;
   document.head.appendChild(link);
-  cleanUpManager?.register(() => {
+  cleanupManager?.register(() => {
     link.remove();
   });
   return link;

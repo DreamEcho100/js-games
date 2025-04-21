@@ -39,7 +39,7 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const canvasConfig = {
       render: {
@@ -139,7 +139,7 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height = boundingBox.height;
       },
     });
-    cleanUpManager.register(adjustCanvasCleanup);
+    cleanupManager.register(adjustCanvasCleanup);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     let gameFrame = 0;
@@ -440,7 +440,7 @@ const gameScreen = await initGameScreen({
     initEnemies(enemiesMeta[selectedEnemyMeta], enemiesSize);
 
     enemyTypeRadios.forEach((radio) => {
-      cleanUpManager.registerEventListener({
+      cleanupManager.registerEventListener({
         elem: radio,
         type: "change",
         listener: (e) => {
@@ -480,7 +480,7 @@ const gameScreen = await initGameScreen({
       animateId = requestAnimationFrame(animate);
     }
 
-    cleanUpManager.register(() => {
+    cleanupManager.register(() => {
       if (!animateId) {
         return;
       }

@@ -14,7 +14,7 @@ const gameScreen = await initGameScreen({
     "./__style.css",
     new URL(import.meta.url),
   ),
-  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const animationsControlId = `${appId}-animations`;
     const animationsControlGroupId = `${appId}-animations-group`;
@@ -105,7 +105,7 @@ const gameScreen = await initGameScreen({
       .getElementById(animationsControlGroupId)
       ?.querySelectorAll("input[type='radio']")
       .forEach((radio) => {
-        cleanUpManager.registerEventListener({
+        cleanupManager.registerEventListener({
           elem: radio,
           type: "change",
           listener: (e) => {
@@ -141,7 +141,7 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height = boundingBox.height;
       },
     });
-    cleanUpManager.register(adjustCanvasCleanup);
+    cleanupManager.register(adjustCanvasCleanup);
 
     let staggerFrame = 5;
     let frameAcc = 0;
@@ -180,7 +180,7 @@ const gameScreen = await initGameScreen({
       animateId = requestAnimationFrame(animate);
     }
 
-    cleanUpManager.register(() => {
+    cleanupManager.register(() => {
       if (!animateId) {
         return;
       }

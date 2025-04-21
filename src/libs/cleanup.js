@@ -1,21 +1,21 @@
 /**
- * @typedef {null|(() => void)} CleanUpItem
+ * @typedef {null|(() => void)} CleanupItem
  */
-export class CleanUpManager {
-  /** @type {CleanUpItem[]} */
-  cleanUpItems = [];
+export class CleanupManager {
+  /** @type {CleanupItem[]} */
+  cleanupItems = [];
 
-  cleanUp() {
-    for (const item of this.cleanUpItems) {
+  cleanup() {
+    for (const item of this.cleanupItems) {
       item?.();
     }
 
-    this.cleanUpItems.length = 0;
+    this.cleanupItems.length = 0;
   }
 
   /** @param {() => void} cb  */
   register(cb) {
-    return this.cleanUpItems.push(cb);
+    return this.cleanupItems.push(cb);
   }
 
   /**
@@ -49,13 +49,13 @@ export class CleanUpManager {
       /** @type {unknown}*/ (options.elem)
     ).addEventListener(options.type, options.listener, options.options);
 
-    const cleanUp = () => {
+    const cleanup = () => {
       /** @type {HTMLElement}*/ (
         /** @type {unknown}*/ (options.elem)
       ).removeEventListener(options.type, options.listener, options.options);
     };
-    this.register(cleanUp);
+    this.register(cleanup);
 
-    return cleanUp;
+    return cleanup;
   }
 }

@@ -41,7 +41,7 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
 
     const minGameSpeed = 1;
@@ -87,7 +87,7 @@ const gameScreen = await initGameScreen({
     const gameSpeedInput = /** @type {HTMLInputElement} */ (
       document.getElementById(gameSpeedInputId)
     );
-    cleanUpManager.registerEventListener({
+    cleanupManager.registerEventListener({
       elem: gameSpeedInput,
       type: "input",
       listener: (event) => {
@@ -125,7 +125,7 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height = boundingBox.height;
       },
     });
-    cleanUpManager.register(adjustCanvasCleanup);
+    cleanupManager.register(adjustCanvasCleanup);
 
     /*
 		// Approach 3
@@ -229,7 +229,7 @@ const gameScreen = await initGameScreen({
       animateId = requestAnimationFrame(animate);
     }
 
-    cleanUpManager.register(() => {
+    cleanupManager.register(() => {
       if (!animateId) {
         return;
       }

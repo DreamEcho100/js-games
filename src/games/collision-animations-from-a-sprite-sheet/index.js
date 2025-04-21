@@ -46,7 +46,7 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const [explosionImage, ...sfxs] = assets;
 
@@ -108,7 +108,7 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height = boundingBox.height;
       },
     });
-    cleanUpManager.register(adjustCanvasCleanup);
+    cleanupManager.register(adjustCanvasCleanup);
 
     let gameFrame = 0;
 
@@ -214,13 +214,13 @@ const gameScreen = await initGameScreen({
       explosion.y -= explosion.height * 0.5;
     }
 
-    cleanUpManager.registerEventListener({
+    cleanupManager.registerEventListener({
       elem: canvas,
       type: "mousemove",
       listener: handleAddExplosion,
     });
 
-    cleanUpManager.registerEventListener({
+    cleanupManager.registerEventListener({
       elem: canvas,
       type: "click",
       listener: handleAddExplosion,
@@ -288,7 +288,7 @@ const gameScreen = await initGameScreen({
       animateId = requestAnimationFrame(animate);
     }
 
-    cleanUpManager.register(() => {
+    cleanupManager.register(() => {
       if (!animateId) {
         return;
       }

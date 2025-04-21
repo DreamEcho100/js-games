@@ -62,7 +62,7 @@ const gameScreen = await initGameScreen({
     "./assets/styles/index.css",
     new URL(import.meta.url),
   ),
-  cb: ({ appId, assets, cleanUpManager, createLayout }) => {
+  cb: ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const canvas2Id = `${appId}-canvas2`;
     const [ravenImage, explosionImage, iceAttack2Sfx] = assets;
@@ -169,13 +169,13 @@ const gameScreen = await initGameScreen({
         canvas2.height = canvasConfig.render.height;
       },
     });
-    cleanUpManager.register(adjustCanvasCleanup);
+    cleanupManager.register(adjustCanvasCleanup);
 
     let gameFrame = 0;
     let score = 0;
     let lives = 3;
 
-    const canvas2ClickCleanup = cleanUpManager.registerEventListener({
+    const canvas2ClickCleanup = cleanupManager.registerEventListener({
       elem: canvas2,
       type: "click",
       listener: (e) => {
@@ -510,7 +510,7 @@ const gameScreen = await initGameScreen({
       }
     }
 
-    cleanUpManager.register(() => {
+    cleanupManager.register(() => {
       if (!animateId) {
         return;
       }

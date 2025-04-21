@@ -4,7 +4,7 @@
  */
 
 import { buttonPrimaryClassName } from "#libs/class-names.js";
-import { CleanUpManager } from "#libs/cleanup.js";
+import { CleanupManager } from "#libs/cleanup.js";
 import { injectStylesheetLink, loadManyAssets } from "#libs/dom.js";
 // import { generateSpriteAnimationStates } from "#libs/sprite.js";
 // import { reduceToString } from "#libs/string.js";
@@ -16,7 +16,7 @@ import { injectStylesheetLink, loadManyAssets } from "#libs/dom.js";
  *  assetsInfo?: TAssetPaths;
  *  cb: (props: {
  * 		assets: TAssetPaths extends TLoadAsset[] ? TElementTypeMapperForAssets<TAssetPaths> : never;
- *    cleanUpManager: CleanUpManager;
+ *    cleanupManager: CleanupManager;
  * 		appId: string;
  * 		goBackButtonId: string;
  * 		goBack: () => void;
@@ -30,15 +30,15 @@ export default async function initGameScreen(initOptions) {
 
   const appId = `app-${Math.random().toString(36).slice(2)}`;
   const goBackButtonId = `${appId}-go-back-button`;
-  const cleanUpManager = new CleanUpManager();
+  const cleanupManager = new CleanupManager();
   if (initOptions.stylesheetLink) {
-    injectStylesheetLink(initOptions.stylesheetLink, cleanUpManager);
+    injectStylesheetLink(initOptions.stylesheetLink, cleanupManager);
   }
 
   return async (props) => {
     function goBack() {
       props.handleGoPrevScreen?.();
-      cleanUpManager.cleanUp();
+      cleanupManager.cleanup();
     }
 
     let assets = /** @type {TCurrentAssets} */ (undefined);
@@ -66,13 +66,13 @@ export default async function initGameScreen(initOptions) {
 				<p class="text-center">Couldn't load the image!</p>
 				<button id="reload" class="${buttonPrimaryClassName}">Reload</button>
 			</main>`;
-        cleanUpManager.registerEventListener({
+        cleanupManager.registerEventListener({
           elem: document.getElementById(goBackButtonId),
           type: "click",
           listener: goBack,
           silent: process.env.NODE_ENV !== "production",
         });
-        cleanUpManager.registerEventListener({
+        cleanupManager.registerEventListener({
           elem: document.getElementById("reload"),
           type: "click",
           listener: () => {
@@ -98,7 +98,7 @@ export default async function initGameScreen(initOptions) {
 		${children}
 	</main>`;
 
-      cleanUpManager.registerEventListener({
+      cleanupManager.registerEventListener({
         elem: document.getElementById(goBackButtonId),
         type: "click",
         listener: goBack,
@@ -108,7 +108,7 @@ export default async function initGameScreen(initOptions) {
 
     return initOptions.cb({
       assets: /** @type {TCurrentAssets} */ (assets),
-      cleanUpManager,
+      cleanupManager,
       appId,
       goBackButtonId,
       goBack,
