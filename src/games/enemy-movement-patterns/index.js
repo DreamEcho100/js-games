@@ -219,20 +219,6 @@ const gameScreen = await initGameScreen({
           );
         options.onInitEnd?.(this);
       }
-      update() {
-        this.movePatternHandler(this);
-
-        // Animation sprite
-        const animationState =
-          this.spriteAnimationStates[this.currentAnimationState];
-
-        if (gameFrame % this.speedModifier === 0) {
-          this.currentFrameX =
-            this.currentFrameX >= animationState.size - 1
-              ? 0
-              : this.currentFrameX + 1;
-        }
-      }
       draw() {
         ctx.drawImage(
           this.img,
@@ -246,6 +232,20 @@ const gameScreen = await initGameScreen({
           this.height,
         );
         ctx.strokeRect(this.x, this.y, this.width, this.height);
+      }
+      update() {
+        this.movePatternHandler(this);
+
+        // Animation sprite
+        const animationState =
+          this.spriteAnimationStates[this.currentAnimationState];
+
+        if (gameFrame % this.speedModifier === 0) {
+          this.currentFrameX =
+            this.currentFrameX >= animationState.size - 1
+              ? 0
+              : this.currentFrameX + 1;
+        }
       }
     }
 

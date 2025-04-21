@@ -43,10 +43,10 @@ export default async function initGameScreen(initOptions) {
 
     let assets = /** @type {TCurrentAssets} */ (undefined);
     if (initOptions.assetsInfo) {
-      props.appElem.innerHTML = `
-			<section class="flex justify-center items-center p-12 text-lg">
+      props.appElem.innerHTML = /* html */ `
+			<main class="flex justify-center items-center p-12 text-lg">
 			Loading assets...
-			</section>
+			</main>
 			`;
 
       const [assetsError, _assets] = await loadManyAssets(
@@ -55,7 +55,7 @@ export default async function initGameScreen(initOptions) {
 
       if (assetsError) {
         console.error(assetsError);
-        props.appElem.innerHTML = /* html */ `<section
+        props.appElem.innerHTML = /* html */ `<main
 				class="p-8 bg-slate-50 dark:bg-slate-900 w-full min-h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
 			>
 				${
@@ -65,7 +65,7 @@ export default async function initGameScreen(initOptions) {
         }
 				<p class="text-center">Couldn't load the image!</p>
 				<button id="reload" class="${buttonPrimaryClassName}">Reload</button>
-			</section>`;
+			</main>`;
         cleanUpManager.registerEventListener({
           elem: document.getElementById(goBackButtonId),
           type: "click",
@@ -87,7 +87,7 @@ export default async function initGameScreen(initOptions) {
 
     /** @param {string} children */
     const createLayout = (children) => {
-      props.appElem.innerHTML = /* html */ `<section
+      props.appElem.innerHTML = /* html */ `<main
 		class="p-8 bg-slate-50 dark:bg-slate-900 w-full h-full text-slate-900 dark:text-slate-50 flex flex-col gap-4 max-w-full"
 	>
 		${
@@ -96,7 +96,7 @@ export default async function initGameScreen(initOptions) {
         : ""
     }
 		${children}
-	</section>`;
+	</main>`;
 
       cleanUpManager.registerEventListener({
         elem: document.getElementById(goBackButtonId),

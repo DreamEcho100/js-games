@@ -55,6 +55,10 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
+  stylesheetLink: import.meta.resolve(
+    "./assets/styles/index.css",
+    new URL(import.meta.url),
+  ),
   cb: ({ appId, assets, cleanUpManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const [ravenImage, explosionImage, ...sfxs] = assets;
@@ -136,6 +140,8 @@ const gameScreen = await initGameScreen({
     });
     cleanUpManager.register(adjustCanvasCleanup);
 
+    let gameFrame = 0;
+
     /** @template {string} TSpriteAnimationName */
     class Raven {
       /**
@@ -167,15 +173,25 @@ const gameScreen = await initGameScreen({
         this.width = dimensions.width;
         this.height = dimensions.height;
 
-        this.x = canvasConfig.render.width;
-        this.y = 0; // Math.random() * (canvasConfig.height - this.height);
+        this.x = props.x;
+        this.y = props.y;
 
-        this.dx = Math.random() * 5 + 3;
-        this.dy = Math.random() * 5 - 2.5;
+        this.frameInterval = 0;
+        this.dx = 0;
+        this.dy = 0;
+        this.reCalc();
+        /** @type {"not-in-screen" | "in-screen" | "was-in-screen"} */
+        this.state = "not-in-screen";
+      }
+      reCalc() {
+        this.frameInterval = Math.floor(Math.random() * 5 + 2.5);
+        this.dx = Math.random() * 1.24 + (8 - this.frameInterval) * 0.5;
+        this.dy = Math.random() * 1.24 + (8 - this.frameInterval) * 0.5;
       }
       draw() {
         ctx.fillStyle = "black";
         ctx.strokeRect(this.x, this.y, this.width, this.height);
+        console.log(this.sprite.currentFrameX);
         ctx.drawImage(
           this.sprite.img,
           this.sprite.currentFrameX * this.sprite.width,
@@ -187,38 +203,105 @@ const gameScreen = await initGameScreen({
           this.width,
           this.height,
         );
-
-        if (this.x < -this.width) {
-          this.x = canvasConfig.render.width;
-        }
-
-        if (this.y < 0 || this.y > canvasConfig.render.height - this.height) {
-          this.dy *= -1;
-        }
       }
       update() {
         this.x -= this.dx;
+        this.y += this.dy;
+
+        if (this.state === "in-screen") {
+          if (
+            this.y < this.height * 0.25 ||
+            this.y > canvasConfig.render.height * 0.75
+          ) {
+            this.dy = -this.dy;
+          }
+        }
+
+        const isOffScreen =
+          this.x + this.width < 0 || // fully out on the left
+          this.y + this.height < 0 || // above the top
+          this.y > canvasConfig.render.height; // below the bottom
+
+        if (isOffScreen) {
+          if (this.state === "in-screen") {
+            this.x =
+              canvasConfig.render.width +
+              canvasConfig.render.width * Math.floor(Math.random() * 5) +
+              this.width * Math.floor(Math.random() * 5);
+            this.y =
+              canvasConfig.render.height * 0.25 +
+              Math.random() * canvasConfig.render.height * 0.4;
+            this.reCalc();
+          } else {
+            this.state = "not-in-screen";
+          }
+        } else {
+          if (this.state === "not-in-screen") {
+            this.state = "in-screen";
+          }
+          // Animation sprite
+          const animationState =
+            this.sprite.animationStates[this.sprite.currentAnimationState];
+
+          if (gameFrame % this.frameInterval === 0) {
+            this.sprite.currentFrameX =
+              this.sprite.currentFrameX >= animationState.size - 1
+                ? 0
+                : this.sprite.currentFrameX + 1;
+          }
+        }
       }
     }
 
-    const testRaven = new Raven({
-      x: 0,
-      y: 0,
-      sprite: {
-        img: ravenImage,
-        animationStates: ravenAnimationsStates,
-        currentAnimationState: "default",
-        renderBaseWidth: 150,
-        width: ravenMetadata.width,
-        height: ravenMetadata.height,
-      },
-      sfx: sfxs[0],
-    });
+    const ravensMaxSize = 10;
+    /** @type {Raven[]} */
+    let ravens = new Array(ravensMaxSize);
+
+    for (let i = 0; i < ravensMaxSize; i++) {
+      const prevRaven = i > 0 ? ravens[i - 1] : null;
+      const raven = new Raven({
+        x:
+          // Make sure the raven is not too close to the previous one
+          (prevRaven?.x
+            ? (prevRaven.x + canvasConfig.render.width) * Math.random() +
+              prevRaven.width
+            : 0) +
+          canvasConfig.render.width * 1.5 +
+          Math.random() * canvasConfig.render.width +
+          10 +
+          (prevRaven ? prevRaven.width * (Math.random() * 6) : 0),
+        y:
+          canvasConfig.render.height * 0.25 +
+          Math.random() * canvasConfig.render.height * 0.4,
+        sprite: {
+          img: ravenImage,
+          animationStates: ravenAnimationsStates,
+          currentAnimationState: "default",
+          renderBaseWidth: 80,
+          width: ravenMetadata.width,
+          height: ravenMetadata.height,
+        },
+        // sfx: sfxs[0],
+        sfx: sfxs[Math.floor(Math.random() * sfxs.length)],
+      });
+
+      if (raven.y > canvasConfig.render.height * 0.5) {
+        raven.dy = -1 * Math.random() * 2 - 0.5;
+      } else {
+        raven.dy = Math.random() * 2 - 0.5;
+      }
+      ravens[i] = raven;
+    }
+
+    let timeToNextRaven = 0;
+    let ravenInterval = 5000;
+    let lastInterval = 0;
 
     /** @type {number|undefined} */
     let animateId;
 
-    function animate() {
+    /** @param {DOMHighResTimeStamp}time */
+    function animate(time) {
       ctx.clearRect(
         0,
         0,
@@ -226,9 +309,12 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.height,
       );
 
-      testRaven.draw();
-      testRaven.update();
+      for (const raven of ravens) {
+        raven.update();
+        raven.draw();
+      }
 
+      gameFrame++;
       animateId = requestAnimationFrame(animate);
     }
 
@@ -239,7 +325,7 @@ const gameScreen = await initGameScreen({
       cancelAnimationFrame(animateId);
     });
 
-    animate();
+    animate(0);
   },
 });
 
