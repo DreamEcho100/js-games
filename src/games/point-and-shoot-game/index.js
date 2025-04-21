@@ -28,15 +28,12 @@ function isCanvasReadBlocked() {
 }
 
 /*
-
 TODO:
-- [x] Add another canvas to be used as a per raven hit-box color detection
-- [x] On hit-box/raven click:
- 	- [x] Play the sound.
-	- [x] Show the explosion animation.
-	- [x] increase the score.
-	- [x] Off the raven to be reused.
-- [x] Add a score counter
+- [ ] Particles from the raven end.
+	- [ ] Add tail _(particles array)_ to the raven, it should be empty at first.
+	- [ ] At the last frame of the raven animation, it should add a new particle to the tail.
+	- [ ] It should be drawn when the raven is on the screen, and the raven has `.hasTrail` set to true.
+	- [ ] The particles will start at the raven's end and move to the right, gradually fading out and growing larger.
 */
 
 const gameScreen = await initGameScreen({
@@ -178,7 +175,7 @@ const gameScreen = await initGameScreen({
     let score = 0;
     let lives = 3;
 
-    cleanUpManager.registerEventListener({
+    const canvas2ClickCleanup = cleanUpManager.registerEventListener({
       elem: canvas2,
       type: "click",
       listener: (e) => {
@@ -210,24 +207,8 @@ const gameScreen = await initGameScreen({
       },
     });
 
-    function drawScore() {
-      ctx.fillStyle = "white";
-      ctx.font = "14px Impact";
-      ctx.fillText(`Score: ${score}`, 7, 21);
-      ctx.fillStyle = "black";
-      ctx.font = "14px Impact";
-      ctx.fillText(`Score: ${score}`, 5, 20);
-    }
-    function drawLives() {
-      ctx.fillStyle = "white";
-      ctx.font = "14px Impact";
-      // Should be under the score
-      ctx.fillText(`Lives: ${lives}`, 7, 41);
-      ctx.fillStyle = "black";
-      ctx.font = "14px Impact";
-      ctx.fillText(`Lives: ${lives}`, 5, 40);
-    }
     function drawGameOver() {
+      canvas2ClickCleanup();
       ctx.fillStyle = "white";
       ctx.font = "24px Impact";
       ctx.textAlign = "center";
@@ -244,6 +225,24 @@ const gameScreen = await initGameScreen({
         canvasConfig.render.width * 0.5 - 1,
         canvasConfig.render.height * 0.5 - 1,
       );
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "white";
+      ctx.font = "14px Impact";
+      ctx.fillText(`Score: ${score}`, 7, 21);
+      ctx.fillStyle = "black";
+      ctx.font = "14px Impact";
+      ctx.fillText(`Score: ${score}`, 5, 20);
+    }
+    function drawLives() {
+      ctx.fillStyle = "white";
+      ctx.font = "14px Impact";
+      // Should be under the score
+      ctx.fillText(`Lives: ${lives}`, 7, 41);
+      ctx.fillStyle = "black";
+      ctx.font = "14px Impact";
+      ctx.fillText(`Lives: ${lives}`, 5, 40);
     }
 
     /** @template {string} TSpriteAnimationName */

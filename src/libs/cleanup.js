@@ -36,22 +36,26 @@ export class CleanUpManager {
    */
   registerEventListener(options) {
     if (!options.elem) {
-      // if (options.silent) {
-      //   console.error("Element is required");
-      //   return;
-      // }
-      // throw new Error("Element is required");
-      return;
+      if (options.silent) {
+        console.error("Element is required");
+        return () => {
+          console.error("Element is required");
+        };
+      }
+      throw new Error("Element is required");
     }
 
     /** @type {HTMLElement}*/ (
       /** @type {unknown}*/ (options.elem)
     ).addEventListener(options.type, options.listener, options.options);
 
-    this.register(() => {
+    const cleanUp = () => {
       /** @type {HTMLElement}*/ (
         /** @type {unknown}*/ (options.elem)
       ).removeEventListener(options.type, options.listener, options.options);
-    });
+    };
+    this.register(cleanUp);
+
+    return cleanUp;
   }
 }
