@@ -3,6 +3,10 @@ import { adjustCanvas } from "#libs/dom.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { reduceToString } from "#libs/string.js";
 
+// Project title: Vanilla JavaScript sprite animation techniques
+// Project description: This project demonstrates how to create sprite animations using JavaScript. It includes a simple game where the player can control a character and make it perform different animations.
+// Project tags: animation, sprite, canvas, sprite-animation
+
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
     {

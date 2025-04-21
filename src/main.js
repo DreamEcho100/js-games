@@ -39,6 +39,9 @@ if (process.env.NODE_ENV === "development") {
             "./games/vanilla-javascript-sprite-animation-techniques/index.js"
           ),
         ),
+      description:
+        "This project demonstrates how to create sprite animations using JavaScript. It includes a simple game where the player can control a character and make it perform different animations.",
+      tags: ["animation", "sprite", "canvas", "html", "css", "javascript"],
     },
     {
       title: "🕹 Project 2: Parallax backgrounds with JavaScript",
@@ -46,11 +49,25 @@ if (process.env.NODE_ENV === "development") {
         lazyLoad(() =>
           import("./games/parallax-backgrounds-with-javascript/index.js"),
         ),
+      description:
+        "This project demonstrates how to create parallax backgrounds using JavaScript. It includes a simple game where the player can control a character and make it perform different animations.",
+      tags: ["parallax", "backgrounds", "canvas", "javascript", "css", "html"],
     },
     {
       title: "🕹 Project 3: Enemy movement patterns",
       cb: () =>
         lazyLoad(() => import("./games/enemy-movement-patterns/index.js")),
+      description:
+        "This project demonstrates how to create enemy movement patterns using JavaScript. It includes a simple game where the player can control a character and make it perform different animations.",
+      tags: [
+        "enemy",
+        "movement",
+        "patterns",
+        "canvas",
+        "javascript",
+        "css",
+        "html",
+      ],
     },
     {
       title: "🕹 Project 4: Collision animations from a sprite sheet",
@@ -58,11 +75,42 @@ if (process.env.NODE_ENV === "development") {
         lazyLoad(() =>
           import("./games/collision-animations-from-a-sprite-sheet/index.js"),
         ),
+      description:
+        "This project demonstrates how to create collision animations using JavaScript. It includes a simple game where the player can control a character and make it perform different animations.",
+      tags: [
+        "collision",
+        "animations",
+        "sprite",
+        "sheet",
+        "canvas",
+        "javascript",
+        "css",
+        "html",
+      ],
     },
     {
       title:
         "🕹 Project 5: Point & shoot game <small><em>In Progress</em></small>",
       cb: () => lazyLoad(() => import("./games/point-and-shoot-game/index.js")),
+      description:
+        "This project demonstrates how to create a point and shoot game using JavaScript. It includes a simple game where the player can control a character and make it perform different animations.",
+      tags: [
+        "collision-detection",
+        "hit-detection",
+        "collision",
+        "detection",
+        "hit",
+        "hit-box",
+        "shooting",
+        "canvas",
+        "javascript",
+        "css",
+        "html",
+      ],
+    },
+    {
+      title: "🕹 Project 6: Enemy AI",
+      cb: () => lazyLoad(() => import("./games/enemy-ai/index.js")),
     },
   ];
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
