@@ -110,7 +110,7 @@ if (process.env.NODE_ENV === "development") {
     },
     {
       title: "🕹 Project 6: Enemy AI",
-      cb: () => lazyLoad(() => import("./games/enemy-ai/index.js")),
+      cb: () => lazyLoad(() => import("./games/point-and-shoot-game/index.js")),
     },
   ];
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment

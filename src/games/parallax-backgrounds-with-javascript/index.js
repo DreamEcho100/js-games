@@ -1,7 +1,7 @@
 import { clamp } from "#libs/math.js";
 
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom.js";
+import { adjustCanvas } from "#libs/dom/index.js";
 
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([

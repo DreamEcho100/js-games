@@ -1,5 +1,5 @@
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom.js";
+import { adjustCanvas } from "#libs/dom/index.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { reduceToString } from "#libs/string.js";
 

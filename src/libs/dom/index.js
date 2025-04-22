@@ -1,10 +1,10 @@
 /**
  * @import { TLoadAsset, TElementTypeMapperForAssets, TResult } from "#libs/types/common.js";
- * @import { CleanupManager } from "./cleanup";
+ * @import { CleanupManager } from "../cleanup";
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import _commonTypes from "#libs/types/common.js";
-import { roundToPrecision } from "./math";
+import { roundToPrecision } from "../math";
 
 /**
  * Loads an image from a given source and returns its dimensions.

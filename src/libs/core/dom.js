@@ -5,7 +5,7 @@
 
 import { buttonPrimaryClassName } from "#libs/class-names.js";
 import { CleanupManager } from "#libs/cleanup.js";
-import { injectStylesheetLink, loadManyAssets } from "#libs/dom.js";
+import { injectStylesheetLink, loadManyAssets } from "#libs/dom/index.js";
 // import { generateSpriteAnimationStates } from "#libs/sprite.js";
 // import { reduceToString } from "#libs/string.js";
 

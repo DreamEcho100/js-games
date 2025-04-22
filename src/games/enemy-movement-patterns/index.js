@@ -3,7 +3,7 @@
  */
 
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom.js";
+import { adjustCanvas } from "#libs/dom/index.js";
 import { scale2dSizeToFit } from "#libs/math.js";
 import { roundToPrecision } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
