@@ -18,11 +18,11 @@
 // XHTMLProps
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const MATHML_NS = "http://www.w3.org/1998/Math/MathML";
+const MathML_NS = "http://www.w3.org/1998/Math/MathML";
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 /**
- * @typedef {typeof SVG_NS | typeof MATHML_NS | typeof XHTML_NS} NS
+ * @typedef {typeof SVG_NS | typeof MathML_NS | typeof XHTML_NS} NS
  */
 
 /**
@@ -42,12 +42,12 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 /**
  * @template {NS} TNS
- * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MATHML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementTagNameMapByNS
+ * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementTagNameMapByNS
  */
 /**
  * @template {NS} TNS
  * @template {string} TTagName
- * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MATHML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementByNS
+ * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementByNS
  */
 
 /**
@@ -83,12 +83,12 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * @template {Record<string, any>} TElemMap
  * @template {Record<string, any>} TElementEventMap
  * @template {keyof TElemMap} TTagName
- * @template {string|undefined} [TOmittedAttributes=undefined]
+ * @template {string} TOmittedAttributes
  * @typedef {{
- *   [K in keyof (TOmittedAttributes extends string ? Omit<TElemMap[TTagName], TOmittedAttributes> : TElemMap[TTagName])]?:
- *     K extends `on${infer E}`
- *       ? (event: TElementEventMap[E & keyof TElementEventMap]) => void
- *       : string
+ *   [Key in keyof (TOmittedAttributes extends string ? Omit<TElemMap[TTagName], XSPA.OmittedAttributes> : TElemMap[TTagName])]?:
+ *     Key extends `on${infer E}`
+ *       ? (event: TElementEventMap[E & keyof TElementEventMap] & { target: TElemMap[TTagName] } ) => void
+ *       : TElemMap[TTagName][Key]
  * } & XSPA.SharedAttributes<TElemMap[TTagName]>} XSPA.GetAttrsForTag
  */
 
@@ -114,7 +114,7 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
 /**
  * @template {NS} TNS
  * @template {keyof XSPA.TagName2ElementMap} TTagName
- * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof XSPA.TagNameSVGPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameSVGPropsMap, XSPA.TagNameSVGElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof MATHML_NS ? TTagName extends keyof XSPA.TagNameMathMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameMathMLPropsMap, XSPA.TagNameMathMLElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof XSPA.TagNameXHTMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameXHTMLPropsMap, XSPA.TagNameXHTMLPropsMap, TTagName, XSPA.OmittedAttributes> : never : never} XSPA.AttrsForNSElement
+ * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof XSPA.TagNameSVGPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameSVGPropsMap, XSPA.TagNameSVGElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof MathML_NS ? TTagName extends keyof XSPA.TagNameMathMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameMathMLPropsMap, XSPA.TagNameMathMLElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof XSPA.TagNameXHTMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameXHTMLPropsMap, XSPA.TagNameXHTMLPropsMap, TTagName, XSPA.OmittedAttributes> : never : never} XSPA.AttrsForNSElement
  */
 
 /**
@@ -165,18 +165,16 @@ function setTagAttribute(
         /** @type {{ [Key in keyof XSPA.HTMLElement['style']]: XSPA.HTMLElement['style'][Key] }} */ (
           value
         );
-      let styleString = "";
+      // let styleString = "";
 
       for (const key in _value) {
         if (Object.prototype.hasOwnProperty.call(_value, key)) {
           const value = _value[key];
           if (typeof value === "string") {
-            styleString += `${key}:${value};`;
+            element.style[key] = value;
           }
         }
       }
-
-      element.setAttribute(key, styleString);
       break;
     }
     case "dataSet": {
@@ -440,7 +438,7 @@ function tagNS(namespace, tagName, attributes, ...children) {
  * This is useful for creating custom elements with specific attributes and children.
  *
  * @template {NS} TNS
- * @template {keyof XSPA.TagName2ElementMap} TTagName
+ * @template {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} TTagName
  *
  * @param {TNS} namespace - The namespace URI for the element.
  * @param {TTagName} tagName - The name of the element to create.
@@ -448,7 +446,17 @@ function tagNS(namespace, tagName, attributes, ...children) {
  */
 function tagNSFactory(namespace, tagName) {
   return function (attributes, ...children) {
-    return tagNS(namespace, tagName, attributes, ...children);
+    if (typeof tagName !== "string") {
+      throw new Error(`Invalid tag name: ${tagName}`);
+    }
+    return tagNS(
+      namespace,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      tagName,
+      attributes,
+      ...children,
+    );
   };
 }
 
@@ -486,33 +494,88 @@ const tagsHTMLProxy = new Proxy(
 
 // TODO: Make one for each ns for now
 /**
- * @typedef {{ [TagName in keyof NSElementTagNameMap]: ReturnType<typeof tagNSFactory<TagName>> }} TagNSMapProxy
+ * @typedef {{ [TagName in keyof XSPA.TagNameSVGPropsMap]: ReturnType<typeof tagNSFactory<typeof SVG_NS, TagName>> }} TagSVGMapProxy
  */
 /** @type {Record<string, any>} */
 const _svgsTagsCache = {};
 /**
- * @type {TagNSMapProxy}
+ * @type {TagSVGMapProxy}
  */
-const svgTagsProxy = new Proxy(/** @type {TagNSMapProxy} */ (_svgsTagsCache), {
+const svgTagsProxy = new Proxy(/** @type {TagSVGMapProxy} */ (_svgsTagsCache), {
   /**
    * @template {keyof XSPA.TagName2ElementMap} TTagName
    *
-   * @param {TagNSMapProxy} target - The target object, used for caching.
+   * @param {TagSVGMapProxy} target - The target object, used for caching.
    * @param {TTagName} tagName - The name of the element to create.
    * @returns
    */
   get(target, tagName) {
     if (!(tagName in _svgsTagsCache)) {
       /** @type {Record<string,any>} */ (_svgsTagsCache)[tagName] =
-        tagNSFactory(namspace, tagName);
+        tagNSFactory(SVG_NS, tagName);
     }
 
     return _svgsTagsCache[tagName];
   },
 });
-
 /**
- * @typedef {TagsHTMLProxy & ((namespaceURI: string) => TagNSMapProxy)} TagsProxy
+ * @typedef {{ [TagName in keyof XSPA.TagNameMathMLPropsMap]: ReturnType<typeof tagNSFactory<typeof MathML_NS, TagName>> }} TagMathMLMapProxy
+ */
+/** @type {Record<string, any>} */
+const _mathMLsTagsCache = {};
+/**
+ * @type {TagMathMLMapProxy}
+ */
+const mathMLTagsProxy = new Proxy(
+  /** @type {TagMathMLMapProxy} */ (_mathMLsTagsCache),
+  {
+    /**
+     * @template {keyof XSPA.TagName2ElementMap} TTagName
+     *
+     * @param {TagMathMLMapProxy} target - The target object, used for caching.
+     * @param {TTagName} tagName - The name of the element to create.
+     * @returns
+     */
+    get(target, tagName) {
+      if (!(tagName in _mathMLsTagsCache)) {
+        /** @type {Record<string,any>} */ (_mathMLsTagsCache)[tagName] =
+          tagNSFactory(MathML_NS, tagName);
+      }
+
+      return _mathMLsTagsCache[tagName];
+    },
+  },
+);
+/**
+ * @typedef {{ [TagName in keyof XSPA.TagNameXHTMLPropsMap]: ReturnType<typeof tagNSFactory<typeof XHTML_NS, TagName>> }} TagXHTMLMapProxy
+ */
+/** @type {Record<string, any>} */
+const _xhtmlsTagsCache = {};
+/**
+ * @type {TagXHTMLMapProxy}
+ */
+const xhtmlTagsProxy = new Proxy(
+  /** @type {TagXHTMLMapProxy} */ (_xhtmlsTagsCache),
+  {
+    /**
+     * @template {keyof XSPA.TagName2ElementMap} TTagName
+     *
+     * @param {TagXHTMLMapProxy} target - The target object, used for caching.
+     * @param {TTagName} tagName - The name of the element to create.
+     * @returns
+     */
+    get(target, tagName) {
+      if (!(tagName in _xhtmlsTagsCache)) {
+        /** @type {Record<string,any>} */ (_xhtmlsTagsCache)[tagName] =
+          tagNSFactory(XHTML_NS, tagName);
+      }
+
+      return _xhtmlsTagsCache[tagName];
+    },
+  },
+);
+/**
+ * @typedef {TagsHTMLProxy & (<TNS extends NS>(namespaceURI: TNS) => TNS extends typeof SVG_NS ? TagSVGMapProxy : TNS extends typeof MathML_NS ? TagMathMLMapProxy : never)} TagsProxy
  */
 
 /**
@@ -524,7 +587,7 @@ const tagsProxy = new Proxy(
     /**
      * @template {keyof HTMLElementTagNameMap} TTagName
      *
-     * @param {TagsProxy} target - The target object, used for caching.
+     * @param {*} target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
      * @returns
      */
@@ -542,11 +605,21 @@ const tagsProxy = new Proxy(
     apply(target, _thisArg, argArray) {
       const namespaceURI = argArray[0];
 
-      if (typeof namespaceURI !== "string" || namespaceURI !== NS_NS) {
-        throw new Error(`Unsupported namespace URI: ${namespaceURI}`);
+      if (namespaceURI === SVG_NS) {
+        return svgTagsProxy;
       }
 
-      return svgTagsProxy;
+      if (namespaceURI === MathML_NS) {
+        return mathMLTagsProxy;
+      }
+
+      if (namespaceURI === XHTML_NS) {
+        return xhtmlTagsProxy;
+      }
+
+      if (typeof namespaceURI !== "string") {
+        throw new Error(`Unsupported namespace URI: ${namespaceURI}`);
+      }
     },
   },
 );
@@ -565,6 +638,7 @@ Marked with `?` at the end of the line needs further investigation and considera
 - [x] `data-*` attributes
 - [x] `aria-*` attributes
 - [x] `dangerouslySetInnerHTML` to set inner HTML
+- [ ] The implementation here could cause an issue for `setAttribute` vs `setAttributeNS` usage, needs to think of another way
 - [x] `on*` attributes to set event listeners
 - [ ] - Research the following, and how to implement their missing types
 	- [ ] `setAttribute` vs `setAttributeNS`
@@ -593,7 +667,9 @@ Give a list of other ideas for now
 */
 
 const h = tagsProxy;
-const svg = tagsProxy(NS_NS);
+const svg = tagsProxy(SVG_NS);
+const math = tagsProxy(MathML_NS);
+const xhtml = tagsProxy(XHTML_NS);
 
 console.log(h);
 console.log(svg);
@@ -610,14 +686,17 @@ const element = h.div(
     },
   },
   h.p({}, "Hello World"),
+  h.input({
+    oninput: (e) => console.log(e.target.value),
+  }),
   h.a({ href: "#" }, "Link"),
   h.button({}, "Click me"),
 );
-
 console.log(element);
 // document.body.appendChild(element);
 
 const svgElement = svg.svg(
+  // Maybe make the props could either {attributes} be a 2 items tuple if [{attributes}, {attributesNS}]
   {
     width: "100",
     height: "100",
@@ -628,6 +707,21 @@ const svgElement = svg.svg(
     stroke: "black",
   }),
 );
-
 console.log(svgElement);
 // document.body.appendChild(svgElement);
+
+const mathElement = math.math(
+  {
+    xmlns: "http://www.w3.org/1998/Math/MathML",
+  },
+  math.mrow(
+    {},
+    math.mi({}, "x"),
+    math.mo({}, "+"),
+    math.mi({}, "y"),
+    math.mo({}, "="),
+    math.mi({}, "z"),
+  ),
+);
+console.log(mathElement);
+// document.body.appendChild(mathElement);
