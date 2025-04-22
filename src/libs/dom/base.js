@@ -1,9 +1,70 @@
 /**
+ * @namespace XSPA
+ */
+
+/**
+ *
  * @typedef {string|number|Node|undefined|null} ChildPrimitive
  * @typedef {ChildPrimitive|ChildPrimitive[]} Child
  */
+
+// - [ ] svg, "http://www.w3.org/2000/svg", HTMLCollectionOf<SVGElement>;
+// - [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<XSPA.HTMLElement>;
+// - [ ] math, "http://www.w3.org/1998/Math/MathML", HTMLCollectionOf<MathMLElement>;
+
+// HTMLProps
+// SVGProps
+// MathMLProps
+// XHTMLProps
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const MATHML_NS = "http://www.w3.org/1998/Math/MathML";
+const XHTML_NS = "http://www.w3.org/1999/xhtml";
+
 /**
- * @typedef {keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap} ElementTagName
+ * @typedef {typeof SVG_NS | typeof MATHML_NS | typeof XHTML_NS} NS
+ */
+
+/**
+ * @typedef {HTMLElementTagNameMap} XSPA.TagNameHTMLPropsMap
+ * @typedef {HTMLElementEventMap} XSPA.TagNameHTMLElementEventMap
+ *
+ * @typedef {SVGElementTagNameMap} XSPA.TagNameSVGPropsMap
+ * @typedef {SVGElementEventMap} XSPA.TagNameSVGElementEventMap
+ *
+ * @typedef {MathMLElementTagNameMap} XSPA.TagNameMathMLPropsMap
+ * @typedef {MathMLElementEventMap} XSPA.TagNameMathMLElementEventMap
+ *
+ * @typedef {HTMLElementTagNameMap} XSPA.TagNameXHTMLPropsMap
+ * @typedef {XSPA.TagNameHTMLPropsMap | XSPA.TagNameSVGPropsMap | XSPA.TagNameMathMLPropsMap | XSPA.TagNameXHTMLPropsMap} XSPA.TagName2ElementMap
+ */
+// * @typedef {XSPA.TagNameHTMLElementEventMap | XSPA.TagNameSVGElementEventMap | XSPA.TagNameMathMLElementEventMap} XSPA.TagName2ElementEventMap
+
+/**
+ * @template {NS} TNS
+ * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MATHML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementTagNameMapByNS
+ */
+/**
+ * @template {NS} TNS
+ * @template {string} TTagName
+ * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MATHML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementByNS
+ */
+
+/**
+ * @typedef {XSPA.TagNameHTMLPropsMap[keyof XSPA.TagNameHTMLPropsMap]} XSPA.HTMLElement
+ * @typedef {XSPA.TagNameSVGPropsMap[keyof XSPA.TagNameSVGPropsMap]} XSPA.SVGElement
+ * @typedef {XSPA.TagNameMathMLPropsMap[keyof XSPA.TagNameMathMLPropsMap]} XSPA.MathMLElement
+ * @typedef {XSPA.TagNameXHTMLPropsMap[keyof XSPA.TagNameXHTMLPropsMap]} XSPA.XHTMLElement
+ * @typedef {XSPA.SVGElement | XSPA.MathMLElement | XSPA.XHTMLElement} XSPA.ElementNS
+ * @typedef {XSPA.ElementNS | XSPA.HTMLElement} XSPA.Element
+ */
+
+/**
+ * @typedef {XSPA.TagNameHTMLPropsMap | XSPA.TagNameSVGPropsMap | XSPA.TagNameMathMLPropsMap | XSPA.TagNameXHTMLPropsMap} ElementTagName
+ */
+
+/**
+ * @typedef {"style"|"toString"} XSPA.OmittedAttributes
  */
 
 /**
@@ -13,13 +74,47 @@
  * 	dangerouslySetInnerHTML?: { __html: string };
  *  dataSet?: { [key: string]: string };
  *  ariaSet?: { [key: string]: string };
- *  style?: { [key in keyof HTMLElement["style"]]?: HTMLElement["style"][key] };
+ *  style?: { [key in keyof XSPA.HTMLElement["style"]]?: XSPA.HTMLElement["style"][key] };
  *  ref?: { current: Elem } | ((element: Elem) => void);
- * }} SharedAttributes
+ * }} XSPA.SharedAttributes
  */
 
 /**
- * @typedef {"style"|"toString"} OmittedAttributes
+ * @template {Record<string, any>} TElemMap
+ * @template {Record<string, any>} TElementEventMap
+ * @template {keyof TElemMap} TTagName
+ * @template {string|undefined} [TOmittedAttributes=undefined]
+ * @typedef {{
+ *   [K in keyof (TOmittedAttributes extends string ? Omit<TElemMap[TTagName], TOmittedAttributes> : TElemMap[TTagName])]?:
+ *     K extends `on${infer E}`
+ *       ? (event: TElementEventMap[E & keyof TElementEventMap]) => void
+ *       : string
+ * } & XSPA.SharedAttributes<TElemMap[TTagName]>} XSPA.GetAttrsForTag
+ */
+
+/**
+ * @template {keyof XSPA.TagNameHTMLPropsMap} TTagName
+ * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameHTMLPropsMap, XSPA.TagNameHTMLElementEventMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForHTMLTag
+ */
+/**
+ * @template {keyof XSPA.TagNameSVGPropsMap} TTagName
+ * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameSVGPropsMap, XSPA.TagNameSVGElementEventMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForSvgTag
+ */
+/**
+ * @template {keyof XSPA.TagNameMathMLPropsMap} TTagName
+ * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameMathMLPropsMap, XSPA.TagNameMathMLElementEventMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForMathMLTag
+ */
+
+/**
+ * @template {keyof XSPA.TagNameXHTMLPropsMap} TTagName
+ * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameXHTMLPropsMap, XSPA.TagNameXHTMLPropsMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForXHTMLTag
+ */
+
+// XSPA.GetNSAttr
+/**
+ * @template {NS} TNS
+ * @template {keyof XSPA.TagName2ElementMap} TTagName
+ * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof XSPA.TagNameSVGPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameSVGPropsMap, XSPA.TagNameSVGElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof MATHML_NS ? TTagName extends keyof XSPA.TagNameMathMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameMathMLPropsMap, XSPA.TagNameMathMLElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof XSPA.TagNameXHTMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameXHTMLPropsMap, XSPA.TagNameXHTMLPropsMap, TTagName, XSPA.OmittedAttributes> : never : never} XSPA.AttrsForNSElement
  */
 
 /**
@@ -44,44 +139,19 @@
 //
 //
 // Attr
-/**
- * @typedef {HTMLElement & SVGElement} TElement
- */
 
-/**
- * @template {ElementTagName} TTagName
- * @typedef {ElementTagName extends infer Tag ? Tag extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[Tag] : Tag extends keyof SVGElementTagNameMap ? SVGElementTagNameMap[Tag] : never : never} ElementType
- */
-/**
- * @template {keyof HTMLElementTagNameMap} TTagName
- * @typedef {{
- *   [K in keyof Omit<HTMLElementTagNameMap[TTagName], OmittedAttributes>]?:
- *     K extends `on${infer E}`
- *       ? (evt: HTMLElementEventMap[E & keyof HTMLElementEventMap]) => void
- *       : string
- * } & SharedAttributes<HTMLElementTagNameMap[TTagName]>} AttrsForHTMLTag
- */
-/**
- * @template {keyof SVGElementTagNameMap} TTagName
- * @typedef {{
- *   [K in keyof Omit<SVGElementTagNameMap[TTagName], OmittedAttributes>]?:
- *     K extends `on${infer E}`
- *       ? (evt: SVGElementEventMap[E & keyof SVGElementEventMap]) => void
- *       : string
- * } & SharedAttributes<SVGElementTagNameMap[TTagName]>} AttrsForSvgTag
- */
-/**
- * @template {ElementTagName} TTagName
- * @typedef {TTagName extends keyof HTMLElementTagNameMap
- *   ? AttrsForHTMLTag<TTagName>
- *   : TTagName extends keyof SVGElementTagNameMap
- *   ? AttrsForSvgTag<TTagName>
- *   : never
- * } AttrsForTag
- */
+// /**
+//  * @template {ElementTagName} TTagName
+//  * @typedef {TTagName extends keyof HTMLElementTagNameMap
+//  *   ? AttrsForHTMLTag<TTagName>
+//  *   : TTagName extends keyof NSElementTagNameMap
+//  *   ? AttrsForSvgTag<TTagName>
+//  *   : never
+//  * } AttrsForTag
+//  */
 
 function setTagAttribute(
-  /** @type {HTMLElement|SVGElement} */ element,
+  /** @type {XSPA.HTMLElement} */ element,
   /** @type {string} */ key,
   /** @type {unknown} */ value,
 ) {
@@ -92,7 +162,7 @@ function setTagAttribute(
         break;
       }
       const _value =
-        /** @type {{ [Key in keyof HTMLElement['style']]: HTMLElement['style'][Key] }} */ (
+        /** @type {{ [Key in keyof XSPA.HTMLElement['style']]: XSPA.HTMLElement['style'][Key] }} */ (
           value
         );
       let styleString = "";
@@ -147,10 +217,7 @@ function setTagAttribute(
 
       if (typeof _value === "function") {
         _value(element);
-      } else if (
-        _value instanceof HTMLElement ||
-        _value instanceof SVGElement
-      ) {
+      } else if (_value instanceof HTMLElement) {
         _value.current = element;
       }
       break;
@@ -169,6 +236,97 @@ function setTagAttribute(
       }
 
       element.setAttribute(key, /** @type {string} */ (value));
+    }
+  }
+}
+function setTagAttributeNS(
+  /** @type {string} */
+  namespace,
+  /** @type {XSPA.ElementNS} */ element,
+  /** @type {string} */ key,
+  /** @type {unknown} */ value,
+) {
+  switch (key) {
+    case "style": {
+      if (typeof value === "string") {
+        element.setAttributeNS(namespace, key, value);
+        break;
+      }
+      const _value =
+        /** @type {{ [Key in keyof XSPA.HTMLElement['style']]: XSPA.HTMLElement['style'][Key] }} */ (
+          value
+        );
+      let styleString = "";
+
+      for (const key in _value) {
+        if (Object.prototype.hasOwnProperty.call(_value, key)) {
+          const value = _value[key];
+          if (typeof value === "string") {
+            styleString += `${key}:${value};`;
+          }
+        }
+      }
+
+      element.setAttributeNS(namespace, key, styleString);
+      break;
+    }
+    case "dataSet": {
+      const _dataSet = /** @type {{ [Key in string]: string }} */ (value);
+      for (const key in _dataSet) {
+        if (Object.prototype.hasOwnProperty.call(_dataSet, key)) {
+          const value = _dataSet[key];
+          if (typeof value === "string") {
+            element.dataset[key] = value;
+          }
+        }
+      }
+      break;
+    }
+    case "ariaSet": {
+      const _ariaSet = /** @type {{ [Key in string]: string }} */ (value);
+      for (const key in _ariaSet) {
+        if (Object.prototype.hasOwnProperty.call(_ariaSet, key)) {
+          const value = _ariaSet[key];
+          if (typeof value === "string") {
+            element.setAttributeNS(namespace, `aria-${key}`, value);
+          }
+        }
+      }
+      break;
+    }
+    case "dangerouslySetInnerHTML": {
+      const _value = /** @type {{ __html: string }} */ (value);
+      element.innerHTML = _value.__html;
+
+      break;
+    }
+    case "ref": {
+      const _value =
+        /** @type {{ current: Element }|((element: Element) => void) } */ (
+          value
+        );
+
+      if (typeof _value === "function") {
+        _value(element);
+      } else if (_value instanceof HTMLElement) {
+        _value.current = element;
+      }
+      break;
+    }
+    default: {
+      if (key.startsWith("on")) {
+        element.addEventListener(
+          key.slice(2).toLowerCase(),
+          /** @type {EventListener} */ (value),
+        );
+        return;
+      }
+
+      if (typeof value === "boolean") {
+        if (value) return element.setAttributeNS(namespace, key, "");
+      }
+
+      element.setAttributeNS(namespace, key, /** @type {string} */ (value));
     }
   }
 }
@@ -196,10 +354,10 @@ function appendChildren(element, children) {
 /**
  * Create an element with the given tag name, attributes, and children.
  *
- * @template {keyof HTMLElementTagNameMap} TTagName
+ * @template {keyof XSPA.TagNameHTMLPropsMap} TTagName
  *
  * @param {TTagName} tagName - The name of the element to create.
- * @param {AttrsForHTMLTag<TTagName>} [attributes] - An object containing attributes to set on the element.
+ * @param {XSPA.AttrsForHTMLTag<TTagName>} [attributes] - An object containing attributes to set on the element.
  * @param {...Child} children - An array of child elements or text nodes to append to the created element.
  * @returns {HTMLElementTagNameMap[TTagName]} The created element.
  */
@@ -214,7 +372,7 @@ function tag(tagName, attributes, ...children) {
         setTagAttribute(
           element,
           /** @type {string} */ (key),
-          attributes[/** @type {keyof AttrsForHTMLTag<TTagName>} */ (key)],
+          attributes[/** @type {keyof XSPA.AttrsForHTMLTag<TTagName>} */ (key)],
         );
       }
     }
@@ -231,38 +389,40 @@ function tag(tagName, attributes, ...children) {
  *
  * @template {keyof HTMLElementTagNameMap} TTagName
  * @param {TTagName} tagName - The name of the element to create.
- * @returns {(attributes?: AttrsForHTMLTag<TTagName>, ...children: Child[]) => HTMLElementTagNameMap[TTagName]} A function that creates an element of the specified type.
+ * @returns {(attributes?: XSPA.AttrsForHTMLTag<TTagName>, ...children: Child[]) => HTMLElementTagNameMap[TTagName]} A function that creates an element of the specified type.
  */
 function tagFactory(tagName) {
   return function (attributes, ...children) {
     return tag(tagName, attributes, ...children);
   };
 }
-
-const SVG_NS = "http://www.w3.org/2000/svg";
-
 /**
  * Create an element with the given tag name, attributes, and children.
  *
- * @template {keyof SVGElementTagNameMap} TTagName
+ * @template {NS} TNS
+ * @template {keyof XSPA.TagName2ElementMap} TTagName
  *
+ * @param {TNS} namespace - The namespace URI for the element.
  * @param {TTagName} tagName - The name of the element to create.
- * @param {AttrsForSvgTag<TTagName>} [attributes] - An object containing attributes to set on the element.
+ * @param {XSPA.AttrsForNSElement<TNS, TTagName>} [attributes] - An object containing attributes to set on the element.
  * @param {...Child} children - An array of child elements or text nodes to append to the created element.
- * @returns {SVGElementTagNameMap[TTagName]} The created element.
+ * @returns {XSPA.GetNSElementByNS<TNS, TTagName>} The created element.
  */
-function svgTag(tagName, attributes, ...children) {
+function tagNS(namespace, tagName, attributes, ...children) {
   // 1. Create the element
-  const element = document.createElementNS(SVG_NS, tagName);
+  const element = document.createElementNS(namespace, tagName);
 
   // 2. Assign props/attributes
   if (attributes) {
     for (const key in attributes) {
       if (Object.prototype.hasOwnProperty.call(attributes, key)) {
-        setTagAttribute(
-          element,
+        setTagAttributeNS(
+          namespace,
+          /** @type {XSPA.ElementNS} */ (element),
           /** @type {string} */ (key),
-          attributes[/** @type {keyof AttrsForSvgTag<TTagName>} */ (key)],
+          attributes[
+            /** @type {keyof XSPA.AttrsForNSElement<TNS, TTagName>} */ (key)
+          ],
         );
       }
     }
@@ -271,20 +431,24 @@ function svgTag(tagName, attributes, ...children) {
   // 3. Append children
   appendChildren(element, children);
 
-  return element;
+  return /** @type {XSPA.GetNSElementByNS<TNS, TTagName>} */ (
+    /** @type {unknown} */ (element)
+  );
 }
 /**
  * Takes a tag name and returns a function _(`tag`)_ that creates elements of that type.
  * This is useful for creating custom elements with specific attributes and children.
  *
- * @template {keyof SVGElementTagNameMap} TTagName
+ * @template {NS} TNS
+ * @template {keyof XSPA.TagName2ElementMap} TTagName
  *
+ * @param {TNS} namespace - The namespace URI for the element.
  * @param {TTagName} tagName - The name of the element to create.
- * @returns {(attributes?: AttrsForSvgTag<TTagName>, ...children: Child[]) => SVGElementTagNameMap[TTagName]} A function that creates an element of the specified type.
+ * @returns {(attributes?: XSPA.AttrsForNSElement<TNS,TTagName>, ...children: Child[]) => XSPA.GetNSElementByNS<TNS,TTagName>} A function that creates an element of the specified type.
  */
-function svgTagFactory(tagName) {
+function tagNSFactory(namespace, tagName) {
   return function (attributes, ...children) {
-    return svgTag(tagName, attributes, ...children);
+    return tagNS(namespace, tagName, attributes, ...children);
   };
 }
 
@@ -320,26 +484,27 @@ const tagsHTMLProxy = new Proxy(
   },
 );
 
+// TODO: Make one for each ns for now
 /**
- * @typedef {{ [TagName in keyof SVGElementTagNameMap]: ReturnType<typeof svgTagFactory<TagName>> }} SvgTagsProxy
+ * @typedef {{ [TagName in keyof NSElementTagNameMap]: ReturnType<typeof tagNSFactory<TagName>> }} TagNSMapProxy
  */
 /** @type {Record<string, any>} */
 const _svgsTagsCache = {};
 /**
- * @type {SvgTagsProxy}
+ * @type {TagNSMapProxy}
  */
-const svgTagsProxy = new Proxy(/** @type {SvgTagsProxy} */ (_svgsTagsCache), {
+const svgTagsProxy = new Proxy(/** @type {TagNSMapProxy} */ (_svgsTagsCache), {
   /**
-   * @template {keyof SVGElementTagNameMap} TTagName
+   * @template {keyof XSPA.TagName2ElementMap} TTagName
    *
-   * @param {SvgTagsProxy} target - The target object, used for caching.
+   * @param {TagNSMapProxy} target - The target object, used for caching.
    * @param {TTagName} tagName - The name of the element to create.
    * @returns
    */
   get(target, tagName) {
     if (!(tagName in _svgsTagsCache)) {
       /** @type {Record<string,any>} */ (_svgsTagsCache)[tagName] =
-        svgTagFactory(tagName);
+        tagNSFactory(namspace, tagName);
     }
 
     return _svgsTagsCache[tagName];
@@ -347,7 +512,7 @@ const svgTagsProxy = new Proxy(/** @type {SvgTagsProxy} */ (_svgsTagsCache), {
 });
 
 /**
- * @typedef {TagsHTMLProxy & ((namespaceURI: string) => SvgTagsProxy)} TagsProxy
+ * @typedef {TagsHTMLProxy & ((namespaceURI: string) => TagNSMapProxy)} TagsProxy
  */
 
 /**
@@ -377,7 +542,7 @@ const tagsProxy = new Proxy(
     apply(target, _thisArg, argArray) {
       const namespaceURI = argArray[0];
 
-      if (typeof namespaceURI !== "string" || namespaceURI !== SVG_NS) {
+      if (typeof namespaceURI !== "string" || namespaceURI !== NS_NS) {
         throw new Error(`Unsupported namespace URI: ${namespaceURI}`);
       }
 
@@ -404,7 +569,7 @@ Marked with `?` at the end of the line needs further investigation and considera
 - [ ] - Research the following, and how to implement their missing types
 	- [ ] `setAttribute` vs `setAttributeNS`
 	- [ ] svg, "http://www.w3.org/2000/svg", HTMLCollectionOf<SVGElement>;
-	- [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<HTMLElement>;
+	- [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<XSPA.HTMLElement>;
 	- [ ] math, "http://www.w3.org/1998/Math/MathML", HTMLCollectionOf<MathMLElement>;
 	- [ ] https://github.com/vanilla-extract-css/vanilla-extract/tree/master
 	- [ ] https://github.com/nivekcode/svg-to-ts
@@ -428,7 +593,7 @@ Give a list of other ideas for now
 */
 
 const h = tagsProxy;
-const svg = tagsProxy(SVG_NS);
+const svg = tagsProxy(NS_NS);
 
 console.log(h);
 console.log(svg);
