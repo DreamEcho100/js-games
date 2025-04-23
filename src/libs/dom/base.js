@@ -8,15 +8,6 @@
  * @typedef {ChildPrimitive|ChildPrimitive[]} Child
  */
 
-// - [ ] svg, "http://www.w3.org/2000/svg", HTMLCollectionOf<SVGElement>;
-// - [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<XSPA.HTMLElement>;
-// - [ ] math, "http://www.w3.org/1998/Math/MathML", HTMLCollectionOf<MathMLElement>;
-
-// HTMLProps
-// SVGProps
-// MathMLProps
-// XHTMLProps
-
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MathML_NS = "http://www.w3.org/1998/Math/MathML";
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
@@ -57,10 +48,6 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * @typedef {XSPA.TagNameXHTMLPropsMap[keyof XSPA.TagNameXHTMLPropsMap]} XSPA.XHTMLElement
  * @typedef {XSPA.SVGElement | XSPA.MathMLElement | XSPA.XHTMLElement} XSPA.ElementNS
  * @typedef {XSPA.ElementNS | XSPA.HTMLElement} XSPA.Element
- */
-
-/**
- * @typedef {XSPA.TagNameHTMLPropsMap | XSPA.TagNameSVGPropsMap | XSPA.TagNameMathMLPropsMap | XSPA.TagNameXHTMLPropsMap} ElementTagName
  */
 
 /**
@@ -134,24 +121,9 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/createElementNS)
  */
-// CSSStyleDeclaration
-//
-//
-//
-// Attr
 
-// /**
-//  * @template {ElementTagName} TTagName
-//  * @typedef {TTagName extends keyof HTMLElementTagNameMap
-//  *   ? AttrsForHTMLTag<TTagName>
-//  *   : TTagName extends keyof NSElementTagNameMap
-//  *   ? AttrsForSvgTag<TTagName>
-//  *   : never
-//  * } AttrsForTag
-//  */
-
-function setTagAttribute(
-  /** @type {XSPA.HTMLElement} */ element,
+function setGeneralTagAttribute(
+  /** @type {XSPA.Element} */ element,
   /** @type {string} */ key,
   /** @type {unknown} */ value,
 ) {
@@ -159,13 +131,13 @@ function setTagAttribute(
     case "style": {
       if (typeof value === "string") {
         element.setAttribute(key, value);
-        break;
+        return true;
       }
+
       const _value =
         /** @type {{ [Key in keyof XSPA.HTMLElement['style']]: XSPA.HTMLElement['style'][Key] }} */ (
           value
         );
-      // let styleString = "";
 
       for (const key in _value) {
         if (Object.prototype.hasOwnProperty.call(_value, key)) {
@@ -175,7 +147,7 @@ function setTagAttribute(
           }
         }
       }
-      break;
+      return true;
     }
     case "dataSet": {
       const _dataSet = /** @type {{ [Key in string]: string }} */ (value);
@@ -187,7 +159,7 @@ function setTagAttribute(
           }
         }
       }
-      break;
+      return true;
     }
     case "ariaSet": {
       const _ariaSet = /** @type {{ [Key in string]: string }} */ (value);
@@ -199,13 +171,13 @@ function setTagAttribute(
           }
         }
       }
-      break;
+      return true;
     }
     case "dangerouslySetInnerHTML": {
       const _value = /** @type {{ __html: string }} */ (value);
       element.innerHTML = _value.__html;
 
-      break;
+      return true;
     }
     case "ref": {
       const _value =
@@ -215,27 +187,34 @@ function setTagAttribute(
 
       if (typeof _value === "function") {
         _value(element);
-      } else if (_value instanceof HTMLElement) {
+      } else if (_value && typeof _value === "object" && "current" in _value) {
         _value.current = element;
       }
-      break;
-    }
-    default: {
-      if (key.startsWith("on")) {
-        element.addEventListener(
-          key.slice(2).toLowerCase(),
-          /** @type {EventListener} */ (value),
-        );
-        return;
-      }
-
-      if (typeof value === "boolean") {
-        if (value) return element.setAttribute(key, "");
-      }
-
-      element.setAttribute(key, /** @type {string} */ (value));
+      return true;
     }
   }
+
+  if (key.startsWith("on")) {
+    element.addEventListener(
+      key.slice(2).toLowerCase(),
+      /** @type {EventListener} */ (value),
+    );
+    return true;
+  }
+
+  return false;
+}
+
+function setTagAttribute(
+  /** @type {XSPA.HTMLElement} */ element,
+  /** @type {string} */ key,
+  /** @type {unknown} */ value,
+) {
+  if (typeof value === "boolean") {
+    if (value) return element.setAttribute(key, "");
+  }
+
+  element.setAttribute(key, /** @type {string} */ (value));
 }
 function setTagAttributeNS(
   /** @type {string} */
@@ -244,89 +223,19 @@ function setTagAttributeNS(
   /** @type {string} */ key,
   /** @type {unknown} */ value,
 ) {
-  switch (key) {
-    case "style": {
-      if (typeof value === "string") {
-        element.setAttributeNS(namespace, key, value);
-        break;
-      }
-      const _value =
-        /** @type {{ [Key in keyof XSPA.HTMLElement['style']]: XSPA.HTMLElement['style'][Key] }} */ (
-          value
-        );
-      let styleString = "";
-
-      for (const key in _value) {
-        if (Object.prototype.hasOwnProperty.call(_value, key)) {
-          const value = _value[key];
-          if (typeof value === "string") {
-            styleString += `${key}:${value};`;
-          }
-        }
-      }
-
-      element.setAttributeNS(namespace, key, styleString);
-      break;
-    }
-    case "dataSet": {
-      const _dataSet = /** @type {{ [Key in string]: string }} */ (value);
-      for (const key in _dataSet) {
-        if (Object.prototype.hasOwnProperty.call(_dataSet, key)) {
-          const value = _dataSet[key];
-          if (typeof value === "string") {
-            element.dataset[key] = value;
-          }
-        }
-      }
-      break;
-    }
-    case "ariaSet": {
-      const _ariaSet = /** @type {{ [Key in string]: string }} */ (value);
-      for (const key in _ariaSet) {
-        if (Object.prototype.hasOwnProperty.call(_ariaSet, key)) {
-          const value = _ariaSet[key];
-          if (typeof value === "string") {
-            element.setAttributeNS(namespace, `aria-${key}`, value);
-          }
-        }
-      }
-      break;
-    }
-    case "dangerouslySetInnerHTML": {
-      const _value = /** @type {{ __html: string }} */ (value);
-      element.innerHTML = _value.__html;
-
-      break;
-    }
-    case "ref": {
-      const _value =
-        /** @type {{ current: Element }|((element: Element) => void) } */ (
-          value
-        );
-
-      if (typeof _value === "function") {
-        _value(element);
-      } else if (_value instanceof HTMLElement) {
-        _value.current = element;
-      }
-      break;
-    }
-    default: {
-      if (key.startsWith("on")) {
-        element.addEventListener(
-          key.slice(2).toLowerCase(),
-          /** @type {EventListener} */ (value),
-        );
-        return;
-      }
-
-      if (typeof value === "boolean") {
-        if (value) return element.setAttributeNS(namespace, key, "");
-      }
-
-      element.setAttributeNS(namespace, key, /** @type {string} */ (value));
-    }
+  if (key.startsWith("on")) {
+    element.addEventListener(
+      key.slice(2).toLowerCase(),
+      /** @type {EventListener} */ (value),
+    );
+    return;
   }
+
+  if (typeof value === "boolean") {
+    if (value) return element.setAttributeNS(namespace, key, "");
+  }
+
+  element.setAttributeNS(namespace, key, /** @type {string} */ (value));
 }
 
 /**
@@ -366,13 +275,21 @@ function tag(tagName, attributes, ...children) {
   // 2. Assign props/attributes
   if (attributes) {
     for (const key in attributes) {
-      if (Object.prototype.hasOwnProperty.call(attributes, key)) {
-        setTagAttribute(
+      if (
+        !Object.prototype.hasOwnProperty.call(attributes, key) ||
+        setGeneralTagAttribute(
           element,
-          /** @type {string} */ (key),
+          key,
           attributes[/** @type {keyof XSPA.AttrsForHTMLTag<TTagName>} */ (key)],
-        );
+        )
+      ) {
+        continue;
       }
+      setTagAttribute(
+        element,
+        /** @type {string} */ (key),
+        attributes[/** @type {keyof XSPA.AttrsForHTMLTag<TTagName>} */ (key)],
+      );
     }
   }
 
@@ -413,16 +330,27 @@ function tagNS(namespace, tagName, attributes, ...children) {
   // 2. Assign props/attributes
   if (attributes) {
     for (const key in attributes) {
-      if (Object.prototype.hasOwnProperty.call(attributes, key)) {
-        setTagAttributeNS(
-          namespace,
+      if (
+        !Object.prototype.hasOwnProperty.call(attributes, key) ||
+        setGeneralTagAttribute(
           /** @type {XSPA.ElementNS} */ (element),
-          /** @type {string} */ (key),
+          key,
           attributes[
             /** @type {keyof XSPA.AttrsForNSElement<TNS, TTagName>} */ (key)
           ],
-        );
+        )
+      ) {
+        continue;
       }
+
+      setTagAttributeNS(
+        namespace,
+        /** @type {XSPA.ElementNS} */ (element),
+        key,
+        attributes[
+          /** @type {keyof XSPA.AttrsForNSElement<TNS, TTagName>} */ (key)
+        ],
+      );
     }
   }
 
@@ -575,7 +503,7 @@ const xhtmlTagsProxy = new Proxy(
   },
 );
 /**
- * @typedef {TagsHTMLProxy & (<TNS extends NS>(namespaceURI: TNS) => TNS extends typeof SVG_NS ? TagSVGMapProxy : TNS extends typeof MathML_NS ? TagMathMLMapProxy : never)} TagsProxy
+ * @typedef {TagsHTMLProxy & (<TNS extends NS>(namespaceURI: TNS) => TNS extends typeof SVG_NS ? TagSVGMapProxy : TNS extends typeof MathML_NS ? TagMathMLMapProxy : TNS extends typeof XHTML_NS ? TagXHTMLMapProxy : never)} TagsProxy
  */
 
 /**
@@ -587,7 +515,7 @@ const tagsProxy = new Proxy(
     /**
      * @template {keyof HTMLElementTagNameMap} TTagName
      *
-     * @param {*} target - The target object, used for caching.
+     * @param {any} target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
      * @returns
      */
@@ -598,9 +526,9 @@ const tagsProxy = new Proxy(
       return tagsHTMLProxy[tagName];
     },
     /**
-     * @param {*} target - The target object, used for caching.
-     * @param {*} _thisArg
-     * @param {*} argArray - The arguments passed to the function.
+     * @param {any} target - The target object, used for caching.
+     * @param {any} _thisArg
+     * @param {any} argArray - The arguments passed to the function.
      */
     apply(target, _thisArg, argArray) {
       const namespaceURI = argArray[0];
@@ -655,6 +583,7 @@ Marked with `?` at the end of the line needs further investigation and considera
 	- [ ] Provides a way to bind state to DOM elements
 	- [ ] Tracks dependencies and automatically updates the DOM when state changes
 - [ ] Garbage Collection
+- [ ] Allow any tag name with a default type of HTMLElement or Element
 
 - [ ] Fragment Support, to create a document fragment?
 - [ ] `key` to identify elements in a list?
@@ -712,8 +641,44 @@ console.log(svgElement);
 
 const mathElement = math.math(
   {
-    xmlns: "http://www.w3.org/1998/Math/MathML",
+    style: {
+      color: "blue",
+      backgroundColor: "blue",
+    },
+    className: "bg-blue-500",
   },
+  math.mrow(
+    {},
+    math.mi({}, "a"),
+    math.mo({}, "+"),
+    math.mi({}, "b"),
+    math.mo({}, "="),
+    math.mi({}, "c"),
+  ),
+  math.mrow(
+    {},
+    math.mi({}, "d"),
+    math.mo({}, "+"),
+    math.mi({}, "e"),
+    math.mo({}, "="),
+    math.mi({}, "f"),
+  ),
+  math.mrow(
+    {},
+    math.mi({}, "g"),
+    math.mo({}, "+"),
+    math.mi({}, "h"),
+    math.mo({}, "="),
+    math.mi({}, "i"),
+  ),
+  math.mrow(
+    {},
+    math.mi({}, "j"),
+    math.mo({}, "+"),
+    math.mi({}, "k"),
+    math.mo({}, "="),
+    math.mi({}, "l"),
+  ),
   math.mrow(
     {},
     math.mi({}, "x"),
@@ -725,3 +690,21 @@ const mathElement = math.math(
 );
 console.log(mathElement);
 // document.body.appendChild(mathElement);
+
+const xhtmlElement = xhtml.div(
+  {
+    className: "bg-blue-500",
+    style: {
+      color: "white",
+      backgroundColor: "blue",
+    },
+  },
+  xhtml.p({}, "Hello World"),
+  xhtml.input({
+    oninput: (e) => console.log(e.target.value),
+  }),
+  xhtml.a({ href: "#" }, "Link"),
+  xhtml.button({}, "Click me"),
+);
+console.log(xhtmlElement);
+// document.body.appendChild(xhtmlElement);
