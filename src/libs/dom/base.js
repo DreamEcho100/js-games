@@ -552,6 +552,8 @@ const tagsProxy = new Proxy(
   },
 );
 
+export { tagsProxy };
+
 /*
 TODO:
 
@@ -594,117 +596,139 @@ Marked with `?` at the end of the line needs further investigation and considera
 
 Give a list of other ideas for now
 */
+// {
+// const h = tagsProxy;
+// const svg = tagsProxy(SVG_NS);
+// const math = tagsProxy(MathML_NS);
+// const xhtml = tagsProxy(XHTML_NS);
 
-const h = tagsProxy;
-const svg = tagsProxy(SVG_NS);
-const math = tagsProxy(MathML_NS);
-const xhtml = tagsProxy(XHTML_NS);
+// console.log(h);
+// console.log(svg);
 
-console.log(h);
-console.log(svg);
+// const element = h.div(
+//   {
+//     className: "bg-red-500",
+//     style: {
+//       color: "white",
+//       backgroundColor: "red",
+//     },
+//     onclick: () => {
+//       console.log("clicked");
+//     },
+//   },
+//   h.p({}, "Hello World"),
+//   h.input({
+//     oninput: (e) => console.log(e.target.value),
+//   }),
+//   h.a({ href: "#" }, "Link"),
+//   h.button({}, "Click me"),
+//   h.canvas({
+//     width: 100,
+//     height: 100,
+//     style: {
+//       backgroundColor: "blue",
+//     },
+//     onload: (e) => {
+//       const ctx = /** @type {CanvasRenderingContext2D} */ (
+//         e.target.getContext("2d")
+//       );
+//       if (!ctx) return;
 
-const element = h.div(
-  {
-    className: "bg-red-500",
-    style: {
-      color: "white",
-      backgroundColor: "red",
-    },
-    onclick: () => {
-      console.log("clicked");
-    },
-  },
-  h.p({}, "Hello World"),
-  h.input({
-    oninput: (e) => console.log(e.target.value),
-  }),
-  h.a({ href: "#" }, "Link"),
-  h.button({}, "Click me"),
-);
-console.log(element);
-// document.body.appendChild(element);
+//       const animate = () => {
+//         ctx.clearRect(0, 0, 100, 100);
+//         ctx.fillStyle = "red";
+//         ctx.fillRect(0, 0, 100, 100);
+//         requestAnimationFrame(animate);
+//       };
+//       animate();
+//     },
+//   }),
+// );
+// console.log(element);
+// // document.body.appendChild(element);
 
-const svgElement = svg.svg(
-  // Maybe make the props could either {attributes} be a 2 items tuple if [{attributes}, {attributesNS}]
-  {
-    width: "100",
-    height: "100",
-  },
-  svg.path({
-    d: "M10 10 H 90 V 90 H 10 L 10 10",
-    fill: "none",
-    stroke: "black",
-  }),
-);
-console.log(svgElement);
-// document.body.appendChild(svgElement);
+// const svgElement = svg.svg(
+//   // Maybe make the props could either {attributes} be a 2 items tuple if [{attributes}, {attributesNS}] or pass a special object `ns: object` on the attributes
+//   {
+//     width: "100",
+//     height: "100",
+//   },
+//   svg.path({
+//     d: "M10 10 H 90 V 90 H 10 L 10 10",
+//     fill: "none",
+//     stroke: "black",
+//   }),
+// );
+// console.log(svgElement);
+// // document.body.appendChild(svgElement);
 
-const mathElement = math.math(
-  {
-    style: {
-      color: "blue",
-      backgroundColor: "blue",
-    },
-    className: "bg-blue-500",
-  },
-  math.mrow(
-    {},
-    math.mi({}, "a"),
-    math.mo({}, "+"),
-    math.mi({}, "b"),
-    math.mo({}, "="),
-    math.mi({}, "c"),
-  ),
-  math.mrow(
-    {},
-    math.mi({}, "d"),
-    math.mo({}, "+"),
-    math.mi({}, "e"),
-    math.mo({}, "="),
-    math.mi({}, "f"),
-  ),
-  math.mrow(
-    {},
-    math.mi({}, "g"),
-    math.mo({}, "+"),
-    math.mi({}, "h"),
-    math.mo({}, "="),
-    math.mi({}, "i"),
-  ),
-  math.mrow(
-    {},
-    math.mi({}, "j"),
-    math.mo({}, "+"),
-    math.mi({}, "k"),
-    math.mo({}, "="),
-    math.mi({}, "l"),
-  ),
-  math.mrow(
-    {},
-    math.mi({}, "x"),
-    math.mo({}, "+"),
-    math.mi({}, "y"),
-    math.mo({}, "="),
-    math.mi({}, "z"),
-  ),
-);
-console.log(mathElement);
-// document.body.appendChild(mathElement);
+// const mathElement = math.math(
+//   {
+//     style: {
+//       color: "blue",
+//       backgroundColor: "blue",
+//     },
+//     className: "bg-blue-500",
+//   },
+//   math.mrow(
+//     {},
+//     math.mi({}, "a"),
+//     math.mo({}, "+"),
+//     math.mi({}, "b"),
+//     math.mo({}, "="),
+//     math.mi({}, "c"),
+//   ),
+//   math.mrow(
+//     {},
+//     math.mi({}, "d"),
+//     math.mo({}, "+"),
+//     math.mi({}, "e"),
+//     math.mo({}, "="),
+//     math.mi({}, "f"),
+//   ),
+//   math.mrow(
+//     {},
+//     math.mi({}, "g"),
+//     math.mo({}, "+"),
+//     math.mi({}, "h"),
+//     math.mo({}, "="),
+//     math.mi({}, "i"),
+//   ),
+//   math.mrow(
+//     {},
+//     math.mi({}, "j"),
+//     math.mo({}, "+"),
+//     math.mi({}, "k"),
+//     math.mo({}, "="),
+//     math.mi({}, "l"),
+//   ),
+//   math.mrow(
+//     {},
+//     math.mi({}, "x"),
+//     math.mo({}, "+"),
+//     math.mi({}, "y"),
+//     math.mo({}, "="),
+//     math.mi({}, "z"),
+//   ),
+// );
+// console.log(mathElement);
+// // document.body.appendChild(mathElement);
 
-const xhtmlElement = xhtml.div(
-  {
-    className: "bg-blue-500",
-    style: {
-      color: "white",
-      backgroundColor: "blue",
-    },
-  },
-  xhtml.p({}, "Hello World"),
-  xhtml.input({
-    oninput: (e) => console.log(e.target.value),
-  }),
-  xhtml.a({ href: "#" }, "Link"),
-  xhtml.button({}, "Click me"),
-);
-console.log(xhtmlElement);
-// document.body.appendChild(xhtmlElement);
+// const xhtmlElement = xhtml.div(
+//   {
+//     className: "bg-blue-500",
+//     style: {
+//       color: "white",
+//       backgroundColor: "blue",
+//     },
+//   },
+//   xhtml.p({}, "Hello World"),
+//   xhtml.input({
+//     oninput: (e) => console.log(e.target.value),
+//   }),
+//   xhtml.a({ href: "#" }, "Link"),
+//   xhtml.button({}, "Click me"),
+// );
+// console.log(xhtmlElement);
+// // document.body.appendChild(xhtmlElement);
+// }
