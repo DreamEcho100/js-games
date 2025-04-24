@@ -1,83 +1,79 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/*
-### Production-Ready Features
 
-1. **Complete Reactive System**
-   - Signals for state management
-   - Computed values for derived state
-   - Effects for side effects
-   - Batched operations for efficiency
+const NODE_TYPE = {
+  SIGNAL: 0,
+  EFFECT: 1,
+  MEMO: 2,
+};
 
-2. **Performance Optimizations**
-   - Microtask-based scheduling for efficient updates
-   - Batching to prevent cascading updates
-   - WeakMap for better memory management
-   - Deep equality for smart change detection
-
-3. **Error Protection**
-   - Cycle detection to prevent infinite loops
-   - Error handling for computations
-   - Proper cleanup on disposal
-
-4. **Developer Experience**
-   - Named signals for easier debugging
-   - The peek() method for reading without tracking
-   - Utilities like untrack() and batch()
-
-5. **Advanced Features**
-   - Resource management with scopes
-   - DOM binding with ref()
-   - Async effect support
-   - Memory leak prevention
-*/
-
-/*
- Concept 1: Reactive Graph
-Everything revolves around nodes (called ReactiveNodes). Each signal, effect, or computed value is represented by one. These nodes:
-
-Track who depends on them (observers)
-
-Track who they depend on (sources)
-
-Rerun their computation if a dependency changed
-*/
-interface ReactiveNode {
+interface ReactiveNode<TValue> {
   id: number;
   version: number; // incremented when value changes
-  sources: WeakMap<ReactiveNode, number>; // dependencies + version seen
-  observers: Set<ReactiveNode>; // who depends on me
-  compute?: () => any; // how to calculate value
-  value?: any; // cached value (for signals/computeds)
+  sources: WeakMap<ReactiveNode<any>, number>; // dependencies + version seen
+  observers: Set<ReactiveNode<any>>; // who depends on me
+  sourceList: ReactiveNode<any>[]; // We can't iterate a WeakMap directly, so we need to track sources separately
+  compute?: () => TValue; // how to calculate value
+  value: TValue; // cached value (for signals/computeds)
   cleanup?: (() => void) | void; // cleanup function (for effects)
   onDirty?: () => void; // how to rerun when dirty
   dirty?: boolean;
   error?: any;
   name?: string; // for debugging and cycle detection
+  // Flag to identify effect nodes (terminals in the dependency graph)
+  type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
+  equals?: (a: TValue, b: TValue) => boolean;
+  dispose: () => void;
+}
+interface SignalOptions<TValue> {
+  equals?: (a: TValue, b: TValue) => boolean;
+  name?: string;
+}
+interface BaseSignalValue<TValue> {
+  _debug?: {
+    node: ReactiveNode<TValue>;
+    peek: () => TValue;
+    dirty: () => boolean | undefined;
+    id: number;
+    name: string | undefined;
+    createdAt?: string; // for stack trace
+  };
+  dispose: () => void;
+  peek: () => TValue;
+}
+interface SignalValue<TValue> extends BaseSignalValue<TValue> {
+  (): TValue;
+  set(value: TValue): void;
+  update(fn: (value: TValue) => TValue): void;
+}
+interface MemoValue<TValue> {
+  (): TValue;
 }
 
+// Symbol used to access internal node (not exported)
 const SIGNAL = Symbol("signal");
 
-// For cycle detection
-const computationStack: ReactiveNode[] = [];
-
-let activeObserver: ReactiveNode | null = null; // current running effect/computed
-let nextId = 1;
+let nextId = 0;
 let batchDepth = 0;
-const pendingEffects = new Set<ReactiveNode>();
+let activeObserver: ReactiveNode<any> | null = null;
+const pendingEffects = new Set<ReactiveNode<any>>();
 let pendingMicrotask = false;
 
-/*
-This is the brain of every signal, computed, or effect. It tracks:
+/************************ ************************/
+/***************** Create Signal *****************/
+/************************ ************************/
 
-Its value
-
-Who depends on it (observers)
-
-What it depends on (sources)
-
-If it's dirty and needs recalculation
-*/
-function createNode<T>(val: T, name?: string): ReactiveNode {
+/**
+ * 🧱 Create a fresh node
+ */
+function createNode<TValue>(
+  val: TValue,
+  options: {
+    name?: string;
+    equals?: (a: TValue, b: TValue) => boolean;
+    type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
+    dispose: () => void;
+  },
+): ReactiveNode<TValue> {
   return {
     id: nextId++,
     version: 0,
@@ -89,116 +85,227 @@ function createNode<T>(val: T, name?: string): ReactiveNode {
     onDirty: undefined,
     sources: new WeakMap(),
     observers: new Set(),
-    name,
+    sourceList: [],
+    ...options,
   };
 }
 
-/*
-Every time a signal or computed is read, and an effect/computed is running, we need to record that dependency.
-*/
-function trackAccess(sourceNode: ReactiveNode) {
+/**
+ * 🛑 Read a value without tracking dependencies
+ */
+function untrack<T>(fn: () => T): T {
+  const prevObserver = activeObserver;
+  activeObserver = null;
+  try {
+    return fn();
+  } finally {
+    activeObserver = prevObserver;
+  }
+}
+
+/**
+ * 🧭 Track a read dependency
+ */
+function trackAccess<TValue>(sourceNode: ReactiveNode<TValue>) {
   if (activeObserver) {
-    activeObserver.sources.set(sourceNode, sourceNode.version);
-    sourceNode.observers.add(activeObserver);
+    // ✅ Prevent duplicate tracking
+    if (!activeObserver.sources.has(sourceNode)) {
+      activeObserver.sources.set(sourceNode, sourceNode.version);
+      activeObserver.sourceList.push(sourceNode);
+      sourceNode.observers.add(activeObserver);
+    }
   }
 }
 
-function cleanupSources(node: ReactiveNode) {
-  // We can't iterate a WeakMap directly, so we need to track sources separately
-  // This is a known limitation of WeakMap
+/**
+ * ⏳ Schedule flush of pending effects
+ */
+function scheduleMicrotask() {
+  if (pendingMicrotask || pendingEffects.size === 0) {
+    return;
+  }
+
+  pendingMicrotask = true;
+  queueMicrotask(() => {
+    pendingMicrotask = false;
+    // Create a copy to avoid issues if new effects are added during processing
+    const effects = Array.from(pendingEffects);
+    pendingEffects.clear();
+    for (const effect of effects) runNode(effect);
+  });
+}
+
+/**
+ * 📣 Notify observers of a change
+ */
+function notifyObservers<TValue>(node: ReactiveNode<TValue>) {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`📣 notifyObservers: ${node.name || `Node_${node.id}`}`);
+  }
+
+  // Make a copy to avoid issues if the set changes during iteration
   const observers = Array.from(node.observers);
-  for (const observer of observers) {
-    observer.sources.delete(node);
-  }
-  node.sources = new WeakMap();
-}
 
-function notifyObservers(node: ReactiveNode) {
-  for (const observer of node.observers) {
-    observer.dirty = true;
-    if (observer.onDirty) {
-      if (batchDepth > 0) {
-        pendingEffects.add(observer);
+  for (const observer of observers) {
+    if (!observer.dirty) {
+      // Avoid redundant notifications
+      observer.dirty = true;
+      // ✅ If the observer knows how to reschedule itself, do that
+      if (observer.onDirty) {
+        observer.onDirty();
       } else {
-        scheduleMicrotask();
+        pendingEffects.add(observer);
+        if (batchDepth === 0) {
+          scheduleMicrotask();
+        }
       }
     }
   }
 }
 
-// Deep equality comparison for objects and arrays
-function deepEquals(a: any, b: any): boolean {
-  if (Object.is(a, b)) return true;
+const defaultEquals = Object.is;
 
-  if (
-    a === null ||
-    b === null ||
-    typeof a !== "object" ||
-    typeof b !== "object"
-  ) {
-    return false;
+/**
+ * 🌱 Signal primitive
+ */
+function createSignal<TValue>(
+  initialValue: TValue,
+  options?: SignalOptions<TValue>,
+) {
+  const node = createNode(initialValue, {
+    name: options?.name,
+    type: NODE_TYPE.SIGNAL,
+    equals: options?.equals,
+    dispose: () => {
+      // Clean up the signal
+      if (node.cleanup) {
+        node.cleanup();
+        node.cleanup = undefined;
+      }
+
+      // Remove from dependency graph
+      cleanupSources(node);
+
+      // Remove from pending effects
+      pendingEffects.delete(node);
+
+      // Remove compute function to mark as disposed
+      node.compute = undefined;
+    },
+  });
+
+  const signal = Object.assign(
+    () => {
+      trackAccess(node);
+      return node.value;
+    },
+    {
+      set: (newValue: TValue) => {
+        if ((node.equals ?? defaultEquals)(node.value, newValue)) {
+          return;
+        }
+
+        node.value = newValue;
+        node.version++;
+        notifyObservers(node);
+      },
+      update: (fn: (value: TValue) => TValue) => signal.set(fn(node.value)),
+      peek: () => node.value,
+      // [SIGNAL]: node,
+    },
+  ) as SignalValue<TValue>;
+
+  // Internal access to node (for system use)
+  Object.defineProperty(signal, SIGNAL, {
+    value: node,
+    enumerable: false,
+    writable: false,
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    signal._debug = {
+      node,
+      peek: () => node.value,
+      dirty: () => node.dirty,
+      id: node.id,
+      name: node.name,
+      createdAt: new Error().stack,
+    };
   }
 
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEquals(a[i], b[i])) return false;
-    }
-    return true;
-  }
-
-  if (a.constructor !== b.constructor) return false;
-
-  if (a instanceof Date) return a.getTime() === b.getTime();
-  if (a instanceof RegExp) return a.toString() === b.toString();
-
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-
-  if (keysA.length !== keysB.length) return false;
-
-  for (const key of keysA) {
-    if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
-    if (!deepEquals(a[key], b[key])) return false;
-  }
-
-  return true;
+  return signal;
 }
 
-function runNode(node: ReactiveNode) {
-  if (!node.compute) return;
+/************************ ************************/
+/***************** Create Effect *****************/
+/************************ ************************/
 
-  // Detect cycles
+/**
+ * 🔄 Core computation logic
+ * Runs a memo/effect and handles dependency tracking + cleanup
+ */
+const computationStack: ReactiveNode<unknown>[] = [];
+
+/**
+ * 🔁 Remove source links from a node
+ */
+function cleanupSources<TValue>(node: ReactiveNode<TValue>) {
+  // Remove this node as an observer from all its sources
+  for (const source of node.sourceList) {
+    source.observers.delete(node);
+  }
+
+  // Clear all tracked sources
+  node.sources = new WeakMap();
+  node.sourceList = [];
+}
+
+function runNode(node: ReactiveNode<any>) {
+  if (!node.compute) return false;
+
+  // 🔁 Detect cycles
   if (computationStack.includes(node)) {
     const cycle = computationStack
       .slice(computationStack.indexOf(node))
       .map((n) => n.name || `Node_${n.id}`)
       .join(" → ");
-    const error = new Error(`Cycle detected in reactive graph: ${cycle}`);
-    console.error(error);
+
+    const error = new Error(`⚠️ Cycle reference detected: ${cycle}`);
+    console.warn(error);
     node.error = error;
-    return;
+    node.dirty = false; // ✅ Stop further propagation
+
+    // Clean up incomplete dependencies to prevent further issues
+    cleanupSources(node);
+    return false;
   }
 
-  // Add to computation stack for cycle detection
   computationStack.push(node);
 
+  // Clean up previous dependencies before recomputing
+  const prevCleanup = node.cleanup;
   cleanupSources(node);
 
   const prevObserver = activeObserver;
   activeObserver = node;
 
   try {
-    if (typeof node.cleanup === "function") {
-      node.cleanup();
-      node.cleanup = undefined;
-    }
+    // Run previous cleanup if any
+    prevCleanup?.();
+    node.cleanup = undefined;
 
     const newValue = node.compute();
+    const valueChanged = !((node && node.equals) ?? defaultEquals)(
+      node.value,
+      newValue,
+    );
 
-    if (node.onDirty && typeof newValue === "function") {
-      node.cleanup = newValue;
-    } else if (!node.onDirty && !deepEquals(node.value, newValue)) {
+    // For effect nodes, store result but don't notify (they're terminal)
+    if (node.type === NODE_TYPE.EFFECT) {
+      node.value = newValue;
+    }
+    // For computed/memo nodes, update and notify if changed
+    else if (valueChanged) {
       node.value = newValue;
       node.version++;
       notifyObservers(node);
@@ -206,312 +313,180 @@ function runNode(node: ReactiveNode) {
 
     node.dirty = false;
     node.error = undefined;
-  } catch (err) {
-    node.error = err;
-    console.error(
-      `Error in ${node.name ? node.name : "reactive computation"}:`,
-      err,
+    return valueChanged;
+  } catch (error) {
+    node.error = error;
+    node.dirty = false; // Prevent continuous retries on error
+    console.warn(
+      `⚠️ Error in reactive computation${node.name ? ` (${node.name})` : ""}:`,
+      error,
     );
+    return false;
   } finally {
-    // Remove from computation stack
     computationStack.pop();
     activeObserver = prevObserver;
   }
 }
 
-function updateIfNecessary(node: ReactiveNode): boolean {
-  if (!node.compute) return false;
-  let shouldUpdate = node.dirty;
-
-  if (!shouldUpdate) {
-    // Since we're using WeakMap and can't iterate, we rely on the dirty flag
-    // We can also check individual sources if we track them separately
-    shouldUpdate = node.dirty === true;
-  }
-
-  if (shouldUpdate) {
-    runNode(node);
-    return true;
-  }
-
-  return false;
-}
-
-function startBatch() {
-  batchDepth++;
-}
-
-function endBatch() {
-  if (--batchDepth === 0) {
-    scheduleMicrotask();
-  }
-}
-
-function scheduleMicrotask() {
-  if (!pendingMicrotask && pendingEffects.size > 0) {
-    pendingMicrotask = true;
-    queueMicrotask(() => {
-      pendingMicrotask = false;
-      const effects = Array.from(pendingEffects);
-      pendingEffects.clear();
-      for (const effect of effects) runNode(effect);
-    });
-  }
-}
-
-export interface SignalOptions<T> {
-  equals?: (a: T, b: T) => boolean;
-  name?: string;
-}
-
-export interface SignalValue<T> {
-  (): T;
-  set(value: T): void;
-  update(fn: (value: T) => T): void;
-  peek(): T; // Read without tracking
-}
-
-export function createSignal<T>(initialValue: T, options?: SignalOptions<T>) {
-  const node = createNode(initialValue, options?.name);
-  const equals = options?.equals || deepEquals;
-
-  const signal = (() => {
-    trackAccess(node);
-    return node.value;
-  }) as SignalValue<T>;
-
-  signal.set = (newValue: T) => {
-    if (!equals(node.value, newValue)) {
-      startBatch();
-      try {
-        node.value = newValue;
-        node.version++;
-        notifyObservers(node);
-      } finally {
-        endBatch();
+/**
+ * 👁️ Effect
+ */
+function createEffect<TValue>(
+  fn: () => TValue,
+  options?: SignalOptions<TValue>,
+) {
+  const node = createNode<TValue>(undefined as any, {
+    name: options?.name,
+    type: NODE_TYPE.EFFECT,
+    equals: options?.equals,
+    dispose: () => {
+      // Clean up the effect
+      if (node.cleanup) {
+        node.cleanup();
+        node.cleanup = undefined;
       }
-    }
-  };
 
-  signal.update = (fn: (value: T) => T) => signal.set(fn(node.value));
+      // Remove from dependency graph
+      cleanupSources(node);
 
-  signal.peek = () => node.value;
+      // Remove from pending effects
+      pendingEffects.delete(node);
 
-  (signal as any)[SIGNAL] = node;
-
-  return signal;
-}
-
-export function createComputed<T>(fn: () => T, options?: { name?: string }) {
-  const node = createNode<T>(undefined as T, options?.name);
+      // Remove compute function to mark as disposed
+      node.compute = undefined;
+    },
+  });
   node.compute = fn;
-  runNode(node);
+  if (process.env.NODE_ENV !== "production") {
+    node.cleanup = () => {
+      console.warn(
+        `⚠️ Effect '${
+          node.name || `Node_${node.id}`
+        }' may have leaked — not disposed manually.`,
+      );
+    };
+  }
 
-  const computed = () => {
-    updateIfNecessary(node);
-    trackAccess(node);
-
-    if (node.error !== undefined) {
-      const err = node.error;
-      node.error = undefined;
-      throw err;
-    }
-
-    return node.value;
-  };
-
-  (computed as any)[SIGNAL] = node;
-
-  return computed;
-}
-
-export function createEffect(fn: () => void, options?: { name?: string }) {
-  const node = createNode(undefined, options?.name);
-  node.compute = fn;
+  // Custom scheduling strategy for this effect
   node.onDirty = () => {
+    node.onDirty = undefined; // Reset to prevent reentrance
     if (batchDepth > 0) {
       pendingEffects.add(node);
     } else {
+      pendingEffects.add(node);
       scheduleMicrotask();
     }
   };
 
+  // Initial run
   runNode(node);
 
+  // Return disposal function
   return () => {
-    if (typeof node.cleanup === "function") {
+    // Clean up the effect
+    if (node.cleanup) {
       node.cleanup();
       node.cleanup = undefined;
     }
+
+    // Remove from dependency graph
     cleanupSources(node);
+
+    // Remove from pending effects
     pendingEffects.delete(node);
+
+    // Remove compute function to mark as disposed
+    node.compute = undefined;
   };
 }
 
-export function createBatchedSignals<T extends Record<string, unknown>>(
-  initials: T,
-  options?: {
-    prefix?: string;
-    equals?: (a: any, b: any) => boolean;
-  },
-) {
-  const result = {} as {
-    [K in keyof T & string]: ReturnType<typeof createSignal<T[K]>>;
-  };
-  const prefix = options?.prefix || "";
-  const equals = options?.equals;
+function updateIfNecessary<TValue>(node: ReactiveNode<TValue>): boolean {
+  if (!node.compute || !node.dirty) return false;
 
-  startBatch();
-  try {
-    for (const key in initials) {
-      if (Object.prototype.hasOwnProperty.call(initials, key)) {
-        (result as Record<string, any>)[key] = createSignal(initials[key], {
-          name: `${prefix}${key}`,
-          equals,
-        });
+  return runNode(node);
+}
+
+/**
+ * 🔁 Memo
+ */
+function createMemo<TValue>(
+  fn: () => TValue,
+  options?: SignalOptions<TValue>,
+): MemoValue<TValue> {
+  const node = createNode<TValue>(undefined as any, {
+    name: options?.name,
+    type: NODE_TYPE.MEMO,
+    equals: options?.equals,
+    dispose: () => {
+      // Clean up the memo
+      if (node.cleanup) {
+        node.cleanup();
+        node.cleanup = undefined;
       }
-    }
-  } finally {
-    endBatch();
-  }
 
-  return result;
-}
+      // Remove from dependency graph
+      cleanupSources(node);
 
-// Core functions from the previous tutorial are assumed available
-// This file includes extended utilities and features built on top of the reactive core
+      // Remove from pending effects
+      pendingEffects.delete(node);
 
-/**
- * Disable tracking within a function
- * @template T
- * @param {() => T} fn
- * @returns {T}
- */
-export function untrack<T>(fn: () => T) {
-  const prev = activeObserver;
-  activeObserver = null;
-  try {
-    return fn();
-  } finally {
-    activeObserver = prev;
-  }
-}
-
-/**
- * Cached computed value with update tracking
- * @template T
- * @param {() => T} fn
- * @returns {() => T}
- */
-export function createMemo<T>(fn: () => T, options?: { name?: string }) {
-  const node = createNode<T>(undefined as T, options?.name);
+      // Remove compute function to mark as disposed
+      node.compute = undefined;
+    },
+  });
   node.compute = fn;
 
+  // Create memo function that acts like a signal
   const memo = () => {
-    updateIfNecessary(node);
     trackAccess(node);
+    updateIfNecessary(node);
     return node.value;
   };
 
-  runNode(node);
-  (memo as any)[SIGNAL] = node;
+  if (process.env.NODE_ENV !== "production") {
+    memo._debug = {
+      node,
+      peek: () => node.value,
+      dirty: () => node.dirty,
+      id: node.id,
+      name: node.name,
+      createdAt: new Error().stack,
+    };
+  }
 
-  return memo;
+  // Initial computation
+  runNode(node);
+
+  // Add signal methods
+  Object.assign(memo, {
+    peek: () => node.value,
+    [SIGNAL]: node,
+  });
+
+  // Internal access to node (for system use)
+  Object.defineProperty(memo, SIGNAL, {
+    value: node,
+    enumerable: false,
+    writable: false,
+  });
+
+  return memo as MemoValue<TValue>;
 }
 
 /**
- * Group multiple signal updates into a single batch
- * @template T
- * @param {() => T} fn
- * @returns {T}
+ * 📦 Batch signals
  */
-export function batch<T>(fn: () => T) {
-  startBatch();
+function batchSignals<TValue>(fn: () => TValue): TValue {
+  batchDepth++;
   try {
     return fn();
   } finally {
-    endBatch();
+    batchDepth--;
+    if (batchDepth === 0 && pendingEffects.size > 0) {
+      scheduleMicrotask();
+    }
   }
 }
 
-/**
- * Bind signal to DOM element property
- * @template {keyof HTMLElementTagNameMap} K
- * @param {HTMLElementTagNameMap[K]} element
- * @param {keyof HTMLElementTagNameMap[K]} key
- * @param {() => any} signalFn
- */
-export function ref<K extends keyof HTMLElementTagNameMap>(
-  element: HTMLElementTagNameMap[K],
-  key: keyof HTMLElementTagNameMap[K],
-  signalFn: () => any,
-) {
-  createEffect(() => {
-    element[key] = signalFn();
-  });
-}
-
-/**
- * Create a disposal scope for effects/signals
- * @returns {{ run<T>(fn: () => T)=> T, dispose() => void }}
- */
-export function createScope<T>(): {
-  run(fn: () => T): T;
-  dispose: () => void;
-} {
-  const disposers: (() => void)[] = [];
-
-  return {
-    run(fn: () => T) {
-      const prev = activeObserver;
-      activeObserver = {
-        sources: new WeakMap(),
-        observers: new Set(),
-        cleanup: undefined,
-        compute: undefined,
-        dirty: false,
-        error: undefined,
-        id: nextId++,
-        onDirty: undefined,
-        version: 0,
-        value: undefined,
-      };
-      const result = fn();
-      cleanupSources(activeObserver);
-      if (typeof activeObserver.cleanup === "function") {
-        disposers.push(activeObserver.cleanup);
-      }
-      activeObserver = prev;
-      return result;
-    },
-    dispose() {
-      for (const d of disposers) {
-        if (typeof d === "function") d();
-      }
-    },
-  };
-}
-
-/**
- * Effect with async support and optional cleanup
- * @param {(onCleanup: (fn: () => void) => void) => void | Promise<void>} fn
- */
-export function createAsyncEffect(
-  fn: (onCleanup: (fn: () => void) => void) => void | Promise<void>,
-  options?: { name?: string },
-) {
-  let cleanupFn: (() => void) | undefined;
-  const onCleanup = (cb: () => void) => {
-    cleanupFn = cb;
-  };
-
-  createEffect(() => {
-    if (cleanupFn) cleanupFn();
-    cleanupFn = undefined;
-
-    const result = fn(onCleanup);
-    if (result instanceof Promise) {
-      result.catch(console.error);
-    }
-  }, options);
-}
+export { createSignal, createEffect, createMemo, batchSignals, untrack };
+export type { SignalValue, SignalOptions, ReactiveNode };
