@@ -54,10 +54,6 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  */
 
 /**
- * @typedef {"style"|"classList"|"toString"} de100x.OmittedAttributes
- */
-
-/**
  * @template {Element} Elem
  *
  * @typedef {{
@@ -70,52 +66,43 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  */
 
 /**
- * @template TItem
- * @typedef {{
- *	[Key in keyof TItem as TItem[Key] extends (...args: any[]) => any
- *		? Key extends `on${infer E}`
- *			? Key
- *			: never
- *		: Key]: TItem[Key];
- * }} FilterNonEventCallbacks
- */
-
-/**
  * @template {Record<string, any>} TElemMap
- * @template {Record<string, any>} TElementEventMap
+ * @template {Record<string, any>} TEventMap
  * @template {keyof TElemMap} TTagName
- * @template {string} TOmittedAttributes
  * @typedef {{
- *   [Key in keyof FilterNonEventCallbacks<Omit<TElemMap[TTagName], de100x.OmittedAttributes>>]?:
- *     Key extends `on${infer E}`
- *       ? (event: TElementEventMap[E & keyof TElementEventMap] & { target: TElemMap[TTagName] } ) => void
- *       : TElemMap[TTagName][Key]
+ *   [Key in keyof TElemMap[TTagName] as (
+ *     Key extends `on${string}` ? Key :
+ *     TElemMap[TTagName][Key] extends object ? never :
+ *     Key
+ *   )]?: TElemMap[TTagName][Key];
+ * } & {
+ *   [K in keyof TEventMap as `on${Capitalize<K & string>}`]?: (event: TEventMap[K] & { target: TElemMap[TTagName] }) => void;
  * } & de100x.SharedAttributes<TElemMap[TTagName]>} de100x.GetAttrsForTag
  */
 
 /**
  * @template {keyof de100x.TagNameHTMLPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameHTMLPropsMap, de100x.TagNameHTMLElementEventMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForHTMLTag
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameHTMLPropsMap, de100x.TagNameHTMLElementEventMap, TTagName>} de100x.AttrsForHTMLTag
  */
 /**
  * @template {keyof de100x.TagNameSVGPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForSvgTag
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName>} de100x.AttrsForSvgTag
  */
 /**
  * @template {keyof de100x.TagNameMathMLPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForMathMLTag
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName>} de100x.AttrsForMathMLTag
  */
 
 /**
  * @template {keyof de100x.TagNameXHTMLPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForXHTMLTag
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName>} de100x.AttrsForXHTMLTag
  */
 
 // de100x.GetNSAttr
 /**
  * @template {de100xNS} TNS
  * @template {keyof de100x.TagName2ElementMap} TTagName
- * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof de100x.TagNameSVGPropsMap ? de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName, de100x.OmittedAttributes> : never : TNS extends typeof MathML_NS ? TTagName extends keyof de100x.TagNameMathMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName, de100x.OmittedAttributes> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof de100x.TagNameXHTMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName, de100x.OmittedAttributes> : never : never} de100x.AttrsForNSElement
+ * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof de100x.TagNameSVGPropsMap ? de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName> : never : TNS extends typeof MathML_NS ? TTagName extends keyof de100x.TagNameMathMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof de100x.TagNameXHTMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName> : never : never} de100x.AttrsForNSElement
  */
 
 /**
@@ -759,19 +746,3 @@ Give a list of other ideas for now
 // console.log(xhtmlElement);
 // // document.body.appendChild(xhtmlElement);
 // }
-
-const { p } = tagsProxy;
-
-const element = p(
-  {
-    className: "bg-red-500",
-    style: {
-      color: "white",
-      backgroundColor: "red",
-    },
-    onclick: () => {
-      console.log("clicked");
-    },
-  },
-  "Hello World",
-);
