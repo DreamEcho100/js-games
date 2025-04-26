@@ -62,6 +62,8 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  *  ariaSet?: { [key: string]: string };
  *  style?: { [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] };
  *  ref?: { current: Elem } | ((element: Elem) => void);
+ *  [`data-*`]: string;
+ *  [`aria-*`]: string;
  * }} de100x.SharedAttributes
  */
 
