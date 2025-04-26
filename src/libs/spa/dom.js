@@ -1,11 +1,11 @@
 /**
- * @namespace XSPA
+ * @namespace de100x
  */
 
 /**
  *
- * @typedef {string|number|Node|undefined|null} ChildPrimitive
- * @typedef {ChildPrimitive|ChildPrimitive[]} Child
+ * @typedef {string|number|Node|undefined|null} de100x.ChildPrimitive
+ * @typedef {de100x.ChildPrimitive|de100x.ChildPrimitive[]} de100x.Child
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -13,48 +13,48 @@ const MathML_NS = "http://www.w3.org/1998/Math/MathML";
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 /**
- * @typedef {typeof SVG_NS | typeof MathML_NS | typeof XHTML_NS} NS
+ * @typedef {typeof SVG_NS | typeof MathML_NS | typeof XHTML_NS} de100xNS
  */
 
 /**
- * @typedef {HTMLElementTagNameMap} XSPA.TagNameHTMLPropsMap
- * @typedef {HTMLElementEventMap} XSPA.TagNameHTMLElementEventMap
+ * @typedef {HTMLElementTagNameMap} de100x.TagNameHTMLPropsMap
+ * @typedef {HTMLElementEventMap} de100x.TagNameHTMLElementEventMap
  *
- * @typedef {SVGElementTagNameMap} XSPA.TagNameSVGPropsMap
- * @typedef {SVGElementEventMap} XSPA.TagNameSVGElementEventMap
+ * @typedef {SVGElementTagNameMap} de100x.TagNameSVGPropsMap
+ * @typedef {SVGElementEventMap} de100x.TagNameSVGElementEventMap
  *
- * @typedef {MathMLElementTagNameMap} XSPA.TagNameMathMLPropsMap
- * @typedef {MathMLElementEventMap} XSPA.TagNameMathMLElementEventMap
+ * @typedef {MathMLElementTagNameMap} de100x.TagNameMathMLPropsMap
+ * @typedef {MathMLElementEventMap} de100x.TagNameMathMLElementEventMap
  *
- * @typedef {HTMLElementTagNameMap} XSPA.TagNameXHTMLPropsMap
- * @typedef {XSPA.TagNameHTMLPropsMap | XSPA.TagNameSVGPropsMap | XSPA.TagNameMathMLPropsMap | XSPA.TagNameXHTMLPropsMap} XSPA.TagName2ElementMap
+ * @typedef {HTMLElementTagNameMap} de100x.TagNameXHTMLPropsMap
+ * @typedef {de100x.TagNameHTMLPropsMap | de100x.TagNameSVGPropsMap | de100x.TagNameMathMLPropsMap | de100x.TagNameXHTMLPropsMap} de100x.TagName2ElementMap
  */
 
 /**
- * @template {NS} TNS
- * @typedef {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} XSPA.GetNSElementTagNameMapByNS
+ * @template {de100xNS} TNS
+ * @typedef {TNS extends typeof SVG_NS ? keyof de100x.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof de100x.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof de100x.TagNameXHTMLPropsMap : never} de100x.GetNSElementTagNameMapByNS
  */
 
 /**
- * @template {NS} TNS
+ * @template {de100xNS} TNS
  * @typedef {TNS extends typeof SVG_NS ? SVGElementTagNameMap :
  *  TNS extends typeof MathML_NS ? MathMLElementTagNameMap :
  *  TNS extends typeof XHTML_NS ? HTMLElementTagNameMap :
  *  never
- * } XSPA.GetNSElementByNS<TNS>
+ * } de100x.GetNSElementByNS<TNS>
  */
 
 /**
- * @typedef {XSPA.TagNameHTMLPropsMap[keyof XSPA.TagNameHTMLPropsMap]} XSPA.HTMLElement
- * @typedef {XSPA.TagNameSVGPropsMap[keyof XSPA.TagNameSVGPropsMap]} XSPA.SVGElement
- * @typedef {XSPA.TagNameMathMLPropsMap[keyof XSPA.TagNameMathMLPropsMap]} XSPA.MathMLElement
- * @typedef {XSPA.TagNameXHTMLPropsMap[keyof XSPA.TagNameXHTMLPropsMap]} XSPA.XHTMLElement
- * @typedef {XSPA.SVGElement | XSPA.MathMLElement | XSPA.XHTMLElement} XSPA.ElementNS
- * @typedef {XSPA.ElementNS | XSPA.HTMLElement} XSPA.Element
+ * @typedef {de100x.TagNameHTMLPropsMap[keyof de100x.TagNameHTMLPropsMap]} de100x.HTMLElement
+ * @typedef {de100x.TagNameSVGPropsMap[keyof de100x.TagNameSVGPropsMap]} de100x.SVGElement
+ * @typedef {de100x.TagNameMathMLPropsMap[keyof de100x.TagNameMathMLPropsMap]} de100x.MathMLElement
+ * @typedef {de100x.TagNameXHTMLPropsMap[keyof de100x.TagNameXHTMLPropsMap]} de100x.XHTMLElement
+ * @typedef {de100x.SVGElement | de100x.MathMLElement | de100x.XHTMLElement} de100x.ElementNS
+ * @typedef {de100x.ElementNS | de100x.HTMLElement} de100x.Element
  */
 
 /**
- * @typedef {"style"|"toString"} XSPA.OmittedAttributes
+ * @typedef {"style"|"classList"|"toString"} de100x.OmittedAttributes
  */
 
 /**
@@ -64,9 +64,20 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * 	dangerouslySetInnerHTML?: { __html: string };
  *  dataSet?: { [key: string]: string };
  *  ariaSet?: { [key: string]: string };
- *  style?: { [key in keyof XSPA.HTMLElement["style"]]?: XSPA.HTMLElement["style"][key] };
+ *  style?: { [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] };
  *  ref?: { current: Elem } | ((element: Elem) => void);
- * }} XSPA.SharedAttributes
+ * }} de100x.SharedAttributes
+ */
+
+/**
+ * @template TItem
+ * @typedef {{
+ *	[Key in keyof TItem as TItem[Key] extends (...args: any[]) => any
+ *		? Key extends `on${infer E}`
+ *			? Key
+ *			: never
+ *		: Key]: TItem[Key];
+ * }} FilterNonEventCallbacks
  */
 
 /**
@@ -75,36 +86,36 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * @template {keyof TElemMap} TTagName
  * @template {string} TOmittedAttributes
  * @typedef {{
- *   [Key in keyof (TOmittedAttributes extends string ? Omit<TElemMap[TTagName], XSPA.OmittedAttributes> : TElemMap[TTagName])]?:
+ *   [Key in keyof FilterNonEventCallbacks<Omit<TElemMap[TTagName], de100x.OmittedAttributes>>]?:
  *     Key extends `on${infer E}`
  *       ? (event: TElementEventMap[E & keyof TElementEventMap] & { target: TElemMap[TTagName] } ) => void
  *       : TElemMap[TTagName][Key]
- * } & XSPA.SharedAttributes<TElemMap[TTagName]>} XSPA.GetAttrsForTag
+ * } & de100x.SharedAttributes<TElemMap[TTagName]>} de100x.GetAttrsForTag
  */
 
 /**
- * @template {keyof XSPA.TagNameHTMLPropsMap} TTagName
- * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameHTMLPropsMap, XSPA.TagNameHTMLElementEventMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForHTMLTag
+ * @template {keyof de100x.TagNameHTMLPropsMap} TTagName
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameHTMLPropsMap, de100x.TagNameHTMLElementEventMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForHTMLTag
  */
 /**
- * @template {keyof XSPA.TagNameSVGPropsMap} TTagName
- * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameSVGPropsMap, XSPA.TagNameSVGElementEventMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForSvgTag
+ * @template {keyof de100x.TagNameSVGPropsMap} TTagName
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForSvgTag
  */
 /**
- * @template {keyof XSPA.TagNameMathMLPropsMap} TTagName
- * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameMathMLPropsMap, XSPA.TagNameMathMLElementEventMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForMathMLTag
- */
-
-/**
- * @template {keyof XSPA.TagNameXHTMLPropsMap} TTagName
- * @typedef {XSPA.GetAttrsForTag<XSPA.TagNameXHTMLPropsMap, XSPA.TagNameXHTMLPropsMap, TTagName, XSPA.OmittedAttributes>} XSPA.AttrsForXHTMLTag
+ * @template {keyof de100x.TagNameMathMLPropsMap} TTagName
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForMathMLTag
  */
 
-// XSPA.GetNSAttr
 /**
- * @template {NS} TNS
- * @template {keyof XSPA.TagName2ElementMap} TTagName
- * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof XSPA.TagNameSVGPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameSVGPropsMap, XSPA.TagNameSVGElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof MathML_NS ? TTagName extends keyof XSPA.TagNameMathMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameMathMLPropsMap, XSPA.TagNameMathMLElementEventMap, TTagName, XSPA.OmittedAttributes> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof XSPA.TagNameXHTMLPropsMap ? XSPA.GetAttrsForTag<XSPA.TagNameXHTMLPropsMap, XSPA.TagNameXHTMLPropsMap, TTagName, XSPA.OmittedAttributes> : never : never} XSPA.AttrsForNSElement
+ * @template {keyof de100x.TagNameXHTMLPropsMap} TTagName
+ * @typedef {de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName, de100x.OmittedAttributes>} de100x.AttrsForXHTMLTag
+ */
+
+// de100x.GetNSAttr
+/**
+ * @template {de100xNS} TNS
+ * @template {keyof de100x.TagName2ElementMap} TTagName
+ * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof de100x.TagNameSVGPropsMap ? de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName, de100x.OmittedAttributes> : never : TNS extends typeof MathML_NS ? TTagName extends keyof de100x.TagNameMathMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName, de100x.OmittedAttributes> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof de100x.TagNameXHTMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName, de100x.OmittedAttributes> : never : never} de100x.AttrsForNSElement
  */
 
 /**
@@ -126,7 +137,7 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  */
 
 function setGeneralTagAttribute(
-  /** @type {XSPA.Element} */ element,
+  /** @type {de100x.Element} */ element,
   /** @type {string} */ key,
   /** @type {unknown} */ value,
 ) {
@@ -138,7 +149,7 @@ function setGeneralTagAttribute(
       }
 
       const _value =
-        /** @type {{ [Key in keyof XSPA.HTMLElement['style']]: XSPA.HTMLElement['style'][Key] }} */ (
+        /** @type {{ [Key in keyof de100x.HTMLElement['style']]: de100x.HTMLElement['style'][Key] }} */ (
           value
         );
 
@@ -150,6 +161,15 @@ function setGeneralTagAttribute(
           }
         }
       }
+      return true;
+    }
+    case "className": {
+      if (typeof value !== "string") {
+        element.classList = "";
+      } else {
+        element.classList = value;
+      }
+
       return true;
     }
     case "dataSet": {
@@ -209,7 +229,7 @@ function setGeneralTagAttribute(
 }
 
 function setTagAttribute(
-  /** @type {XSPA.HTMLElement} */ element,
+  /** @type {de100x.HTMLElement} */ element,
   /** @type {string} */ key,
   /** @type {unknown} */ value,
 ) {
@@ -224,7 +244,7 @@ function setTagAttribute(
 function setTagAttributeNS(
   /** @type {string} */
   namespace,
-  /** @type {XSPA.ElementNS} */ element,
+  /** @type {de100x.ElementNS} */ element,
   /** @type {string} */ key,
   /** @type {unknown} */ value,
 ) {
@@ -245,7 +265,7 @@ function setTagAttributeNS(
 
 /**
  * @param {Element} element
- * @param {Child[]} children
+ * @param {de100x.Child[]} children
  */
 function appendChildren(element, children) {
   const childrenCopy = [...children];
@@ -266,11 +286,11 @@ function appendChildren(element, children) {
 /**
  * Create an element with the given tag name, attributes, and children.
  *
- * @template {keyof XSPA.TagNameHTMLPropsMap} TTagName
+ * @template {keyof de100x.TagNameHTMLPropsMap} TTagName
  *
  * @param {TTagName} tagName - The name of the element to create.
- * @param {XSPA.AttrsForHTMLTag<TTagName>} [attributes] - An object containing attributes to set on the element.
- * @param {...Child} children - An array of child elements or text nodes to append to the created element.
+ * @param {de100x.AttrsForHTMLTag<TTagName>} [attributes] - An object containing attributes to set on the element.
+ * @param {...de100x.Child} children - An array of child elements or text nodes to append to the created element.
  * @returns {HTMLElementTagNameMap[TTagName]} The created element.
  */
 function tag(tagName, attributes, ...children) {
@@ -285,7 +305,9 @@ function tag(tagName, attributes, ...children) {
         setGeneralTagAttribute(
           element,
           key,
-          attributes[/** @type {keyof XSPA.AttrsForHTMLTag<TTagName>} */ (key)],
+          attributes[
+            /** @type {keyof de100x.AttrsForHTMLTag<TTagName>} */ (key)
+          ],
         )
       ) {
         continue;
@@ -293,7 +315,7 @@ function tag(tagName, attributes, ...children) {
       setTagAttribute(
         element,
         /** @type {string} */ (key),
-        attributes[/** @type {keyof XSPA.AttrsForHTMLTag<TTagName>} */ (key)],
+        attributes[/** @type {keyof de100x.AttrsForHTMLTag<TTagName>} */ (key)],
       );
     }
   }
@@ -309,7 +331,7 @@ function tag(tagName, attributes, ...children) {
  *
  * @template {keyof HTMLElementTagNameMap} TTagName
  * @param {TTagName} tagName - The name of the element to create.
- * @returns {(attributes?: XSPA.AttrsForHTMLTag<TTagName>, ...children: Child[]) => HTMLElementTagNameMap[TTagName]} A function that creates an element of the specified type.
+ * @returns {(attributes?: de100x.AttrsForHTMLTag<TTagName>, ...children: de100x.Child[]) => HTMLElementTagNameMap[TTagName]} A function that creates an element of the specified type.
  */
 function tagFactory(tagName) {
   return function (attributes, ...children) {
@@ -319,14 +341,14 @@ function tagFactory(tagName) {
 /**
  * Create an element with the given tag name, attributes, and children.
  *
- * @template {NS} TNS
- * @template {keyof XSPA.TagName2ElementMap} TTagName
+ * @template {de100xNS} TNS
+ * @template {keyof de100x.TagName2ElementMap} TTagName
  *
  * @param {TNS} namespace - The namespace URI for the element.
  * @param {TTagName} tagName - The name of the element to create.
- * @param {XSPA.AttrsForNSElement<TNS, TTagName>} [attributes] - An object containing attributes to set on the element.
- * @param {...Child} children - An array of child elements or text nodes to append to the created element.
- * @returns {XSPA.GetNSElementByNS<TNS>[TTagName]} The created element.
+ * @param {de100x.AttrsForNSElement<TNS, TTagName>} [attributes] - An object containing attributes to set on the element.
+ * @param {...de100x.Child} children - An array of child elements or text nodes to append to the created element.
+ * @returns {de100x.GetNSElementByNS<TNS>[TTagName]} The created element.
  */
 function tagNS(namespace, tagName, attributes, ...children) {
   // 1. Create the element
@@ -338,10 +360,10 @@ function tagNS(namespace, tagName, attributes, ...children) {
       if (
         !Object.prototype.hasOwnProperty.call(attributes, key) ||
         setGeneralTagAttribute(
-          /** @type {XSPA.ElementNS} */ (element),
+          /** @type {de100x.ElementNS} */ (element),
           key,
           attributes[
-            /** @type {keyof XSPA.AttrsForNSElement<TNS, TTagName>} */ (key)
+            /** @type {keyof de100x.AttrsForNSElement<TNS, TTagName>} */ (key)
           ],
         )
       ) {
@@ -350,10 +372,10 @@ function tagNS(namespace, tagName, attributes, ...children) {
 
       setTagAttributeNS(
         namespace,
-        /** @type {XSPA.ElementNS} */ (element),
+        /** @type {de100x.ElementNS} */ (element),
         key,
         attributes[
-          /** @type {keyof XSPA.AttrsForNSElement<TNS, TTagName>} */ (key)
+          /** @type {keyof de100x.AttrsForNSElement<TNS, TTagName>} */ (key)
         ],
       );
     }
@@ -362,7 +384,7 @@ function tagNS(namespace, tagName, attributes, ...children) {
   // 3. Append children
   appendChildren(element, children);
 
-  return /** @type {XSPA.GetNSElementByNS<TNS>[TTagName]} */ (
+  return /** @type {de100x.GetNSElementByNS<TNS>[TTagName]} */ (
     /** @type {unknown} */ (element)
   );
 }
@@ -370,12 +392,12 @@ function tagNS(namespace, tagName, attributes, ...children) {
  * Takes a tag name and returns a function _(`tag`)_ that creates elements of that type.
  * This is useful for creating custom elements with specific attributes and children.
  *
- * @template {NS} TNS
- * @template {TNS extends typeof SVG_NS ? keyof XSPA.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof XSPA.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof XSPA.TagNameXHTMLPropsMap : never} TTagName
+ * @template {de100xNS} TNS
+ * @template {TNS extends typeof SVG_NS ? keyof de100x.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof de100x.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof de100x.TagNameXHTMLPropsMap : never} TTagName
  *
  * @param {TNS} namespace - The namespace URI for the element.
  * @param {TTagName} tagName - The name of the element to create.
- * @returns {(attributes?: XSPA.AttrsForNSElement<TNS,TTagName>, ...children: Child[]) => XSPA.GetNSElementByNS<TNS>[TTagName]} A function that creates an element of the specified type.
+ * @returns {(attributes?: de100x.AttrsForNSElement<TNS,TTagName>, ...children: de100x.Child[]) => de100x.GetNSElementByNS<TNS>[TTagName]} A function that creates an element of the specified type.
  */
 function tagNSFactory(namespace, tagName) {
   return function (attributes, ...children) {
@@ -427,7 +449,7 @@ const tagsHTMLProxy = new Proxy(
 
 // TODO: Make one for each ns for now
 /**
- * @typedef {{ [TagName in keyof XSPA.TagNameSVGPropsMap]: ReturnType<typeof tagNSFactory<typeof SVG_NS, TagName>> }} TagSVGMapProxy
+ * @typedef {{ [TagName in keyof de100x.TagNameSVGPropsMap]: ReturnType<typeof tagNSFactory<typeof SVG_NS, TagName>> }} TagSVGMapProxy
  */
 /** @type {Record<string, any>} */
 const _svgsTagsCache = {};
@@ -436,7 +458,7 @@ const _svgsTagsCache = {};
  */
 const svgTagsProxy = new Proxy(/** @type {TagSVGMapProxy} */ (_svgsTagsCache), {
   /**
-   * @template {keyof XSPA.TagName2ElementMap} TTagName
+   * @template {keyof de100x.TagName2ElementMap} TTagName
    *
    * @param {TagSVGMapProxy} target - The target object, used for caching.
    * @param {TTagName} tagName - The name of the element to create.
@@ -452,7 +474,7 @@ const svgTagsProxy = new Proxy(/** @type {TagSVGMapProxy} */ (_svgsTagsCache), {
   },
 });
 /**
- * @typedef {{ [TagName in keyof XSPA.TagNameMathMLPropsMap]: ReturnType<typeof tagNSFactory<typeof MathML_NS, TagName>> }} TagMathMLMapProxy
+ * @typedef {{ [TagName in keyof de100x.TagNameMathMLPropsMap]: ReturnType<typeof tagNSFactory<typeof MathML_NS, TagName>> }} TagMathMLMapProxy
  */
 /** @type {Record<string, any>} */
 const _mathMLsTagsCache = {};
@@ -463,7 +485,7 @@ const mathMLTagsProxy = new Proxy(
   /** @type {TagMathMLMapProxy} */ (_mathMLsTagsCache),
   {
     /**
-     * @template {keyof XSPA.TagName2ElementMap} TTagName
+     * @template {keyof de100x.TagName2ElementMap} TTagName
      *
      * @param {TagMathMLMapProxy} target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
@@ -480,7 +502,7 @@ const mathMLTagsProxy = new Proxy(
   },
 );
 /**
- * @typedef {{ [TagName in keyof XSPA.TagNameXHTMLPropsMap]: ReturnType<typeof tagNSFactory<typeof XHTML_NS, TagName>> }} TagXHTMLMapProxy
+ * @typedef {{ [TagName in keyof de100x.TagNameXHTMLPropsMap]: ReturnType<typeof tagNSFactory<typeof XHTML_NS, TagName>> }} TagXHTMLMapProxy
  */
 /** @type {Record<string, any>} */
 const _xhtmlsTagsCache = {};
@@ -491,7 +513,7 @@ const xhtmlTagsProxy = new Proxy(
   /** @type {TagXHTMLMapProxy} */ (_xhtmlsTagsCache),
   {
     /**
-     * @template {keyof XSPA.TagName2ElementMap} TTagName
+     * @template {keyof de100x.TagName2ElementMap} TTagName
      *
      * @param {TagXHTMLMapProxy} target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
@@ -508,7 +530,7 @@ const xhtmlTagsProxy = new Proxy(
   },
 );
 /**
- * @typedef {TagsHTMLProxy & (<TNS extends NS>(namespaceURI: TNS) => TNS extends typeof SVG_NS ? TagSVGMapProxy : TNS extends typeof MathML_NS ? TagMathMLMapProxy : TNS extends typeof XHTML_NS ? TagXHTMLMapProxy : never)} TagsProxy
+ * @typedef {TagsHTMLProxy & (<TNS extends de100xNS>(namespaceURI: TNS) => TNS extends typeof SVG_NS ? TagSVGMapProxy : TNS extends typeof MathML_NS ? TagMathMLMapProxy : TNS extends typeof XHTML_NS ? TagXHTMLMapProxy : never)} TagsProxy
  */
 
 /**
@@ -578,7 +600,7 @@ Marked with `?` at the end of the line needs further investigation and considera
 - [ ] - Research the following, and how to implement their missing types
 	- [ ] `setAttribute` vs `setAttributeNS`
 	- [ ] svg, "http://www.w3.org/2000/svg", HTMLCollectionOf<SVGElement>;
-	- [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<XSPA.HTMLElement>;
+	- [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<de100x.HTMLElement>;
 	- [ ] math, "http://www.w3.org/1998/Math/MathML", HTMLCollectionOf<MathMLElement>;
 	- [ ] https://github.com/vanilla-extract-css/vanilla-extract/tree/master
 	- [ ] https://github.com/nivekcode/svg-to-ts
@@ -737,3 +759,19 @@ Give a list of other ideas for now
 // console.log(xhtmlElement);
 // // document.body.appendChild(xhtmlElement);
 // }
+
+const { p } = tagsProxy;
+
+const element = p(
+  {
+    className: "bg-red-500",
+    style: {
+      color: "white",
+      backgroundColor: "red",
+    },
+    onclick: () => {
+      console.log("clicked");
+    },
+  },
+  "Hello World",
+);

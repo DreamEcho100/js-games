@@ -4,7 +4,7 @@
 
 /**
  *
- * @typedef {string|number|Node|undefined|null} ChildPrimitive
+ * @typedef {string|number|Element|undefined|null} ChildPrimitive
  * @typedef {ChildPrimitive|ChildPrimitive[]} Child
  */
 

@@ -1,10 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { ChildPrimitive } from "#libs/dom/base.js";
+
 const NODE_TYPE = {
   SIGNAL: 0,
   EFFECT: 1,
   MEMO: 2,
 };
+
+interface Scope {
+  id: number;
+  name?: string;
+  depth: number;
+  nextSignalId: number;
+  batchDepth: number;
+  activeObserver: ReactiveNode<any> | null;
+  pendingEffects: Set<ReactiveNode<any>>;
+  nodes: Set<ReactiveNode<any>>; // New: ALL nodes (signals, memos, effects)
+  pendingMicrotask: boolean;
+  nextScopes: Scope[];
+  prevScope: Scope | null;
+  cleanups: (() => void)[];
+}
 
 interface ReactiveNode<TValue> {
   id: number;
@@ -23,6 +40,7 @@ interface ReactiveNode<TValue> {
   type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
   equals?: (a: TValue, b: TValue) => boolean;
   dispose: () => void;
+  scopeRef: Scope;
 }
 interface SignalOptions<TValue> {
   equals?: (a: TValue, b: TValue) => boolean;
@@ -52,11 +70,111 @@ interface MemoValue<TValue> {
 // Symbol used to access internal node (not exported)
 const SIGNAL = Symbol("signal");
 
-let nextId = 0;
-let batchDepth = 0;
-let activeObserver: ReactiveNode<any> | null = null;
-const pendingEffects = new Set<ReactiveNode<any>>();
-let pendingMicrotask = false;
+let nextScopeId = 0;
+let currentScope: Scope = {
+  id: nextScopeId++,
+  depth: 0,
+  nextSignalId: 0,
+  batchDepth: 0,
+  activeObserver: null,
+  pendingEffects: new Set(),
+  pendingMicrotask: false,
+  nextScopes: [],
+  prevScope: null,
+  nodes: new Set(),
+  cleanups: [],
+  name: undefined,
+};
+
+/************************ ************************/
+/***************** Create Scope *****************/
+/************************ ************************/
+
+function disposeScope(scope: Scope) {
+  // Recursively dispose child scopes first
+  for (const child of scope.nextScopes) {
+    disposeScope(child);
+  }
+  scope.nextScopes = [];
+
+  for (const node of scope.nodes) {
+    node.dispose();
+  }
+  // // Dispose all nodes owned by this scope
+  // for (const effect of scope.pendingEffects) {
+  //   effect.dispose();
+  // }
+  if (process.env.NODE_ENV !== "production" && scope.nodes.size > 0) {
+    console.warn(
+      `Scope "${scope.name ?? scope.id}" still had ${
+        scope.nodes.size
+      } nodes when disposed.`,
+    );
+  }
+  scope.nodes.clear();
+  scope.pendingEffects.clear();
+  scope.cleanups.forEach((cleanup) => cleanup());
+  scope.cleanups = [];
+  if (scope.prevScope) {
+    scope.prevScope.nextScopes = scope.prevScope.nextScopes.filter(
+      (s) => s.id !== scope.id,
+    );
+  }
+  // Clear the reference to the parent scope
+  scope.prevScope = null;
+  // Clear the reference to the current scope
+  if (currentScope === scope) {
+    currentScope = { ...scope, nextScopes: [] };
+  }
+}
+
+/**
+ * 🧱 Create a new scope
+ * @param fn Function to run in the new scope
+ */
+function createScope<T>(
+  fn: () => T,
+  options?: { detached?: boolean; name?: string },
+): { dispose: () => void; result: T } {
+  const parentScope = currentScope;
+
+  const newScope: Scope = {
+    id: nextScopeId++,
+    name: options?.name,
+    depth: parentScope.depth + 1,
+    nextSignalId: 0,
+    batchDepth: 0,
+    activeObserver: null,
+    pendingEffects: new Set(),
+    nodes: new Set(),
+    pendingMicrotask: false,
+    nextScopes: [],
+    prevScope: options?.detached ? null : parentScope,
+    cleanups: [],
+  };
+
+  if (!options?.detached) {
+    parentScope.nextScopes.push(newScope);
+  }
+
+  // Switch to new scope
+  currentScope = newScope;
+
+  let result: T;
+  try {
+    result = fn();
+  } finally {
+    // Restore parent scope
+    currentScope = parentScope;
+  }
+
+  return {
+    result,
+    dispose: () => {
+      disposeScope(newScope);
+    },
+  };
+}
 
 /************************ ************************/
 /***************** Create Signal *****************/
@@ -74,8 +192,8 @@ function createNode<TValue>(
     dispose: () => void;
   },
 ): ReactiveNode<TValue> {
-  return {
-    id: nextId++,
+  const node: ReactiveNode<TValue> = {
+    id: currentScope.nextSignalId++,
     version: 0,
     value: val,
     compute: undefined,
@@ -86,20 +204,26 @@ function createNode<TValue>(
     sources: new WeakMap(),
     observers: new Set(),
     sourceList: [],
+    scopeRef: currentScope,
     ...options,
   };
+
+  // 🆕 Add node to scope's set
+  currentScope.nodes.add(node);
+
+  return node;
 }
 
 /**
  * 🛑 Read a value without tracking dependencies
  */
 function untrack<T>(fn: () => T): T {
-  const prevObserver = activeObserver;
-  activeObserver = null;
+  const prevObserver = currentScope.activeObserver;
+  currentScope.activeObserver = null;
   try {
     return fn();
   } finally {
-    activeObserver = prevObserver;
+    currentScope.activeObserver = prevObserver;
   }
 }
 
@@ -107,12 +231,23 @@ function untrack<T>(fn: () => T): T {
  * 🧭 Track a read dependency
  */
 function trackAccess<TValue>(sourceNode: ReactiveNode<TValue>) {
-  if (activeObserver) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    sourceNode.compute === undefined
+  ) {
+    console.warn(
+      `⚠️ Attempted to read a disposed signal or memo: ${
+        sourceNode.name ?? `Node_${sourceNode.id}`
+      }`,
+    );
+  }
+
+  if (currentScope.activeObserver) {
     // ✅ Prevent duplicate tracking
-    if (!activeObserver.sources.has(sourceNode)) {
-      activeObserver.sources.set(sourceNode, sourceNode.version);
-      activeObserver.sourceList.push(sourceNode);
-      sourceNode.observers.add(activeObserver);
+    if (!currentScope.activeObserver.sources.has(sourceNode)) {
+      currentScope.activeObserver.sources.set(sourceNode, sourceNode.version);
+      currentScope.activeObserver.sourceList.push(sourceNode);
+      sourceNode.observers.add(currentScope.activeObserver);
     }
   }
 }
@@ -121,16 +256,16 @@ function trackAccess<TValue>(sourceNode: ReactiveNode<TValue>) {
  * ⏳ Schedule flush of pending effects
  */
 function scheduleMicrotask() {
-  if (pendingMicrotask || pendingEffects.size === 0) {
+  if (currentScope.pendingMicrotask || currentScope.pendingEffects.size === 0) {
     return;
   }
 
-  pendingMicrotask = true;
+  currentScope.pendingMicrotask = true;
   queueMicrotask(() => {
-    pendingMicrotask = false;
+    currentScope.pendingMicrotask = false;
     // Create a copy to avoid issues if new effects are added during processing
-    const effects = Array.from(pendingEffects);
-    pendingEffects.clear();
+    const effects = Array.from(currentScope.pendingEffects);
+    currentScope.pendingEffects.clear();
     for (const effect of effects) runNode(effect);
   });
 }
@@ -154,8 +289,8 @@ function notifyObservers<TValue>(node: ReactiveNode<TValue>) {
       if (observer.onDirty) {
         observer.onDirty();
       } else {
-        pendingEffects.add(observer);
-        if (batchDepth === 0) {
+        currentScope.pendingEffects.add(observer);
+        if (currentScope.batchDepth === 0) {
           scheduleMicrotask();
         }
       }
@@ -187,7 +322,7 @@ function createSignal<TValue>(
       cleanupSources(node);
 
       // Remove from pending effects
-      pendingEffects.delete(node);
+      currentScope.pendingEffects.delete(node);
 
       // Remove compute function to mark as disposed
       node.compute = undefined;
@@ -286,8 +421,8 @@ function runNode(node: ReactiveNode<any>) {
   const prevCleanup = node.cleanup;
   cleanupSources(node);
 
-  const prevObserver = activeObserver;
-  activeObserver = node;
+  const prevObserver = currentScope.activeObserver;
+  currentScope.activeObserver = node;
 
   try {
     // Run previous cleanup if any
@@ -324,7 +459,7 @@ function runNode(node: ReactiveNode<any>) {
     return false;
   } finally {
     computationStack.pop();
-    activeObserver = prevObserver;
+    currentScope.activeObserver = prevObserver;
   }
 }
 
@@ -350,7 +485,7 @@ function createEffect<TValue>(
       cleanupSources(node);
 
       // Remove from pending effects
-      pendingEffects.delete(node);
+      currentScope.pendingEffects.delete(node);
 
       // Remove compute function to mark as disposed
       node.compute = undefined;
@@ -358,22 +493,22 @@ function createEffect<TValue>(
   });
   node.compute = fn;
   if (process.env.NODE_ENV !== "production") {
-    node.cleanup = () => {
+    if (node.observers.size > 0 || node.sourceList.length > 0) {
       console.warn(
         `⚠️ Effect '${
-          node.name || `Node_${node.id}`
-        }' may have leaked — not disposed manually.`,
+          node.name ?? `Node_${node.id}`
+        }' was disposed while still active.`,
       );
-    };
+    }
   }
 
   // Custom scheduling strategy for this effect
   node.onDirty = () => {
     node.onDirty = undefined; // Reset to prevent reentrance
-    if (batchDepth > 0) {
-      pendingEffects.add(node);
+    if (currentScope.batchDepth > 0) {
+      currentScope.pendingEffects.add(node);
     } else {
-      pendingEffects.add(node);
+      currentScope.pendingEffects.add(node);
       scheduleMicrotask();
     }
   };
@@ -393,7 +528,7 @@ function createEffect<TValue>(
     cleanupSources(node);
 
     // Remove from pending effects
-    pendingEffects.delete(node);
+    currentScope.pendingEffects.delete(node);
 
     // Remove compute function to mark as disposed
     node.compute = undefined;
@@ -428,7 +563,7 @@ function createMemo<TValue>(
       cleanupSources(node);
 
       // Remove from pending effects
-      pendingEffects.delete(node);
+      currentScope.pendingEffects.delete(node);
 
       // Remove compute function to mark as disposed
       node.compute = undefined;
@@ -477,16 +612,222 @@ function createMemo<TValue>(
  * 📦 Batch signals
  */
 function batchSignals<TValue>(fn: () => TValue): TValue {
-  batchDepth++;
+  currentScope.batchDepth++;
   try {
     return fn();
   } finally {
-    batchDepth--;
-    if (batchDepth === 0 && pendingEffects.size > 0) {
+    currentScope.batchDepth--;
+    if (currentScope.batchDepth === 0 && currentScope.pendingEffects.size > 0) {
       scheduleMicrotask();
     }
   }
 }
 
-export { createSignal, createEffect, createMemo, batchSignals, untrack };
+/**
+ * 🧹 Cleanup function
+ */
+function onScopeCleanup(fn: () => void) {
+  if (currentScope.cleanups) {
+    currentScope.cleanups.push(fn);
+  } else {
+    console.warn(
+      "⚠️ Attempted to register a cleanup function outside of a scope.",
+    );
+  }
+
+  // if (currentScope.activeObserver) {
+  //   currentScope.activeObserver.cleanup = fn;
+  // } else {
+  //   console.warn(
+  //     "⚠️ onCleanup called outside of an effect or memo. Cleanup function will not be registered.",
+  //   );
+  // }
+}
+
+export {
+  createScope,
+  disposeScope,
+  createSignal,
+  createEffect,
+  createMemo,
+  batchSignals,
+  untrack,
+};
 export type { SignalValue, SignalOptions, ReactiveNode };
+
+// ========== Reactive DOM Components ==========
+function List<TValue extends any[]>(
+  list: SignalValue<TValue>,
+  key: (item: TValue[number], index: number, items: TValue) => string,
+  fn: (
+    item: TValue[number],
+    index: number,
+    items: TValue,
+  ) => ChildPrimitive | ChildPrimitive[],
+) {
+  const placeholder = document.createComment(`scope-${currentScope.id}list`);
+
+  type NodeEntry = {
+    value: TValue[number];
+    elems: (Element | Text)[];
+  };
+
+  let nodes = new Map<string, NodeEntry>();
+
+  createEffect(() => {
+    const newNodes = new Map<string, NodeEntry>();
+    const listValue = list();
+    const maxLength = Math.max(listValue.length, nodes.size);
+
+    let prevAnchor: Node = placeholder;
+
+    for (let i = 0; i < maxLength; i++) {
+      const item = listValue[i];
+      const nodeKey = key(item, i, listValue);
+      const oldEntry = nodes.get(nodeKey);
+
+      if (i < listValue.length && oldEntry && oldEntry.value === item) {
+        // Reuse, but MOVE before previous anchor
+        for (let j = oldEntry.elems.length - 1; j >= 0; j--) {
+          const elem = oldEntry.elems[j];
+          if (prevAnchor.parentNode) {
+            prevAnchor.parentNode.insertBefore(elem, prevAnchor);
+          }
+        }
+        newNodes.set(nodeKey, oldEntry);
+      } else if (i < listValue.length) {
+        // New node to add
+        const _result = fn(item, i, listValue);
+        const elems = Array.isArray(_result) ? _result : [_result];
+        const normalizedElems = elems.map((elem) =>
+          elem instanceof Node
+            ? elem
+            : document.createTextNode(elem == null ? "" : String(elem)),
+        );
+
+        for (let j = normalizedElems.length - 1; j >= 0; j--) {
+          const elem = normalizedElems[j];
+          prevAnchor.parentNode?.insertBefore(elem, prevAnchor);
+        }
+
+        newNodes.set(nodeKey, { value: item, elems: normalizedElems });
+      }
+
+      prevAnchor = newNodes.get(nodeKey)?.elems[0] || prevAnchor;
+    }
+
+    // Remove any leftover nodes not in new list
+    for (const [oldKey, oldEntry] of nodes) {
+      if (!newNodes.has(oldKey)) {
+        for (const elem of oldEntry.elems) {
+          elem.remove();
+        }
+      }
+    }
+
+    nodes = newNodes;
+  });
+
+  onScopeCleanup(() => {
+    for (const { elems } of nodes.values()) {
+      for (const elem of elems) {
+        elem.remove();
+      }
+    }
+    nodes.clear();
+  });
+
+  return placeholder;
+}
+
+function Visible(
+  condition: SignalValue<boolean>,
+  fn: () => ChildPrimitive | ChildPrimitive[],
+) {
+  const placeholder = document.createComment(`scope-${currentScope.id}visible`);
+  let currentElems: (Element | Text)[] = [];
+
+  createEffect(() => {
+    const shouldShow = condition();
+
+    if (shouldShow) {
+      if (currentElems.length === 0) {
+        const _result = fn();
+        const elems = Array.isArray(_result) ? _result : [_result];
+        currentElems = elems.map((elem) =>
+          elem instanceof Node
+            ? elem
+            : document.createTextNode(elem == null ? "" : String(elem)),
+        );
+
+        for (const elem of currentElems) {
+          placeholder.parentNode?.insertBefore(elem, placeholder);
+        }
+      }
+    } else {
+      for (const elem of currentElems) {
+        elem.remove();
+      }
+      currentElems = [];
+    }
+  });
+
+  onScopeCleanup(() => {
+    for (const elem of currentElems) {
+      elem.remove();
+    }
+    currentElems = [];
+  });
+
+  return placeholder;
+}
+
+function Switch<TValue extends string>(
+  condition: SignalValue<TValue>,
+  cases: {
+    [key: string]: () => ChildPrimitive | ChildPrimitive[];
+  },
+) {
+  const placeholder = document.createComment(`scope-${currentScope.id}switch`);
+  let currentElems: (Element | Text)[] = [];
+  let oldCase: string | undefined;
+
+  createEffect(() => {
+    const value = condition();
+    const caseFn = cases[value];
+    if (oldCase === value) {
+      return;
+    }
+    oldCase = value;
+
+    for (const elem of currentElems) {
+      elem.remove();
+    }
+    currentElems = [];
+
+    if (caseFn) {
+      const _result = caseFn();
+      const elems = Array.isArray(_result) ? _result : [_result];
+      currentElems = elems.map((elem) =>
+        elem instanceof Node
+          ? elem
+          : document.createTextNode(elem == null ? "" : String(elem)),
+      );
+
+      for (const elem of currentElems) {
+        placeholder.parentNode?.insertBefore(elem, placeholder);
+      }
+    }
+  });
+
+  onScopeCleanup(() => {
+    for (const elem of currentElems) {
+      elem.remove();
+    }
+    currentElems = [];
+  });
+
+  return placeholder;
+}
+
+export { List, Visible, Switch };
