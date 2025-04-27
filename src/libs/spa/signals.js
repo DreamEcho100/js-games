@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-/** @import { ChildPrimitive } from "#libs/dom/base.js" */
-
 const NODE_TYPE = {
   SIGNAL: 0,
   EFFECT: 1,
@@ -28,7 +24,7 @@ const NODE_TYPE = {
  * @template TValue
  * @typedef {object} ReactiveNode
  * @property {number} id
- * @property {number} version1 - incremented when value changes
+ * @property {number} version - incremented when value changes
  * @property {Map<ReactiveNode<any>, number>} sources - dependencies + version seen
  * @property {Set<ReactiveNode<any>>} observers - who depends on me
  * @property {() => TValue} [compute] - how to calculate value
@@ -87,8 +83,7 @@ const NODE_TYPE = {
 /**
  * @template TValue
  * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue> & {
- *  @property {() => TValue} - function to get the current value
- *  @property {function(value: TValue): void} set - function to set a new value
+ *  set: (value: TValue) => void
  * }} SignalValue
  */
 // interface MemoValue<TValue> {
@@ -210,6 +205,24 @@ function createScope(fn, options) {
   };
 }
 
+/**
+ * 🧹 Cleanup function
+ *
+ * @param {() => void} fn Function to run on cleanup
+ * @throws {Error} If called outside of a scope
+ * @returns {void}
+ */
+function onScopeCleanup(fn) {
+  if (currentScope?.cleanups) {
+    currentScope.cleanups.push(fn);
+  } else {
+    console.warn(
+      "⚠️ Attempted to register a cleanup function outside of a scope.",
+    );
+    throw new Error("No active scope for cleanup registration.");
+  }
+}
+
 function getScopeId() {
   return currentScope.id;
 }
@@ -274,7 +287,8 @@ function untrack(fn) {
 function trackAccess(sourceNode) {
   if (
     process.env.NODE_ENV !== "production" &&
-    sourceNode.compute === undefined
+    sourceNode.compute === undefined &&
+    sourceNode.type !== NODE_TYPE.SIGNAL
   ) {
     console.warn(
       `⚠️ Attempted to read a disposed signal or memo: ${
@@ -453,7 +467,7 @@ function createSignal(initialValue, options) {
  * 🔄 Core computation logic
  * Runs a memo/effect and handles dependency tracking + cleanup
  *
- * @type {ReactiveNode<any>} node The node to run
+ * @type {Set<ReactiveNode<any>>} node The node to run
  */
 const computationStack = new Set();
 
@@ -559,7 +573,7 @@ function runNode(node) {
  * @returns {() => void} Disposal function to clean up the effect
  */
 function createEffect(fn, options) {
-  const node = createNode(/** @type {TValue} */ undefined, {
+  const node = createNode(/** @type {TValue} */ (undefined), {
     name: options?.name,
     type: NODE_TYPE.EFFECT,
     equals: options?.equals,
@@ -632,7 +646,7 @@ function updateIfNecessary(node) {
  * @returns {MemoValue<TValue>} The created memo
  */
 function createMemo(fn, options) {
-  const node = createNode(/** @type {TValue} */ undefined, {
+  const node = createNode(/** @type {TValue} */ (undefined), {
     name: options?.name,
     type: NODE_TYPE.MEMO,
     equals: options?.equals,
@@ -643,11 +657,17 @@ function createMemo(fn, options) {
    * Create memo function that acts like a signal
    * @type {MemoValue<TValue>}
    */
-  const memo = () => {
-    trackAccess(node);
-    updateIfNecessary(node);
-    return node.value;
-  };
+  const memo = Object.assign(
+    () => {
+      trackAccess(node);
+      updateIfNecessary(node);
+      return node.value;
+    },
+    {
+      peek: () => node.value,
+      [SIGNAL]: node,
+    },
+  );
 
   if (process.env.NODE_ENV !== "production") {
     memo._debug = {
@@ -662,12 +682,6 @@ function createMemo(fn, options) {
 
   // Initial computation
   runNode(node);
-
-  // Add signal methods
-  Object.assign(memo, {
-    peek: () => node.value,
-    [SIGNAL]: node,
-  });
 
   onScopeCleanup(() => disposeNode(node));
 
@@ -693,130 +707,111 @@ function batchSignals(fn) {
   }
 }
 
-/**
- * 🧹 Cleanup function
- *
- * @param {() => void} fn Function to run on cleanup
- * @throws {Error} If called outside of a scope
- * @returns {void}
- */
-function onScopeCleanup(fn) {
-  if (currentScope?.cleanups) {
-    currentScope.cleanups.push(fn);
-  } else {
-    console.warn(
-      "⚠️ Attempted to register a cleanup function outside of a scope.",
-    );
-    throw new Error("No active scope for cleanup registration.");
-  }
-}
+// // example of usage
+// function createScope2() {
+//   return createScope(() => {
+//     const counter = createSignal(0);
+//     const scopeId = getScopeId();
 
-// example of usage
+//     const secondScopeSection = document.createElement("div");
+//     const incrementButton = document.createElement("button");
+//     incrementButton.textContent = "Increment";
+//     incrementButton.addEventListener("click", () => {
+//       counter.set(counter() + 1);
+//     });
+//     secondScopeSection.appendChild(incrementButton);
+//     const decrementButton = document.createElement("button");
+//     decrementButton.textContent = "Decrement";
+//     decrementButton.addEventListener("click", () => {
+//       counter.set(counter() - 1);
+//     });
+//     secondScopeSection.appendChild(decrementButton);
+//     const resetButton = document.createElement("button");
+//     resetButton.textContent = "Reset";
+//     resetButton.addEventListener("click", () => {
+//       counter.set(0);
+//     });
+//     secondScopeSection.appendChild(resetButton);
+//     const counterDisplay = document.createElement("h2");
+//     counterDisplay.id = `second-scope-counter-${scopeId}`;
+//     counterDisplay.textContent = `Second Scope Counter: ${counter.peek()}`;
+//     secondScopeSection.appendChild(counterDisplay);
+//     createEffect(() => {
+//       counterDisplay.textContent = `Second Scope Counter: ${counter()}`;
+//     });
+//     onScopeCleanup(() => {
+//       secondScopeSection.remove();
+//     });
 
-/*
-function createScope2() {
-  return createScope(() => {
-    const counter = createSignal(0);
-    const scopeId = getScopeId();
+//     return secondScopeSection;
+//   });
+// }
 
-    const secondScopeSection = document.createElement("div");
-    const incrementButton = document.createElement("button");
-    incrementButton.textContent = "Increment";
-    incrementButton.addEventListener("click", () => {
-      counter.set(counter() + 1);
-    });
-    secondScopeSection.appendChild(incrementButton);
-    const decrementButton = document.createElement("button");
-    decrementButton.textContent = "Decrement";
-    decrementButton.addEventListener("click", () => {
-      counter.set(counter() - 1);
-    });
-    secondScopeSection.appendChild(decrementButton);
-    const resetButton = document.createElement("button");
-    resetButton.textContent = "Reset";
-    resetButton.addEventListener("click", () => {
-      counter.set(0);
-    });
-    secondScopeSection.appendChild(resetButton);
-    const counterDisplay = document.createElement("h2");
-    counterDisplay.id = `second-scope-counter-${scopeId}`;
-    counterDisplay.textContent = `Second Scope Counter: ${counter.peek()}`;
-    secondScopeSection.appendChild(counterDisplay);
-    createEffect(() => {
-      counterDisplay.textContent = `Second Scope Counter: ${counter()}`;
-    });
-    onScopeCleanup(() => {
-      secondScopeSection.remove();
-    });
+// batchSignals(() => {
+//   createScope(() => {
+//     const scopeId = getScopeId();
+//     const counter = createSignal(0);
+//     const increment = () => {
+//       counter.set(counter() + 1);
+//     };
+//     const decrement = () => {
+//       counter.set(counter() - 1);
+//     };
+//     const reset = () => {
+//       counter.set(0);
+//     };
+//     const double = createMemo(() => counter() * 2);
 
-    return secondScopeSection;
-  });
-}
+//     document.body.innerHTML = `
+// 		<div>
+// 			<h1 id=${`counter-${scopeId}`}>Counter: ${counter.peek()}</h1>
+// 			<button id=${`increment-${scopeId}`}>Increment</button>
+// 			<button id=${`decrement-${scopeId}`}>Decrement</button>
+// 			<button id=${`reset-${scopeId}`}>Reset</button>
+// 			<p id=${`double-${scopeId}`}>Double: ${double.peek()}</p>
+// 		</div>
+// 		<hr />
+// 		<section>
+// 			<h1>Second Scope Toggle</h1>
+// 			<button id=${`toggleSecondScope-${scopeId}`}>Toggle Second Scope</button>
+// 		</section>
+// 	`;
+//     document
+//       .getElementById(`increment-${scopeId}`)
+//       ?.addEventListener("click", increment);
+//     document
+//       .getElementById(`decrement-${scopeId}`)
+//       ?.addEventListener("click", decrement);
+//     document
+//       .getElementById(`reset-${scopeId}`)
+//       ?.addEventListener("click", reset);
 
-createScope(() => {
-  const scopeId = getScopeId();
-  const counter = createSignal(0);
-  const increment = () => {
-    counter.set(counter() + 1);
-  };
-  const decrement = () => {
-    counter.set(counter() - 1);
-  };
-  const reset = () => {
-    counter.set(0);
-  };
-  const double = createMemo(() => counter() * 2);
-  const doubleEffect = createEffect(() => {
-    console.log(`Double: ${double()}`);
-  });
+//     /** @type {ReturnType<typeof createScope2> | null} */
+//     let secondScope;
+//     document
+//       .getElementById(`toggleSecondScope-${scopeId}`)
+//       ?.addEventListener("click", () => {
+//         if (secondScope) {
+//           secondScope.dispose();
+//           secondScope = null;
+//         } else {
+//           secondScope = createScope2();
+//           document.body.appendChild(secondScope.result);
+//         }
+//       });
 
-  document.body.innerHTML = `
-		<div>
-			<h1 id=${`counter-${scopeId}`}>Counter: ${counter.peek()}</h1>
-			<button id=${`increment-${scopeId}`}>Increment</button>
-			<button id=${`decrement-${scopeId}`}>Decrement</button>
-			<button id=${`reset-${scopeId}`}>Reset</button>
-			<p id=${`double-${scopeId}`}>Double: ${double.peek()}</p>
-		</div>
-		<hr />
-		<section>
-			<h1>Second Scope Toggle</h1>
-			<button id=${`toggleSecondScope-${scopeId}`}>Toggle Second Scope</button>
-		</section>
-	`;
-  document
-    .getElementById(`increment-${scopeId}`)
-    .addEventListener("click", increment);
-  document
-    .getElementById(`decrement-${scopeId}`)
-    .addEventListener("click", decrement);
-  document.getElementById(`reset-${scopeId}`).addEventListener("click", reset);
+//     createEffect(() => {
+//       const element = document.getElementById(`counter-${scopeId}`);
 
-  let secondScope;
-  document
-    .getElementById(`toggleSecondScope-${scopeId}`)
-    .addEventListener("click", () => {
-      if (secondScope) {
-        secondScope.dispose();
-        secondScope = null;
-      } else {
-        secondScope = createScope2();
-        document.body.appendChild(secondScope.result);
-      }
-    });
+//       if (element) element.textContent = `Counter: ${counter()}`;
+//     });
+//     createEffect(() => {
+//       const element = document.getElementById(`double-${scopeId}`);
 
-  createEffect(() => {
-    document.getElementById(
-      `counter-${scopeId}`,
-    ).textContent = `Counter: ${counter()}`;
-  });
-  createEffect(() => {
-    document.getElementById(
-      `double-${scopeId}`,
-    ).textContent = `Double: ${double()}`;
-  });
-});
-*/
+//       if (element) element.textContent = `Double: ${double()}`;
+//     });
+//   });
+// });
 
 export {
   createScope,
@@ -829,203 +824,3 @@ export {
   batchSignals,
   untrack,
 };
-// export type { SignalValue, SignalOptions, ReactiveNode };
-
-// ========== Reactive DOM Components ==========
-/**
- * 🧩 List componen
- * t
- * @template TValue
- * @param {SignalValue<TValue>} list - Signal value to iterate over
- * @param {(item: TValue[number], index: number, items: TValue) => string} key - Function to generate a unique key for each item
- * @param {(item: TValue[number], index: number, items: TValue) => ChildPrimitive | ChildPrimitive[]} fn - Function to generate elements for each item
- * @returns {ChildPrimitive}
- * @description
- * Creates a list of elements based on a signal value.
- * The `key` function is used to identify each item in the list.
- * The `fn` function is called for each item in the list to generate the corresponding DOM elements.
- */
-function $list(list, key, fn) {
-  const placeholder = document.createComment(`scope-${getScopeId()}list`);
-
-  /** @typedef {{ value: TValue[number]; elems: (Element | Text)[] }} NodeEntry */
-
-  /** @type {Map<string, NodeEntry>} */
-  let nodes = new Map();
-
-  createEffect(() => {
-    /** @type {Map<string, NodeEntry>} */
-    const newNodes = new Map();
-    const listValue = list();
-    const maxLength = Math.max(listValue.length, nodes.size);
-
-    /** @type {Node} */
-    let prevAnchor = placeholder;
-
-    for (let i = 0; i < maxLength; i++) {
-      const item = listValue[i];
-      const nodeKey = key(item, i, listValue);
-      const oldEntry = nodes.get(nodeKey);
-
-      if (i < listValue.length && oldEntry && oldEntry.value === item) {
-        // Reuse, but MOVE before previous anchor
-        for (let j = oldEntry.elems.length - 1; j >= 0; j--) {
-          const elem = oldEntry.elems[j];
-          if (prevAnchor.parentNode) {
-            prevAnchor.parentNode.insertBefore(elem, prevAnchor);
-          }
-        }
-        newNodes.set(nodeKey, oldEntry);
-      } else if (i < listValue.length) {
-        // New node to add
-        const _result = fn(item, i, listValue);
-        const elems = Array.isArray(_result) ? _result : [_result];
-        const normalizedElems = elems.map((elem) =>
-          elem instanceof Node
-            ? elem
-            : document.createTextNode(elem == null ? "" : String(elem)),
-        );
-
-        for (let j = normalizedElems.length - 1; j >= 0; j--) {
-          const elem = normalizedElems[j];
-          prevAnchor.parentNode?.insertBefore(elem, prevAnchor);
-        }
-
-        newNodes.set(nodeKey, { value: item, elems: normalizedElems });
-      }
-
-      prevAnchor = newNodes.get(nodeKey)?.elems[0] ?? prevAnchor;
-    }
-
-    // Remove any leftover nodes not in new list
-    for (const [oldKey, oldEntry] of nodes) {
-      if (!newNodes.has(oldKey)) {
-        for (const elem of oldEntry.elems) {
-          elem.remove();
-        }
-      }
-    }
-
-    nodes = newNodes;
-  });
-
-  onScopeCleanup(() => {
-    for (const { elems } of nodes.values()) {
-      for (const elem of elems) {
-        elem.remove();
-      }
-    }
-    nodes.clear();
-  });
-
-  return placeholder;
-}
-
-/**
- * 🧩 Toggle component
- *
- * @template TValue
- * @param {SignalValue<TValue>} condition - Signal value to determine visibility
- * @param {() => ChildPrimitive | ChildPrimitive[]} fn - Function to generate elements
- * @returns {ChildPrimitive}
- * @description
- * Creates a toggle component that shows or hides elements based on a signal value.
- * The `fn` function is called to generate the elements to be shown or hidden.
- * The elements are removed from the DOM when not visible.
- */
-function $toggle(condition, fn) {
-  const placeholder = document.createComment(`scope-${getScopeId()}visible`);
-  /** @type {(Element | Text)[]} */
-  let currentElems = [];
-
-  createEffect(() => {
-    const shouldShow = condition();
-
-    if (shouldShow) {
-      const _result = fn();
-      const elems = Array.isArray(_result) ? _result : [_result];
-      currentElems = elems.map((elem) =>
-        elem instanceof Node
-          ? elem
-          : document.createTextNode(elem == null ? "" : String(elem)),
-      );
-
-      for (const elem of currentElems) {
-        placeholder.parentNode?.insertBefore(elem, placeholder);
-      }
-    } else {
-      for (const elem of currentElems) {
-        elem.remove();
-      }
-      currentElems = [];
-    }
-  });
-
-  onScopeCleanup(() => {
-    for (const elem of currentElems) {
-      elem.remove();
-    }
-    currentElems = [];
-  });
-
-  return placeholder;
-}
-
-/**
- * 🧩 Switch component
- *
- * @template TValue
- * @param {SignalValue<TValue>} condition - Signal value to determine which case to show
- * @param {{ [key: string | number]: () => ChildPrimitive | ChildPrimitive[] }} cases - Object mapping case keys to functions that generate elements
- * @returns {ChildPrimitive}
- * @description
- * Creates a switch component that shows different elements based on a signal value.
- * The `cases` object maps case keys to functions that generate the elements to be shown.
- * The elements are removed from the DOM when not visible.
- */
-function $switch(condition, cases) {
-  const placeholder = document.createComment(`scope-${getScopeId()}switch`);
-  /** @type {(Element | Text)[]} */
-  let currentElems = [];
-  /** @type {string | number | null | undefined} */
-  let oldCase;
-
-  createEffect(() => {
-    const value = condition();
-    const caseFn = cases[value];
-    if (oldCase === value) {
-      return;
-    }
-    oldCase = value;
-
-    for (const elem of currentElems) {
-      elem.remove();
-    }
-    currentElems = [];
-
-    if (caseFn) {
-      const _result = caseFn();
-      const elems = Array.isArray(_result) ? _result : [_result];
-      currentElems = elems.map((elem) =>
-        elem instanceof Node
-          ? elem
-          : document.createTextNode(elem == null ? "" : String(elem)),
-      );
-
-      for (const elem of currentElems) {
-        placeholder.parentNode?.insertBefore(elem, placeholder);
-      }
-    }
-  });
-
-  onScopeCleanup(() => {
-    for (const elem of currentElems) {
-      elem.remove();
-    }
-    currentElems = [];
-  });
-
-  return placeholder;
-}
-
-export { $list, $toggle, $switch };

@@ -1,6 +1,9 @@
-/** @import { de100x } from "./dom.js"; */
+/**
+ * @import { de100x } from "./dom.js";
+ * @import { SignalValue } from "./signals.js";
+ */
 
-import { createEffect, onScopeCleanup } from "./signals.Js";
+import { createEffect, onScopeCleanup, getScopeId } from "./signals.js";
 
 /*
 valueOrCB
@@ -308,3 +311,202 @@ Not needed now, but possible future expansion if you go there.
 For events, you could normalize the event listener value to always be a function.
 (If someone accidentally passed null or non-function, it might cause weird runtime error.)
 */
+
+// ========== Reactive DOM Components ==========
+/**
+ * 🧩 List componen
+ * t
+ * @template {any[]} TValue
+ * @param {SignalValue<TValue>} list - Signal value to iterate over
+ * @param {(item: TValue[number], index: number, items: TValue) => string} key - Function to generate a unique key for each item
+ * @param {(item: TValue[number], index: number, items: TValue) => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements for each item
+ * @returns {de100x.ChildPrimitive}
+ * @description
+ * Creates a list of elements based on a signal value.
+ * The `key` function is used to identify each item in the list.
+ * The `fn` function is called for each item in the list to generate the corresponding DOM elements.
+ */
+function $list(list, key, fn) {
+  const placeholder = document.createComment(`scope-${getScopeId()}list`);
+
+  /** @typedef {{ value: TValue[number]; elems: (Element | Text)[] }} NodeEntry */
+
+  /** @type {Map<string, NodeEntry>} */
+  let nodes = new Map();
+
+  createEffect(() => {
+    /** @type {Map<string, NodeEntry>} */
+    const newNodes = new Map();
+    const listValue = list();
+    const maxLength = Math.max(listValue.length, nodes.size);
+
+    /** @type {Node} */
+    let prevAnchor = placeholder;
+
+    for (let i = 0; i < maxLength; i++) {
+      const item = listValue[i];
+      const nodeKey = key(item, i, listValue);
+      const oldEntry = nodes.get(nodeKey);
+
+      if (i < listValue.length && oldEntry && oldEntry.value === item) {
+        // Reuse, but MOVE before previous anchor
+        for (let j = oldEntry.elems.length - 1; j >= 0; j--) {
+          const elem = oldEntry.elems[j];
+          if (prevAnchor.parentNode) {
+            prevAnchor.parentNode.insertBefore(elem, prevAnchor);
+          }
+        }
+        newNodes.set(nodeKey, oldEntry);
+      } else if (i < listValue.length) {
+        // New node to add
+        const _result = fn(item, i, listValue);
+        const elems = Array.isArray(_result) ? _result : [_result];
+        const normalizedElems = elems.map((elem) =>
+          elem instanceof Node
+            ? elem
+            : document.createTextNode(elem == null ? "" : String(elem)),
+        );
+
+        for (let j = normalizedElems.length - 1; j >= 0; j--) {
+          const elem = normalizedElems[j];
+          prevAnchor.parentNode?.insertBefore(elem, prevAnchor);
+        }
+
+        newNodes.set(nodeKey, { value: item, elems: normalizedElems });
+      }
+
+      prevAnchor = newNodes.get(nodeKey)?.elems[0] ?? prevAnchor;
+    }
+
+    // Remove any leftover nodes not in new list
+    for (const [oldKey, oldEntry] of nodes) {
+      if (!newNodes.has(oldKey)) {
+        for (const elem of oldEntry.elems) {
+          elem.remove();
+        }
+      }
+    }
+
+    nodes = newNodes;
+  });
+
+  onScopeCleanup(() => {
+    for (const { elems } of nodes.values()) {
+      for (const elem of elems) {
+        elem.remove();
+      }
+    }
+    nodes.clear();
+  });
+
+  return placeholder;
+}
+
+/**
+ * 🧩 Toggle component
+ *
+ * @template TValue
+ * @param {SignalValue<TValue>} condition - Signal value to determine visibility
+ * @param {() => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements
+ * @returns {de100x.ChildPrimitive}
+ * @description
+ * Creates a toggle component that shows or hides elements based on a signal value.
+ * The `fn` function is called to generate the elements to be shown or hidden.
+ * The elements are removed from the DOM when not visible.
+ */
+function $toggle(condition, fn) {
+  const placeholder = document.createComment(`scope-${getScopeId()}visible`);
+  /** @type {(Element | Text)[]} */
+  let currentElems = [];
+
+  createEffect(() => {
+    const shouldShow = condition();
+
+    if (shouldShow) {
+      const _result = fn();
+      const elems = Array.isArray(_result) ? _result : [_result];
+      currentElems = elems.map((elem) =>
+        elem instanceof Node
+          ? /** @type {Element} */ (elem)
+          : document.createTextNode(elem == null ? "" : String(elem)),
+      );
+
+      for (const elem of currentElems) {
+        placeholder.parentNode?.insertBefore(elem, placeholder);
+      }
+    } else {
+      for (const elem of currentElems) {
+        elem.remove();
+      }
+      currentElems = [];
+    }
+  });
+
+  onScopeCleanup(() => {
+    for (const elem of currentElems) {
+      elem.remove();
+    }
+    currentElems = [];
+  });
+
+  return placeholder;
+}
+
+/**
+ * 🧩 Switch component
+ *
+ * @template TValue
+ * @param {SignalValue<TValue>} condition - Signal value to determine which case to show
+ * @param {{ [key: string | number]: () => de100x.ChildPrimitive | de100x.ChildPrimitive[] }} cases - Object mapping case keys to functions that generate elements
+ * @returns {de100x.ChildPrimitive}
+ * @description
+ * Creates a switch component that shows different elements based on a signal value.
+ * The `cases` object maps case keys to functions that generate the elements to be shown.
+ * The elements are removed from the DOM when not visible.
+ */
+function $switch(condition, cases) {
+  const placeholder = document.createComment(`scope-${getScopeId()}switch`);
+  /** @type {(Element | Text)[]} */
+  let currentElems = [];
+  /** @type {string | number | null | undefined} */
+  let oldCase;
+
+  createEffect(() => {
+    const value = condition();
+    const caseFn = cases[value];
+    if (oldCase === value) {
+      return;
+    }
+    oldCase = value;
+
+    for (const elem of currentElems) {
+      elem.remove();
+    }
+    currentElems = [];
+
+    if (caseFn) {
+      const _result = caseFn();
+      const elems = Array.isArray(_result) ? _result : [_result];
+      currentElems = elems.map((elem) =>
+        elem instanceof Node
+          ? /** @type {Element} */ (elem)
+          : document.createTextNode(elem == null ? "" : String(elem)),
+      );
+
+      for (const elem of currentElems) {
+        placeholder.parentNode?.insertBefore(elem, placeholder);
+      }
+    }
+  });
+
+  onScopeCleanup(() => {
+    for (const elem of currentElems) {
+      elem.remove();
+    }
+    currentElems = [];
+  });
+
+  return placeholder;
+}
+
+export { $list, $toggle, $switch };
