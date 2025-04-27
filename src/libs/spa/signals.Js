@@ -8,69 +8,99 @@ const NODE_TYPE = {
   MEMO: 2,
 };
 
-interface Scope {
-  id: number;
-  name?: string;
-  depth: number;
-  nextSignalId: number;
-  batchDepth: number;
-  activeObserver: ReactiveNode<any> | null;
-  pendingEffects: Set<ReactiveNode<any>>;
-  nodes: Set<ReactiveNode<any>>; // New: ALL nodes (signals, memos, effects)
-  pendingMicrotask: boolean;
-  nextScopes: Scope[];
-  prevScope: Scope | null;
-  cleanups: (() => void)[];
-}
+/**
+ * @typedef {object} Scope
+ * @property {number} id - unique identifier
+ * @property {string} [name] - optional name for debugging
+ * @property {number} depth - depth of the scope in the tree
+ * @property {number} nextSignalId - next signal ID to be assigned
+ * @property {number} batchDepth - current batch depth
+ * @property {ReactiveNode<any> | null} activeObserver - current active observer
+ * @property {Set<ReactiveNode<any>>} pendingEffects - set of pending effects
+ * @property {Set<ReactiveNode<any>>} nodes - set of all nodes (signals, memos, effects)
+ * @property {boolean} pendingMicrotask - whether a microtask is pending
+ * @property {Scope[]} nextScopes - child scopes
+ * @property {Scope | null} prevScope - parent scope
+ * @property {(() => void)[]} cleanups - array of cleanup functions
+ */
 
-interface ReactiveNode<TValue> {
-  id: number;
-  version: number; // incremented when value changes
-  sources: Map<ReactiveNode<any>, number>; // dependencies + version seen
-  observers: Set<ReactiveNode<any>>; // who depends on me
-  // sourceList: ReactiveNode<any>[]; // We can't iterate a WeakMap directly, so we need to track sources separately
-  compute?: () => TValue; // how to calculate value
-  value: TValue; // cached value (for signals/computeds)
-  cleanup?: (() => void) | void; // cleanup function (for effects)
-  onDirty?: () => void; // how to rerun when dirty
-  dirty?: boolean;
-  error?: any;
-  name?: string; // for debugging and cycle detection
-  // Flag to identify effect nodes (terminals in the dependency graph)
-  type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
-  equals?: (a: TValue, b: TValue) => boolean;
-  // dispose: () => void;
-  scopeRef: Scope;
-}
-interface SignalOptions<TValue> {
-  equals?: (a: TValue, b: TValue) => boolean;
-  name?: string;
-}
-interface BaseSignalValue<TValue> {
-  _debug?: {
-    node: ReactiveNode<TValue>;
-    peek: () => TValue;
-    dirty: () => boolean | undefined;
-    id: number;
-    name: string | undefined;
-    createdAt?: string; // for stack trace
-  };
-  peek: () => TValue;
-}
-interface SignalValue<TValue> extends BaseSignalValue<TValue> {
-  (): TValue;
-  set(value: TValue): void;
-  update(fn: (value: TValue) => TValue): void;
-}
-interface MemoValue<TValue> {
-  (): TValue;
-}
+/**
+ * @template TValue
+ * @typedef {object} ReactiveNode
+ * @property {number} id
+ * @property {number} version1 - incremented when value changes
+ * @property {Map<ReactiveNode<any>, number>} sources - dependencies + version seen
+ * @property {Set<ReactiveNode<any>>} observers - who depends on me
+ * @property {() => TValue} [compute] - how to calculate value
+ * @property {TValue} value - cached value (for signals/computeds)
+ * @property {(() => void) | void} [cleanup] - cleanup function (for effects)
+ * @property {() => void} [onDirty] - how to rerun when dirty
+ * @property {boolean} [dirty]
+ * @property {any} [error]
+ * @property {string} [name] - for debugging and cycle detection
+ * @property {(typeof NODE_TYPE)[keyof typeof NODE_TYPE]} type - type of node
+ * @property {((a: TValue, b: TValue) => boolean) | undefined} [equals]
+ * @property {Scope} scopeRef - reference to the current scope
+ */
+// interface SignalOptions<TValue> {
+//   equals?: (a: TValue, b: TValue) => boolean;
+//   name?: string;
+// }
+/**
+ * @template TValue
+ * @typedef {object} SignalOptions
+ * @property {((a: TValue, b: TValue) => boolean) | undefined} [equals] - custom equality check
+ * @property {string | undefined} [name] - name for debugging
+ */
+// interface BaseSignalValue<TValue> {
+//   _debug?: {
+//     node: ReactiveNode<TValue>;
+//     peek: () => TValue;
+//     dirty: () => boolean | undefined;
+//     id: number;
+//     name: string | undefined;
+//     createdAt?: string; // for stack trace
+//   };
+//   peek: () => TValue;
+// }
+/**
+ * @template TValue
+ * @typedef {object} BaseSignalValue
+ * @property {object} [_debug] - debug information
+ * @property {ReactiveNode<TValue>} [_debug.node] - node reference
+ * @property {() => TValue} [_debug.peek] - function to peek value
+ * @property {() => boolean | undefined} [_debug.dirty] - function to check if dirty
+ * @property {number} [_debug.id] - node ID
+ * @property {string | undefined} [_debug.name] - node name
+ * @property {string | undefined} [_debug.createdAt] - stack trace
+ * @property {() => TValue} peek - function to get the current value
+ */
+// interface SignalValue<TValue> extends BaseSignalValue<TValue> {
+//   (): TValue;
+//   set(value: TValue): void;
+//   update(fn: (value: TValue) => TValue): void;
+// }
+/**
+ * @template TValue
+ * @typedef {(() => TValue) & BaseSignalValue {
+ *  @property {() => TValue} - function to get the current value
+ *  @property {function(value: TValue): void} set - function to set a new value
+ * }} SignalValue
+ */
+// interface MemoValue<TValue> {
+//   (): TValue;
+// }
+/**
+ * @template TValue
+ * @typedef {(() => TValue) & BaseSignalValue} MemoValue
+ */
 
 // Symbol used to access internal node (not exported)
 const SIGNAL = Symbol("signal");
 
 let nextScopeId = 0;
-let currentScope: Scope = {
+/** @type {Scope} */
+let currentScope = {
   id: nextScopeId++,
   depth: 0,
   nextSignalId: 0,
@@ -89,7 +119,13 @@ let currentScope: Scope = {
 /***************** Create Scope *****************/
 /************************ ************************/
 
-function disposeScope(scope: Scope) {
+/**
+ * 🧹 Dispose a scope and all its child scopes
+ *
+ * @param {Scope} scope
+ * @returns {void}
+ */
+function disposeScope(scope) {
   // Recursively dispose child scopes first
   for (const child of scope.nextScopes) {
     disposeScope(child);
@@ -121,15 +157,17 @@ function disposeScope(scope: Scope) {
 
 /**
  * 🧱 Create a new scope
- * @param fn Function to run in the new scope
+ *
+ * @template TValue
+ * @param {() => TValue} fn Function to run in the new scope
+ * @param {{ detached?: boolean; name?: string }} [options] Options for the scope
+ * @returns {{ dispose: () => void; result: TValue }} Result of the function and a dispose function
  */
-function createScope<T>(
-  fn: () => T,
-  options?: { detached?: boolean; name?: string },
-): { dispose: () => void; result: T } {
+function createScope(fn, options) {
   const parentScope = currentScope;
 
-  const newScope: Scope = {
+  /** @type {Scope} */
+  const newScope = {
     id: nextScopeId++,
     name: options?.name,
     depth: parentScope.depth + 1,
@@ -151,7 +189,8 @@ function createScope<T>(
   // $switch to new scope
   currentScope = newScope;
 
-  let result: T;
+  /** @type {TValue} */
+  let result;
   try {
     result = fn();
   } finally {
@@ -176,16 +215,15 @@ function getScopeId() {
 
 /**
  * 🧱 Create a fresh node
+ *
+ * @template TValue
+ * @param {TValue} val Initial value
+ * @param {{ name?: string; equals?: (a: TValue, b: TValue) => boolean; type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE]; }} options Options for the node
+ * @returns {ReactiveNode<TValue>} The created node
  */
-function createNode<TValue>(
-  val: TValue,
-  options: {
-    name?: string;
-    equals?: (a: TValue, b: TValue) => boolean;
-    type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
-  },
-): ReactiveNode<TValue> {
-  const node: ReactiveNode<TValue> = {
+function createNode(val, options) {
+  /** @type {ReactiveNode<TValue>} */
+  const node = {
     id: currentScope.nextSignalId++,
     version: 0,
     value: val,
@@ -207,8 +245,12 @@ function createNode<TValue>(
 
 /**
  * 🛑 Read a value without tracking dependencies
+ *
+ * @template TValue
+ * @param {() => TValue} fn Function to execute
+ * @returns {TValue} The result of the function
  */
-function untrack<T>(fn: () => T): T {
+function untrack(fn) {
   const prevObserver = currentScope.activeObserver;
   currentScope.activeObserver = null;
   try {
@@ -220,8 +262,12 @@ function untrack<T>(fn: () => T): T {
 
 /**
  * 🧭 Track a read dependency
+ *
+ * @template TValue
+ * @param {ReactiveNode<TValue>} sourceNode The node to track
+ * @returns {void}
  */
-function trackAccess<TValue>(sourceNode: ReactiveNode<TValue>) {
+function trackAccess(sourceNode) {
   if (
     process.env.NODE_ENV !== "production" &&
     sourceNode.compute === undefined
@@ -244,8 +290,11 @@ function trackAccess<TValue>(sourceNode: ReactiveNode<TValue>) {
 
 /**
  * 🧹 Flush pending effects on the scope and it's children scopes recursively
+ *
+ * @param {Scope} scope The scope to flush
+ * @returns {void}
  */
-function flushPendingEffects(scope: Scope) {
+function flushPendingEffects(scope) {
   for (const effect of scope.pendingEffects) {
     runNode(effect);
   }
@@ -258,6 +307,8 @@ function flushPendingEffects(scope: Scope) {
 
 /**
  * ⏳ Schedule flush of pending effects
+ *
+ * @returns {void}
  */
 function scheduleMicrotask() {
   if (currentScope.pendingMicrotask || currentScope.pendingEffects.size === 0) {
@@ -277,8 +328,12 @@ function scheduleMicrotask() {
 
 /**
  * 📣 Notify observers of a change
+ *
+ * @template TValue
+ * @param {ReactiveNode<TValue>} node The node to notify
+ * @returns {void}
  */
-function notifyObservers<TValue>(node: ReactiveNode<TValue>) {
+function notifyObservers(node) {
   if (process.env.NODE_ENV !== "production") {
     console.log(`📣 notifyObservers: ${node.name ?? `Node_${node.id}`}`);
   }
@@ -303,7 +358,13 @@ function notifyObservers<TValue>(node: ReactiveNode<TValue>) {
   }
 }
 
-function disposeNode(node: ReactiveNode<any>) {
+/**
+ * 🧹 Dispose a node
+ *
+ * @param {ReactiveNode<any>} node The node to dispose
+ * @returns {void}
+ */
+function disposeNode(node) {
   if (node.cleanup) {
     node.cleanup();
     node.cleanup = undefined;
@@ -327,24 +388,28 @@ const defaultEquals = Object.is;
 
 /**
  * 🌱 Signal primitive
+ *
+ * @template TValue
+ * @param {TValue} initialValue Initial value
+ * @param {SignalOptions<TValue>} [options] Options for the signal
+ * @returns {SignalValue<TValue>} The created signal
  */
-function createSignal<TValue>(
-  initialValue: TValue,
-  options?: SignalOptions<TValue>,
-) {
+function createSignal(initialValue, options) {
   const node = createNode(initialValue, {
     name: options?.name,
     type: NODE_TYPE.SIGNAL,
     equals: options?.equals,
   });
 
+  /** @type {SignalValue<TValue>} */
   const signal = Object.assign(
     () => {
       trackAccess(node);
       return node.value;
     },
     {
-      set: (newValue: TValue) => {
+      /** @param {TValue} newValue */
+      set: (newValue) => {
         if ((node.equals ?? defaultEquals)(node.value, newValue)) {
           return;
         }
@@ -353,11 +418,12 @@ function createSignal<TValue>(
         node.version++;
         notifyObservers(node);
       },
-      update: (fn: (value: TValue) => TValue) => signal.set(fn(node.value)),
+      /** @param {(value: TValue) => TValue} fn */
+      update: (fn) => signal.set(fn(node.value)),
       peek: () => node.value,
       [SIGNAL]: node,
     },
-  ) as SignalValue<TValue>;
+  );
 
   if (process.env.NODE_ENV !== "production") {
     signal._debug = {
@@ -382,13 +448,19 @@ function createSignal<TValue>(
 /**
  * 🔄 Core computation logic
  * Runs a memo/effect and handles dependency tracking + cleanup
+ *
+ * @type {ReactiveNode<any>} node The node to run
  */
-const computationStack: Set<ReactiveNode<unknown>> = new Set();
+const computationStack = new Set();
 
 /**
  * 🔁 Remove source links from a node
+ *
+ * @template TValue
+ * @param {ReactiveNode<TValue>} node The node to clean up
+ * @returns {void}
  */
-function cleanupSources<TValue>(node: ReactiveNode<TValue>) {
+function cleanupSources(node) {
   // Remove this node as an observer from all its sources
   for (const [source] of node.sources) {
     source.observers.delete(node);
@@ -398,7 +470,14 @@ function cleanupSources<TValue>(node: ReactiveNode<TValue>) {
   node.sources = new Map();
 }
 
-function runNode(node: ReactiveNode<any>) {
+/**
+ * 🔁 Run a node and handle cycles
+ *
+ * @template TValue
+ * @param {ReactiveNode<TValue>} node The node to run
+ * @returns {boolean} Whether the node was successfully run
+ */
+function runNode(node) {
   if (!node.compute) return false;
 
   // 🔁 Detect cycles
@@ -469,16 +548,22 @@ function runNode(node: ReactiveNode<any>) {
 
 /**
  * 👁️ Effect
+ *
+ * @template TValue
+ * @param {() => TValue} fn Function to run as an effect
+ * @param {SignalOptions<TValue>} [options] Options for the effect
+ * @returns {() => void} Disposal function to clean up the effect
  */
-function createEffect<TValue>(
-  fn: () => TValue,
-  options?: SignalOptions<TValue>,
-) {
-  const node = createNode<TValue>(undefined as any, {
-    name: options?.name,
-    type: NODE_TYPE.EFFECT,
-    equals: options?.equals,
-  });
+function createEffect(fn, options) {
+  const node =
+    createNode <
+    TValue >
+    /** @type {any} */ ((undefined),
+    {
+      name: options?.name,
+      type: NODE_TYPE.EFFECT,
+      equals: options?.equals,
+    });
   node.compute = fn;
   if (process.env.NODE_ENV !== "production") {
     if (node.observers.size > 0 || node.sources.size > 0) {
@@ -525,7 +610,14 @@ function createEffect<TValue>(
   return dispose;
 }
 
-function updateIfNecessary<TValue>(node: ReactiveNode<TValue>): boolean {
+/**
+ * 🔁 Update a node if necessary
+ *
+ * @template TValue
+ * @param {ReactiveNode<TValue>} node The node to update
+ * @returns {boolean} Whether the node was updated
+ */
+function updateIfNecessary(node) {
   if (!node.compute || !node.dirty) return false;
 
   return runNode(node);
@@ -533,19 +625,28 @@ function updateIfNecessary<TValue>(node: ReactiveNode<TValue>): boolean {
 
 /**
  * 🔁 Memo
+ *
+ * @template TValue
+ * @param {() => TValue} fn Function to run as a memo
+ * @param {SignalOptions<TValue>} [options] Options for the memo
+ * @returns {MemoValue<TValue>} The created memo
  */
-function createMemo<TValue>(
-  fn: () => TValue,
-  options?: SignalOptions<TValue>,
-): MemoValue<TValue> {
-  const node = createNode<TValue>(undefined as any, {
-    name: options?.name,
-    type: NODE_TYPE.MEMO,
-    equals: options?.equals,
-  });
+function createMemo(fn, options) {
+  const node =
+    createNode <
+    TValue >
+    /** @type {any} */ ((undefined),
+    {
+      name: options?.name,
+      type: NODE_TYPE.MEMO,
+      equals: options?.equals,
+    });
   node.compute = fn;
 
-  // Create memo function that acts like a signal
+  /**
+   * Create memo function that acts like a signal
+   * @type {MemoValue<TValue>}
+   */
   const memo = () => {
     trackAccess(node);
     updateIfNecessary(node);
@@ -574,13 +675,17 @@ function createMemo<TValue>(
 
   onScopeCleanup(() => disposeNode(node));
 
-  return memo as MemoValue<TValue>;
+  return memo;
 }
 
 /**
  * 📦 Batch signals
+ *
+ * @template TValue
+ * @param {() => TValue} fn Function to run in batch
+ * @returns {TValue} The result of the function
  */
-function batchSignals<TValue>(fn: () => TValue): TValue {
+function batchSignals(fn) {
   currentScope.batchDepth++;
   try {
     return fn();
@@ -594,8 +699,12 @@ function batchSignals<TValue>(fn: () => TValue): TValue {
 
 /**
  * 🧹 Cleanup function
+ *
+ * @param {() => void} fn Function to run on cleanup
+ * @throws {Error} If called outside of a scope
+ * @returns {void}
  */
-function onScopeCleanup(fn: () => void) {
+function onScopeCleanup(fn) {
   if (currentScope?.cleanups) {
     currentScope.cleanups.push(fn);
   } else {
@@ -616,33 +725,36 @@ export {
   batchSignals,
   untrack,
 };
-export type { SignalValue, SignalOptions, ReactiveNode };
+// export type { SignalValue, SignalOptions, ReactiveNode };
 
 // ========== Reactive DOM Components ==========
-function $list<TValue extends any[]>(
-  list: SignalValue<TValue>,
-  key: (item: TValue[number], index: number, items: TValue) => string,
-  fn: (
-    item: TValue[number],
-    index: number,
-    items: TValue,
-  ) => ChildPrimitive | ChildPrimitive[],
-) {
+/**
+ * @template TValue
+ * @param {SignalValue<TValue>} list
+ * @param {(item: TValue[number], index: number, items: TValue) => string} key -
+ * @param {(item: TValue[number], index: number, items: TValue) => ChildPrimitive | ChildPrimitive[]} fn
+ * @returns {ChildPrimitive}
+ * @description
+ * Creates a list of elements based on a signal value.
+ * The `key` function is used to identify each item in the list.
+ * The `fn` function is called for each item in the list to generate the corresponding DOM elements.
+ */
+function $list(list, key, fn) {
   const placeholder = document.createComment(`scope-${getScopeId()}list`);
 
-  type NodeEntry = {
-    value: TValue[number];
-    elems: (Element | Text)[];
-  };
+  /** @typedef {{ value: TValue[number]; elems: (Element | Text)[] }} NodeEntry */
 
-  let nodes = new Map<string, NodeEntry>();
+  /** @type {Map<string, NodeEntry>} */
+  let nodes = new Map();
 
   createEffect(() => {
-    const newNodes = new Map<string, NodeEntry>();
+    /** @type {Map<string, NodeEntry>} */
+    const newNodes = new Map();
     const listValue = list();
     const maxLength = Math.max(listValue.length, nodes.size);
 
-    let prevAnchor: Node = placeholder;
+    /** @type {Node} */
+    let prevAnchor = placeholder;
 
     for (let i = 0; i < maxLength; i++) {
       const item = listValue[i];
@@ -703,12 +815,22 @@ function $list<TValue extends any[]>(
   return placeholder;
 }
 
-function $toggle(
-  condition: SignalValue<boolean>,
-  fn: () => ChildPrimitive | ChildPrimitive[],
-) {
+/**
+ * 🧩 Toggle component
+ *
+ * @template TValue
+ * @param {SignalValue<TValue>} condition - Signal value to determine visibility
+ * @param {() => ChildPrimitive | ChildPrimitive[]} fn - Function to generate elements
+ * @returns {ChildPrimitive}
+ * @description
+ * Creates a toggle component that shows or hides elements based on a signal value.
+ * The `fn` function is called to generate the elements to be shown or hidden.
+ * The elements are removed from the DOM when not visible.
+ */
+function $toggle(condition, fn) {
   const placeholder = document.createComment(`scope-${getScopeId()}visible`);
-  let currentElems: (Element | Text)[] = [];
+  /** @type {(Element | Text)[]} */
+  let currentElems = [];
 
   createEffect(() => {
     const shouldShow = condition();
@@ -743,15 +865,24 @@ function $toggle(
   return placeholder;
 }
 
-function $switch<TValue extends string>(
-  condition: SignalValue<TValue>,
-  cases: {
-    [key: string]: () => ChildPrimitive | ChildPrimitive[];
-  },
-) {
+/**
+ * 🧩 Switch component
+ *
+ * @template TValue
+ * @param {SignalValue<TValue>} condition - Signal value to determine which case to show
+ * @param {{ [key: string | number]: () => ChildPrimitive | ChildPrimitive[] }} cases - Object mapping case keys to functions that generate elements
+ * @returns {ChildPrimitive}
+ * @description
+ * Creates a switch component that shows different elements based on a signal value.
+ * The `cases` object maps case keys to functions that generate the elements to be shown.
+ * The elements are removed from the DOM when not visible.
+ */
+function $switch(condition, cases) {
   const placeholder = document.createComment(`scope-${getScopeId()}switch`);
-  let currentElems: (Element | Text)[] = [];
-  let oldCase: string | undefined;
+  /** @type {(Element | Text)[]} */
+  let currentElems = [];
+  /** @type {string | number | null | undefined} */
+  let oldCase;
 
   createEffect(() => {
     const value = condition();

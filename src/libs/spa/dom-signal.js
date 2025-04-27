@@ -1,6 +1,6 @@
 /** @import { de100x } from "./dom.js"; */
 
-import { createEffect, onScopeCleanup } from "./signals.js";
+import { createEffect, onScopeCleanup } from "./signals.Js";
 
 /*
 valueOrCB
