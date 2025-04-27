@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { ChildPrimitive } from "#libs/dom/base.js";
+/** @import { ChildPrimitive } from "#libs/dom/base.js" */
 
 const NODE_TYPE = {
   SIGNAL: 0,
@@ -82,7 +82,11 @@ const NODE_TYPE = {
 // }
 /**
  * @template TValue
- * @typedef {(() => TValue) & BaseSignalValue {
+ * @typedef {() => TValue} BaseGetter
+ */
+/**
+ * @template TValue
+ * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue> & {
  *  @property {() => TValue} - function to get the current value
  *  @property {function(value: TValue): void} set - function to set a new value
  * }} SignalValue
@@ -92,7 +96,7 @@ const NODE_TYPE = {
 // }
 /**
  * @template TValue
- * @typedef {(() => TValue) & BaseSignalValue} MemoValue
+ * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue>} MemoValue
  */
 
 // Symbol used to access internal node (not exported)
@@ -555,15 +559,11 @@ function runNode(node) {
  * @returns {() => void} Disposal function to clean up the effect
  */
 function createEffect(fn, options) {
-  const node =
-    createNode <
-    TValue >
-    /** @type {any} */ ((undefined),
-    {
-      name: options?.name,
-      type: NODE_TYPE.EFFECT,
-      equals: options?.equals,
-    });
+  const node = createNode(/** @type {TValue} */ undefined, {
+    name: options?.name,
+    type: NODE_TYPE.EFFECT,
+    equals: options?.equals,
+  });
   node.compute = fn;
   if (process.env.NODE_ENV !== "production") {
     if (node.observers.size > 0 || node.sources.size > 0) {
@@ -632,15 +632,11 @@ function updateIfNecessary(node) {
  * @returns {MemoValue<TValue>} The created memo
  */
 function createMemo(fn, options) {
-  const node =
-    createNode <
-    TValue >
-    /** @type {any} */ ((undefined),
-    {
-      name: options?.name,
-      type: NODE_TYPE.MEMO,
-      equals: options?.equals,
-    });
+  const node = createNode(/** @type {TValue} */ undefined, {
+    name: options?.name,
+    type: NODE_TYPE.MEMO,
+    equals: options?.equals,
+  });
   node.compute = fn;
 
   /**
@@ -714,6 +710,114 @@ function onScopeCleanup(fn) {
     throw new Error("No active scope for cleanup registration.");
   }
 }
+
+// example of usage
+
+/*
+function createScope2() {
+  return createScope(() => {
+    const counter = createSignal(0);
+    const scopeId = getScopeId();
+
+    const secondScopeSection = document.createElement("div");
+    const incrementButton = document.createElement("button");
+    incrementButton.textContent = "Increment";
+    incrementButton.addEventListener("click", () => {
+      counter.set(counter() + 1);
+    });
+    secondScopeSection.appendChild(incrementButton);
+    const decrementButton = document.createElement("button");
+    decrementButton.textContent = "Decrement";
+    decrementButton.addEventListener("click", () => {
+      counter.set(counter() - 1);
+    });
+    secondScopeSection.appendChild(decrementButton);
+    const resetButton = document.createElement("button");
+    resetButton.textContent = "Reset";
+    resetButton.addEventListener("click", () => {
+      counter.set(0);
+    });
+    secondScopeSection.appendChild(resetButton);
+    const counterDisplay = document.createElement("h2");
+    counterDisplay.id = `second-scope-counter-${scopeId}`;
+    counterDisplay.textContent = `Second Scope Counter: ${counter.peek()}`;
+    secondScopeSection.appendChild(counterDisplay);
+    createEffect(() => {
+      counterDisplay.textContent = `Second Scope Counter: ${counter()}`;
+    });
+    onScopeCleanup(() => {
+      secondScopeSection.remove();
+    });
+
+    return secondScopeSection;
+  });
+}
+
+createScope(() => {
+  const scopeId = getScopeId();
+  const counter = createSignal(0);
+  const increment = () => {
+    counter.set(counter() + 1);
+  };
+  const decrement = () => {
+    counter.set(counter() - 1);
+  };
+  const reset = () => {
+    counter.set(0);
+  };
+  const double = createMemo(() => counter() * 2);
+  const doubleEffect = createEffect(() => {
+    console.log(`Double: ${double()}`);
+  });
+
+  document.body.innerHTML = `
+		<div>
+			<h1 id=${`counter-${scopeId}`}>Counter: ${counter.peek()}</h1>
+			<button id=${`increment-${scopeId}`}>Increment</button>
+			<button id=${`decrement-${scopeId}`}>Decrement</button>
+			<button id=${`reset-${scopeId}`}>Reset</button>
+			<p id=${`double-${scopeId}`}>Double: ${double.peek()}</p>
+		</div>
+		<hr />
+		<section>
+			<h1>Second Scope Toggle</h1>
+			<button id=${`toggleSecondScope-${scopeId}`}>Toggle Second Scope</button>
+		</section>
+	`;
+  document
+    .getElementById(`increment-${scopeId}`)
+    .addEventListener("click", increment);
+  document
+    .getElementById(`decrement-${scopeId}`)
+    .addEventListener("click", decrement);
+  document.getElementById(`reset-${scopeId}`).addEventListener("click", reset);
+
+  let secondScope;
+  document
+    .getElementById(`toggleSecondScope-${scopeId}`)
+    .addEventListener("click", () => {
+      if (secondScope) {
+        secondScope.dispose();
+        secondScope = null;
+      } else {
+        secondScope = createScope2();
+        document.body.appendChild(secondScope.result);
+      }
+    });
+
+  createEffect(() => {
+    document.getElementById(
+      `counter-${scopeId}`,
+    ).textContent = `Counter: ${counter()}`;
+  });
+  createEffect(() => {
+    document.getElementById(
+      `double-${scopeId}`,
+    ).textContent = `Double: ${double()}`;
+  });
+});
+*/
+
 export {
   createScope,
   disposeScope,
@@ -729,10 +833,12 @@ export {
 
 // ========== Reactive DOM Components ==========
 /**
+ * 🧩 List componen
+ * t
  * @template TValue
- * @param {SignalValue<TValue>} list
- * @param {(item: TValue[number], index: number, items: TValue) => string} key -
- * @param {(item: TValue[number], index: number, items: TValue) => ChildPrimitive | ChildPrimitive[]} fn
+ * @param {SignalValue<TValue>} list - Signal value to iterate over
+ * @param {(item: TValue[number], index: number, items: TValue) => string} key - Function to generate a unique key for each item
+ * @param {(item: TValue[number], index: number, items: TValue) => ChildPrimitive | ChildPrimitive[]} fn - Function to generate elements for each item
  * @returns {ChildPrimitive}
  * @description
  * Creates a list of elements based on a signal value.
