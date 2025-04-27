@@ -2,6 +2,12 @@
  * @namespace de100x
  */
 
+import {
+  setGeneralTagAttribute,
+  setTagAttribute,
+  setTagAttributeNS,
+} from "./dom-signal";
+
 /**
  *
  * @typedef {string|number|Node|undefined|null} de100x.ChildPrimitive
@@ -54,16 +60,25 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  */
 
 /**
+ * @template TValue
+ * @typedef {TValue | null | undefined} de100x.Nullable
+ */
+/**
+ * @template TValueOrCb
+ * @typedef {de100x.Nullable<TValueOrCb> | (() => de100x.Nullable<TValueOrCb>)} de100x.NullableOrCb
+ */
+
+/**
  * @template {Element} Elem
  *
  * @typedef {{
  * 	dangerouslySetInnerHTML?: { __html: string };
- *  dataSet?: ({ [key: string]: string | undefined | (() => string | undefined) }) | (() => { [key: string]: string | undefined | (() => string | undefined) });
- *  ariaSet?: ({ [key: string]: string | undefined | (() => string | undefined) }) | (() => { [key: string]: string | undefined | (() => string | undefined) });
- *  style?: ({ [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] | (() => de100x.HTMLElement["style"][key]) }) | (() => ({ [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] }));
+ *  dataSet?: de100x.NullableOrCb<({ [key: string]: de100x.NullableOrCb<string> })>;
+ *  ariaSet?: de100x.NullableOrCb<({ [key in keyof ARIAMixin]: de100x.NullableOrCb<ARIAMixin[key]> })>;
+ *  style?: de100x.NullableOrCb<({ [key in keyof de100x.HTMLElement["style"]]?: de100x.NullableOrCb<de100x.HTMLElement["style"][key]> })>;
  *  ref?: { current: Elem } | ((element: Elem) => void);
- *  [`data-*`]: string | undefined | (() => string | undefined);
- *  [`aria-*`]: string | undefined | (() => string | undefined);
+ *  [`data-*`]?: de100x.NullableOrCb<string>;
+ *  [`aria-*`]?: de100x.NullableOrCb<string>;
  * }} de100x.SharedAttributes
  */
 
@@ -72,14 +87,26 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * @template {Record<string, any>} TEventMap
  * @template {keyof TElemMap} TTagName
  * @typedef {{
+ *   [K in keyof TEventMap as `on${K & string}`]?:
+ * 		((event: TEventMap[K] & { target: TElemMap[TTagName] }) => void) |
+ * 		[(event: TEventMap[K] & { target: TElemMap[TTagName] }) => void,
+ * 	   boolean | AddEventListenerOptions | { onAdd: boolean | AddEventListenerOptions; onRemove: boolean | EventListenerOptions | AddEventListenerOptions}
+ * 		];
+ * }} de100x.GetEventMapForTag
+ */
+
+/**
+ * @template {Record<string, any>} TElemMap
+ * @template {Record<string, any>} TEventMap
+ * @template {keyof TElemMap} TTagName
+ * @typedef {{
  *   [Key in keyof TElemMap[TTagName] as (
- *     Key extends `on${string}` ? Key :
- *     TElemMap[TTagName][Key] extends object ? never :
+ *     NonNullable<TElemMap[TTagName][Key]> extends (object | ((...params: any[]) => any)) ? never :
  *     Key
- *   )]?: TElemMap[TTagName][Key] | (() => TElemMap[TTagName][Key]);
- * } & {
- *   [K in keyof TEventMap as `on${Capitalize<K & string>}`]?: (event: TEventMap[K] & { target: TElemMap[TTagName] }) => void;
- * } & de100x.SharedAttributes<TElemMap[TTagName]>} de100x.GetAttrsForTag
+ *   )]?:  TElemMap[TTagName][Key] | (() => TElemMap[TTagName][Key]);
+ * }
+ * & de100x.GetEventMapForTag<TElemMap, TEventMap, TTagName>
+ * & de100x.SharedAttributes<TElemMap[TTagName]>} de100x.GetAttrsForTag
  */
 
 /**
@@ -124,141 +151,6 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/createElementNS)
  */
-
-function setGeneralTagAttribute(
-  /** @type {de100x.Element} */ element,
-  /** @type {string} */ key,
-  /** @type {unknown} */ valueOrCB,
-) {
-  const value = typeof valueOrCB === "function" ? valueOrCB() : valueOrCB;
-
-  switch (key) {
-    case "style": {
-      if (typeof value === "string") {
-        element.setAttribute(key, value);
-        return true;
-      }
-
-      const _value =
-        /** @type {{ [Key in keyof de100x.HTMLElement['style']]: de100x.HTMLElement['style'][Key] | (() => de100x.HTMLElement['style'][Key]) }} */ (
-          value
-        );
-
-      for (const key in _value) {
-        if (Object.prototype.hasOwnProperty.call(_value, key)) {
-          const value =
-            typeof _value[key] === "function" ? _value[key]() : _value[key];
-          if (typeof value === "string") {
-            element.style[key] = value;
-          }
-        }
-      }
-      return true;
-    }
-    case "className": {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      element.className = typeof value === "string" ? value : "";
-      return true;
-    }
-    case "dataSet": {
-      const _dataSet =
-        /** @type {{ [Key in string]: string | undefined | (() => string | undefined) }} */ (
-          value
-        );
-      for (const key in _dataSet) {
-        if (Object.prototype.hasOwnProperty.call(_dataSet, key)) {
-          const value =
-            typeof _dataSet[key] === "function"
-              ? _dataSet[key]()
-              : _dataSet[key];
-          if (typeof value === "string") {
-            element.dataset[key] = value;
-          }
-        }
-      }
-      return true;
-    }
-    case "ariaSet": {
-      const _ariaSet =
-        /** @type {{ [Key in string]: string | undefined | (() => string | undefined) }} */ (
-          value
-        );
-      for (const key in _ariaSet) {
-        if (Object.prototype.hasOwnProperty.call(_ariaSet, key)) {
-          const value =
-            typeof _ariaSet[key] === "function"
-              ? _ariaSet[key]()
-              : _ariaSet[key];
-          if (typeof value === "string") {
-            element.setAttribute(`aria-${key}`, value);
-          }
-        }
-      }
-      return true;
-    }
-    case "dangerouslySetInnerHTML": {
-      const _value = /** @type {{ __html: string }} */ (value);
-      element.innerHTML = _value.__html;
-
-      return true;
-    }
-    case "ref": {
-      const _value =
-        /** @type {{ current: Element }|((element: Element) => void) } */ (
-          value
-        );
-
-      if (typeof _value === "function") {
-        _value(element);
-      } else if (_value && typeof _value === "object" && "current" in _value) {
-        _value.current = element;
-      }
-      return true;
-    }
-  }
-
-  if (key.startsWith("on")) {
-    element.addEventListener(
-      key.slice(2).toLowerCase(),
-      /** @type {EventListener} */ (value),
-    );
-    return true;
-  }
-
-  return false;
-}
-
-function setTagAttribute(
-  /** @type {de100x.HTMLElement} */ element,
-  /** @type {string} */ key,
-  /** @type {unknown} */ valueOrCB,
-) {
-  const value = typeof valueOrCB === "function" ? valueOrCB() : valueOrCB;
-
-  if (typeof value === "boolean") {
-    if (value) element.setAttribute(key, "");
-    else element.removeAttribute(key);
-    return;
-  }
-
-  element.setAttribute(key, /** @type {string} */ (value));
-}
-function setTagAttributeNS(
-  /** @type {string} */
-  namespace,
-  /** @type {de100x.ElementNS} */ element,
-  /** @type {string} */ key,
-  /** @type {unknown} */ valueOrCB,
-) {
-  const value = typeof valueOrCB === "function" ? valueOrCB() : valueOrCB;
-
-  if (typeof value === "boolean") {
-    if (value) return element.setAttributeNS(namespace, key, "");
-  }
-
-  element.setAttributeNS(namespace, key, /** @type {string} */ (value));
-}
 
 /**
  * @param {Element} element
@@ -439,7 +331,7 @@ const tagsHTMLProxy = new Proxy(
           tagFactory(tagName);
       }
 
-      return tagFactory(tagName);
+      return _basicTagsCache[tagName];
     },
   },
 );
@@ -455,11 +347,10 @@ const _svgsTagsCache = {};
  */
 const svgTagsProxy = new Proxy(/** @type {TagSVGMapProxy} */ (_svgsTagsCache), {
   /**
-   * @template {keyof de100x.TagName2ElementMap} TTagName
+   * @template {keyof de100x.TagNameSVGPropsMap} TTagName
    *
    * @param {TagSVGMapProxy} target - The target object, used for caching.
    * @param {TTagName} tagName - The name of the element to create.
-   * @returns
    */
   get(target, tagName) {
     if (!(tagName in _svgsTagsCache)) {
@@ -482,11 +373,10 @@ const mathMLTagsProxy = new Proxy(
   /** @type {TagMathMLMapProxy} */ (_mathMLsTagsCache),
   {
     /**
-     * @template {keyof de100x.TagName2ElementMap} TTagName
+     * @template {keyof de100x.TagNameMathMLPropsMap} TTagName
      *
      * @param {TagMathMLMapProxy} target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
-     * @returns
      */
     get(target, tagName) {
       if (!(tagName in _mathMLsTagsCache)) {
@@ -510,11 +400,10 @@ const xhtmlTagsProxy = new Proxy(
   /** @type {TagXHTMLMapProxy} */ (_xhtmlsTagsCache),
   {
     /**
-     * @template {keyof de100x.TagName2ElementMap} TTagName
+     * @template {keyof de100x.TagNameXHTMLPropsMap} TTagName
      *
      * @param {TagXHTMLMapProxy} target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
-     * @returns
      */
     get(target, tagName) {
       if (!(tagName in _xhtmlsTagsCache)) {
@@ -557,20 +446,24 @@ const tagsProxy = new Proxy(
     apply(target, _thisArg, argArray) {
       const namespaceURI = argArray[0];
 
-      if (namespaceURI === SVG_NS) {
-        return svgTagsProxy;
-      }
+      switch (namespaceURI) {
+        case SVG_NS:
+          return svgTagsProxy;
+        case MathML_NS:
+          return mathMLTagsProxy;
+        case XHTML_NS:
+          return xhtmlTagsProxy;
+        default:
+          if (typeof namespaceURI !== "string") {
+            throw new Error(`Unsupported namespace URI: ${namespaceURI}`);
+          }
+          if (process.env.NODE_ENV !== "production") {
+            console.warn(
+              `Namespace URI "${namespaceURI}" is not supported. Defaulting to HTML namespace.`,
+            );
+          }
 
-      if (namespaceURI === MathML_NS) {
-        return mathMLTagsProxy;
-      }
-
-      if (namespaceURI === XHTML_NS) {
-        return xhtmlTagsProxy;
-      }
-
-      if (typeof namespaceURI !== "string") {
-        throw new Error(`Unsupported namespace URI: ${namespaceURI}`);
+          return tagsHTMLProxy;
       }
     },
   },

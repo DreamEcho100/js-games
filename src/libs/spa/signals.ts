@@ -148,7 +148,7 @@ function createScope<T>(
     parentScope.nextScopes.push(newScope);
   }
 
-  // MountSwitch to new scope
+  // $switch to new scope
   currentScope = newScope;
 
   let result: T;
@@ -608,6 +608,7 @@ function onScopeCleanup(fn: () => void) {
 export {
   createScope,
   disposeScope,
+  onScopeCleanup,
   getScopeId,
   createSignal,
   createEffect,
@@ -618,7 +619,7 @@ export {
 export type { SignalValue, SignalOptions, ReactiveNode };
 
 // ========== Reactive DOM Components ==========
-function MountList<TValue extends any[]>(
+function $list<TValue extends any[]>(
   list: SignalValue<TValue>,
   key: (item: TValue[number], index: number, items: TValue) => string,
   fn: (
@@ -702,7 +703,7 @@ function MountList<TValue extends any[]>(
   return placeholder;
 }
 
-function MountToggle(
+function $toggle(
   condition: SignalValue<boolean>,
   fn: () => ChildPrimitive | ChildPrimitive[],
 ) {
@@ -742,7 +743,7 @@ function MountToggle(
   return placeholder;
 }
 
-function MountSwitch<TValue extends string>(
+function $switch<TValue extends string>(
   condition: SignalValue<TValue>,
   cases: {
     [key: string]: () => ChildPrimitive | ChildPrimitive[];
@@ -790,4 +791,4 @@ function MountSwitch<TValue extends string>(
   return placeholder;
 }
 
-export { MountList, MountToggle, MountSwitch };
+export { $list, $toggle, $switch };
