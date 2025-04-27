@@ -148,7 +148,7 @@ function createScope<T>(
     parentScope.nextScopes.push(newScope);
   }
 
-  // Switch to new scope
+  // MountSwitch to new scope
   currentScope = newScope;
 
   let result: T;
@@ -618,7 +618,7 @@ export {
 export type { SignalValue, SignalOptions, ReactiveNode };
 
 // ========== Reactive DOM Components ==========
-function List<TValue extends any[]>(
+function MountList<TValue extends any[]>(
   list: SignalValue<TValue>,
   key: (item: TValue[number], index: number, items: TValue) => string,
   fn: (
@@ -702,7 +702,7 @@ function List<TValue extends any[]>(
   return placeholder;
 }
 
-function Visible(
+function MountToggle(
   condition: SignalValue<boolean>,
   fn: () => ChildPrimitive | ChildPrimitive[],
 ) {
@@ -742,7 +742,7 @@ function Visible(
   return placeholder;
 }
 
-function Switch<TValue extends string>(
+function MountSwitch<TValue extends string>(
   condition: SignalValue<TValue>,
   cases: {
     [key: string]: () => ChildPrimitive | ChildPrimitive[];
@@ -790,4 +790,4 @@ function Switch<TValue extends string>(
   return placeholder;
 }
 
-export { List, Visible, Switch };
+export { MountList, MountToggle, MountSwitch };
