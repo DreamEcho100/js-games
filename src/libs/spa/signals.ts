@@ -713,18 +713,16 @@ function Visible(
     const shouldShow = condition();
 
     if (shouldShow) {
-      if (currentElems.length === 0) {
-        const _result = fn();
-        const elems = Array.isArray(_result) ? _result : [_result];
-        currentElems = elems.map((elem) =>
-          elem instanceof Node
-            ? elem
-            : document.createTextNode(elem == null ? "" : String(elem)),
-        );
+      const _result = fn();
+      const elems = Array.isArray(_result) ? _result : [_result];
+      currentElems = elems.map((elem) =>
+        elem instanceof Node
+          ? elem
+          : document.createTextNode(elem == null ? "" : String(elem)),
+      );
 
-        for (const elem of currentElems) {
-          placeholder.parentNode?.insertBefore(elem, placeholder);
-        }
+      for (const elem of currentElems) {
+        placeholder.parentNode?.insertBefore(elem, placeholder);
       }
     } else {
       for (const elem of currentElems) {

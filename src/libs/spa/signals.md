@@ -931,19 +931,17 @@ function Visible(
     const shouldShow = condition();
 
     if (shouldShow) {
-      if (currentElems.length === 0) {
-        const _result = fn();
-        const elems = Array.isArray(_result) ? _result : [_result];
-        currentElems = elems.map((elem) =>
-          elem instanceof Node
-            ? elem
-            : document.createTextNode(elem == null ? "" : String(elem)),
-        );
+   const _result = fn();
+   const elems = Array.isArray(_result) ? _result : [_result];
+   currentElems = elems.map((elem) =>
+    elem instanceof Node
+     ? elem
+     : document.createTextNode(elem == null ? "" : String(elem)),
+   );
 
-        for (const elem of currentElems) {
-          placeholder.parentNode?.insertBefore(elem, placeholder);
-        }
-      }
+   for (const elem of currentElems) {
+    placeholder.parentNode?.insertBefore(elem, placeholder);
+   }
     } else {
       for (const elem of currentElems) {
         elem.remove();
@@ -968,7 +966,7 @@ The `Visible` component conditionally renders content based on a boolean signal.
 1. It creates a placeholder comment node.
 2. It uses `createEffect` to react to changes in the `condition` signal.
 3. Inside the effect:
-    * If `condition()` is true and no elements are currently rendered (`currentElems.length === 0`), it calls the `fn` to generate the DOM elements, normalizes them, and inserts them before the `placeholder`.
+    * If `condition()` is true, it calls the `fn` to generate the DOM elements, normalizes them, and inserts them before the `placeholder`.
     * If `condition()` is false and elements are currently rendered, it removes all the `currentElems` from the DOM and clears the `currentElems` array.
 4. It uses `onScopeCleanup` to remove any rendered elements when the component's scope is disposed.
 5. It returns the `placeholder` comment node.
