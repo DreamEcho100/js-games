@@ -58,12 +58,12 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  *
  * @typedef {{
  * 	dangerouslySetInnerHTML?: { __html: string };
- *  dataSet?: { [key: string]: string };
- *  ariaSet?: { [key: string]: string };
- *  style?: { [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] };
+ *  dataSet?: ({ [key: string]: string | undefined | (() => string | undefined) }) | (() => { [key: string]: string | undefined | (() => string | undefined) });
+ *  ariaSet?: ({ [key: string]: string | undefined | (() => string | undefined) }) | (() => { [key: string]: string | undefined | (() => string | undefined) });
+ *  style?: ({ [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] | (() => de100x.HTMLElement["style"][key]) }) | (() => ({ [key in keyof de100x.HTMLElement["style"]]?: de100x.HTMLElement["style"][key] }));
  *  ref?: { current: Elem } | ((element: Elem) => void);
- *  [`data-*`]: string;
- *  [`aria-*`]: string;
+ *  [`data-*`]: string | undefined | (() => string | undefined);
+ *  [`aria-*`]: string | undefined | (() => string | undefined);
  * }} de100x.SharedAttributes
  */
 
@@ -76,7 +76,7 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  *     Key extends `on${string}` ? Key :
  *     TElemMap[TTagName][Key] extends object ? never :
  *     Key
- *   )]?: TElemMap[TTagName][Key];
+ *   )]?: TElemMap[TTagName][Key] | (() => TElemMap[TTagName][Key]);
  * } & {
  *   [K in keyof TEventMap as `on${Capitalize<K & string>}`]?: (event: TEventMap[K] & { target: TElemMap[TTagName] }) => void;
  * } & de100x.SharedAttributes<TElemMap[TTagName]>} de100x.GetAttrsForTag
@@ -128,8 +128,10 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
 function setGeneralTagAttribute(
   /** @type {de100x.Element} */ element,
   /** @type {string} */ key,
-  /** @type {unknown} */ value,
+  /** @type {unknown} */ valueOrCB,
 ) {
+  const value = typeof valueOrCB === "function" ? valueOrCB() : valueOrCB;
+
   switch (key) {
     case "style": {
       if (typeof value === "string") {
@@ -138,13 +140,14 @@ function setGeneralTagAttribute(
       }
 
       const _value =
-        /** @type {{ [Key in keyof de100x.HTMLElement['style']]: de100x.HTMLElement['style'][Key] }} */ (
+        /** @type {{ [Key in keyof de100x.HTMLElement['style']]: de100x.HTMLElement['style'][Key] | (() => de100x.HTMLElement['style'][Key]) }} */ (
           value
         );
 
       for (const key in _value) {
         if (Object.prototype.hasOwnProperty.call(_value, key)) {
-          const value = _value[key];
+          const value =
+            typeof _value[key] === "function" ? _value[key]() : _value[key];
           if (typeof value === "string") {
             element.style[key] = value;
           }
@@ -153,19 +156,22 @@ function setGeneralTagAttribute(
       return true;
     }
     case "className": {
-      if (typeof value !== "string") {
-        element.classList = "";
-      } else {
-        element.classList = value;
-      }
-
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      element.className = typeof value === "string" ? value : "";
       return true;
     }
     case "dataSet": {
-      const _dataSet = /** @type {{ [Key in string]: string }} */ (value);
+      const _dataSet =
+        /** @type {{ [Key in string]: string | undefined | (() => string | undefined) }} */ (
+          value
+        );
       for (const key in _dataSet) {
         if (Object.prototype.hasOwnProperty.call(_dataSet, key)) {
-          const value = _dataSet[key];
+          const value =
+            typeof _dataSet[key] === "function"
+              ? _dataSet[key]()
+              : _dataSet[key];
           if (typeof value === "string") {
             element.dataset[key] = value;
           }
@@ -174,10 +180,16 @@ function setGeneralTagAttribute(
       return true;
     }
     case "ariaSet": {
-      const _ariaSet = /** @type {{ [Key in string]: string }} */ (value);
+      const _ariaSet =
+        /** @type {{ [Key in string]: string | undefined | (() => string | undefined) }} */ (
+          value
+        );
       for (const key in _ariaSet) {
         if (Object.prototype.hasOwnProperty.call(_ariaSet, key)) {
-          const value = _ariaSet[key];
+          const value =
+            typeof _ariaSet[key] === "function"
+              ? _ariaSet[key]()
+              : _ariaSet[key];
           if (typeof value === "string") {
             element.setAttribute(`aria-${key}`, value);
           }
@@ -220,8 +232,10 @@ function setGeneralTagAttribute(
 function setTagAttribute(
   /** @type {de100x.HTMLElement} */ element,
   /** @type {string} */ key,
-  /** @type {unknown} */ value,
+  /** @type {unknown} */ valueOrCB,
 ) {
+  const value = typeof valueOrCB === "function" ? valueOrCB() : valueOrCB;
+
   if (typeof value === "boolean") {
     if (value) element.setAttribute(key, "");
     else element.removeAttribute(key);
@@ -235,15 +249,9 @@ function setTagAttributeNS(
   namespace,
   /** @type {de100x.ElementNS} */ element,
   /** @type {string} */ key,
-  /** @type {unknown} */ value,
+  /** @type {unknown} */ valueOrCB,
 ) {
-  if (key.startsWith("on")) {
-    element.addEventListener(
-      key.slice(2).toLowerCase(),
-      /** @type {EventListener} */ (value),
-    );
-    return;
-  }
+  const value = typeof valueOrCB === "function" ? valueOrCB() : valueOrCB;
 
   if (typeof value === "boolean") {
     if (value) return element.setAttributeNS(namespace, key, "");
