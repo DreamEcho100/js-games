@@ -26,9 +26,9 @@ interface Scope {
 interface ReactiveNode<TValue> {
   id: number;
   version: number; // incremented when value changes
-  sources: WeakMap<ReactiveNode<any>, number>; // dependencies + version seen
+  sources: Map<ReactiveNode<any>, number>; // dependencies + version seen
   observers: Set<ReactiveNode<any>>; // who depends on me
-  sourceList: ReactiveNode<any>[]; // We can't iterate a WeakMap directly, so we need to track sources separately
+  // sourceList: ReactiveNode<any>[]; // We can't iterate a WeakMap directly, so we need to track sources separately
   compute?: () => TValue; // how to calculate value
   value: TValue; // cached value (for signals/computeds)
   cleanup?: (() => void) | void; // cleanup function (for effects)
@@ -39,7 +39,7 @@ interface ReactiveNode<TValue> {
   // Flag to identify effect nodes (terminals in the dependency graph)
   type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
   equals?: (a: TValue, b: TValue) => boolean;
-  dispose: () => void;
+  // dispose: () => void;
   scopeRef: Scope;
 }
 interface SignalOptions<TValue> {
@@ -55,7 +55,6 @@ interface BaseSignalValue<TValue> {
     name: string | undefined;
     createdAt?: string; // for stack trace
   };
-  dispose: () => void;
   peek: () => TValue;
 }
 interface SignalValue<TValue> extends BaseSignalValue<TValue> {
@@ -98,12 +97,8 @@ function disposeScope(scope: Scope) {
   scope.nextScopes = [];
 
   for (const node of scope.nodes) {
-    node.dispose();
+    disposeNode(node);
   }
-  // // Dispose all nodes owned by this scope
-  // for (const effect of scope.pendingEffects) {
-  //   effect.dispose();
-  // }
   if (process.env.NODE_ENV !== "production" && scope.nodes.size > 0) {
     console.warn(
       `Scope "${scope.name ?? scope.id}" still had ${
@@ -113,6 +108,7 @@ function disposeScope(scope: Scope) {
   }
   scope.nodes.clear();
   scope.pendingEffects.clear();
+  scope.pendingMicrotask = false;
   scope.cleanups.forEach((cleanup) => cleanup());
   scope.cleanups = [];
   if (scope.prevScope) {
@@ -120,12 +116,7 @@ function disposeScope(scope: Scope) {
       (s) => s.id !== scope.id,
     );
   }
-  // Clear the reference to the parent scope
   scope.prevScope = null;
-  // Clear the reference to the current scope
-  if (currentScope === scope) {
-    currentScope = { ...scope, nextScopes: [] };
-  }
 }
 
 /**
@@ -192,7 +183,6 @@ function createNode<TValue>(
     name?: string;
     equals?: (a: TValue, b: TValue) => boolean;
     type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
-    dispose: () => void;
   },
 ): ReactiveNode<TValue> {
   const node: ReactiveNode<TValue> = {
@@ -204,14 +194,12 @@ function createNode<TValue>(
     error: undefined,
     dirty: false,
     onDirty: undefined,
-    sources: new WeakMap(),
+    sources: new Map(),
     observers: new Set(),
-    sourceList: [],
     scopeRef: currentScope,
     ...options,
   };
 
-  // 🆕 Add node to scope's set
   currentScope.nodes.add(node);
 
   return node;
@@ -249,9 +237,22 @@ function trackAccess<TValue>(sourceNode: ReactiveNode<TValue>) {
     // ✅ Prevent duplicate tracking
     if (!currentScope.activeObserver.sources.has(sourceNode)) {
       currentScope.activeObserver.sources.set(sourceNode, sourceNode.version);
-      currentScope.activeObserver.sourceList.push(sourceNode);
       sourceNode.observers.add(currentScope.activeObserver);
     }
+  }
+}
+
+/**
+ * 🧹 Flush pending effects on the scope and it's children scopes recursively
+ */
+function flushPendingEffects(scope: Scope) {
+  for (const effect of scope.pendingEffects) {
+    runNode(effect);
+  }
+  scope.pendingEffects.clear();
+
+  for (const child of scope.nextScopes) {
+    flushPendingEffects(child);
   }
 }
 
@@ -266,10 +267,11 @@ function scheduleMicrotask() {
   currentScope.pendingMicrotask = true;
   queueMicrotask(() => {
     currentScope.pendingMicrotask = false;
-    // Create a copy to avoid issues if new effects are added during processing
-    const effects = Array.from(currentScope.pendingEffects);
-    currentScope.pendingEffects.clear();
-    for (const effect of effects) runNode(effect);
+    // for (const effect of currentScope.pendingEffects) runNode(effect);
+    // currentScope.pendingEffects.clear();
+
+    // Instead of only currentScope → flush all scopes recursively
+    flushPendingEffects(currentScope);
   });
 }
 
@@ -278,7 +280,7 @@ function scheduleMicrotask() {
  */
 function notifyObservers<TValue>(node: ReactiveNode<TValue>) {
   if (process.env.NODE_ENV !== "production") {
-    console.log(`📣 notifyObservers: ${node.name || `Node_${node.id}`}`);
+    console.log(`📣 notifyObservers: ${node.name ?? `Node_${node.id}`}`);
   }
 
   // Make a copy to avoid issues if the set changes during iteration
@@ -301,6 +303,26 @@ function notifyObservers<TValue>(node: ReactiveNode<TValue>) {
   }
 }
 
+function disposeNode(node: ReactiveNode<any>) {
+  if (node.cleanup) {
+    node.cleanup();
+    node.cleanup = undefined;
+  }
+  cleanupSources(node);
+  node.scopeRef.pendingEffects.delete(node);
+  node.scopeRef.nodes.delete(node);
+  node.compute = undefined;
+  if (process.env.NODE_ENV !== "production") {
+    if (node.observers.size > 0 || node.sources.size > 0) {
+      console.warn(
+        `⚠️ Node '${
+          node.name ?? `Node_${node.id}`
+        }' was disposed while still active.`,
+      );
+    }
+  }
+}
+
 const defaultEquals = Object.is;
 
 /**
@@ -314,22 +336,6 @@ function createSignal<TValue>(
     name: options?.name,
     type: NODE_TYPE.SIGNAL,
     equals: options?.equals,
-    dispose: () => {
-      // Clean up the signal
-      if (node.cleanup) {
-        node.cleanup();
-        node.cleanup = undefined;
-      }
-
-      // Remove from dependency graph
-      cleanupSources(node);
-
-      // Remove from pending effects
-      currentScope.pendingEffects.delete(node);
-
-      // Remove compute function to mark as disposed
-      node.compute = undefined;
-    },
   });
 
   const signal = Object.assign(
@@ -349,16 +355,9 @@ function createSignal<TValue>(
       },
       update: (fn: (value: TValue) => TValue) => signal.set(fn(node.value)),
       peek: () => node.value,
-      // [SIGNAL]: node,
+      [SIGNAL]: node,
     },
   ) as SignalValue<TValue>;
-
-  // Internal access to node (for system use)
-  Object.defineProperty(signal, SIGNAL, {
-    value: node,
-    enumerable: false,
-    writable: false,
-  });
 
   if (process.env.NODE_ENV !== "production") {
     signal._debug = {
@@ -371,6 +370,8 @@ function createSignal<TValue>(
     };
   }
 
+  onScopeCleanup(() => disposeNode(node));
+
   return signal;
 }
 
@@ -382,31 +383,31 @@ function createSignal<TValue>(
  * 🔄 Core computation logic
  * Runs a memo/effect and handles dependency tracking + cleanup
  */
-const computationStack: ReactiveNode<unknown>[] = [];
+const computationStack: Set<ReactiveNode<unknown>> = new Set();
 
 /**
  * 🔁 Remove source links from a node
  */
 function cleanupSources<TValue>(node: ReactiveNode<TValue>) {
   // Remove this node as an observer from all its sources
-  for (const source of node.sourceList) {
+  for (const [source] of node.sources) {
     source.observers.delete(node);
   }
 
   // Clear all tracked sources
-  node.sources = new WeakMap();
-  node.sourceList = [];
+  node.sources = new Map();
 }
 
 function runNode(node: ReactiveNode<any>) {
   if (!node.compute) return false;
 
   // 🔁 Detect cycles
-  if (computationStack.includes(node)) {
-    const cycle = computationStack
-      .slice(computationStack.indexOf(node))
-      .map((n) => n.name || `Node_${n.id}`)
-      .join(" → ");
+  if (computationStack.has(node)) {
+    let cycle = "";
+    for (const n of computationStack) {
+      cycle += `${n.name ?? `Node_${n.id}`}${n === node ? " (cycle)" : ""} → `;
+    }
+    cycle += node.name ?? `Node_${node.id}`;
 
     const error = new Error(`⚠️ Cycle reference detected: ${cycle}`);
     console.warn(error);
@@ -418,7 +419,7 @@ function runNode(node: ReactiveNode<any>) {
     return false;
   }
 
-  computationStack.push(node);
+  computationStack.add(node);
 
   // Clean up previous dependencies before recomputing
   const prevCleanup = node.cleanup;
@@ -461,7 +462,7 @@ function runNode(node: ReactiveNode<any>) {
     );
     return false;
   } finally {
-    computationStack.pop();
+    computationStack.delete(node);
     currentScope.activeObserver = prevObserver;
   }
 }
@@ -477,26 +478,10 @@ function createEffect<TValue>(
     name: options?.name,
     type: NODE_TYPE.EFFECT,
     equals: options?.equals,
-    dispose: () => {
-      // Clean up the effect
-      if (node.cleanup) {
-        node.cleanup();
-        node.cleanup = undefined;
-      }
-
-      // Remove from dependency graph
-      cleanupSources(node);
-
-      // Remove from pending effects
-      currentScope.pendingEffects.delete(node);
-
-      // Remove compute function to mark as disposed
-      node.compute = undefined;
-    },
   });
   node.compute = fn;
   if (process.env.NODE_ENV !== "production") {
-    if (node.observers.size > 0 || node.sourceList.length > 0) {
+    if (node.observers.size > 0 || node.sources.size > 0) {
       console.warn(
         `⚠️ Effect '${
           node.name ?? `Node_${node.id}`
@@ -520,7 +505,7 @@ function createEffect<TValue>(
   runNode(node);
 
   // Return disposal function
-  return () => {
+  const dispose = () => {
     // Clean up the effect
     if (node.cleanup) {
       node.cleanup();
@@ -536,6 +521,8 @@ function createEffect<TValue>(
     // Remove compute function to mark as disposed
     node.compute = undefined;
   };
+  onScopeCleanup(() => dispose());
+  return dispose;
 }
 
 function updateIfNecessary<TValue>(node: ReactiveNode<TValue>): boolean {
@@ -555,22 +542,6 @@ function createMemo<TValue>(
     name: options?.name,
     type: NODE_TYPE.MEMO,
     equals: options?.equals,
-    dispose: () => {
-      // Clean up the memo
-      if (node.cleanup) {
-        node.cleanup();
-        node.cleanup = undefined;
-      }
-
-      // Remove from dependency graph
-      cleanupSources(node);
-
-      // Remove from pending effects
-      currentScope.pendingEffects.delete(node);
-
-      // Remove compute function to mark as disposed
-      node.compute = undefined;
-    },
   });
   node.compute = fn;
 
@@ -601,12 +572,7 @@ function createMemo<TValue>(
     [SIGNAL]: node,
   });
 
-  // Internal access to node (for system use)
-  Object.defineProperty(memo, SIGNAL, {
-    value: node,
-    enumerable: false,
-    writable: false,
-  });
+  onScopeCleanup(() => disposeNode(node));
 
   return memo as MemoValue<TValue>;
 }
@@ -630,21 +596,14 @@ function batchSignals<TValue>(fn: () => TValue): TValue {
  * 🧹 Cleanup function
  */
 function onScopeCleanup(fn: () => void) {
-  if (currentScope.cleanups) {
+  if (currentScope?.cleanups) {
     currentScope.cleanups.push(fn);
   } else {
     console.warn(
       "⚠️ Attempted to register a cleanup function outside of a scope.",
     );
+    throw new Error("No active scope for cleanup registration.");
   }
-
-  // if (currentScope.activeObserver) {
-  //   currentScope.activeObserver.cleanup = fn;
-  // } else {
-  //   console.warn(
-  //     "⚠️ onCleanup called outside of an effect or memo. Cleanup function will not be registered.",
-  //   );
-  // }
 }
 export {
   createScope,
@@ -716,7 +675,7 @@ function List<TValue extends any[]>(
         newNodes.set(nodeKey, { value: item, elems: normalizedElems });
       }
 
-      prevAnchor = newNodes.get(nodeKey)?.elems[0] || prevAnchor;
+      prevAnchor = newNodes.get(nodeKey)?.elems[0] ?? prevAnchor;
     }
 
     // Remove any leftover nodes not in new list
