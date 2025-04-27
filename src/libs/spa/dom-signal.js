@@ -363,7 +363,7 @@ function $list(list, key, fn) {
         const elems = Array.isArray(_result) ? _result : [_result];
         const normalizedElems = elems.map((elem) =>
           elem instanceof Node
-            ? elem
+            ? /** @type {Element} */ (elem)
             : document.createTextNode(elem == null ? "" : String(elem)),
         );
 
@@ -472,7 +472,7 @@ function $switch(condition, cases) {
   let oldCase;
 
   createEffect(() => {
-    const value = condition();
+    const value = /** @type {keyof typeof cases} */ (condition());
     const caseFn = cases[value];
     if (oldCase === value) {
       return;
