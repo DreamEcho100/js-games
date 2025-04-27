@@ -176,6 +176,9 @@ function createScope<T>(
   };
 }
 
+function getScopeId() {
+  return currentScope.id;
+}
 /************************ ************************/
 /***************** Create Signal *****************/
 /************************ ************************/
@@ -643,10 +646,10 @@ function onScopeCleanup(fn: () => void) {
   //   );
   // }
 }
-
 export {
   createScope,
   disposeScope,
+  getScopeId,
   createSignal,
   createEffect,
   createMemo,
@@ -665,7 +668,7 @@ function List<TValue extends any[]>(
     items: TValue,
   ) => ChildPrimitive | ChildPrimitive[],
 ) {
-  const placeholder = document.createComment(`scope-${currentScope.id}list`);
+  const placeholder = document.createComment(`scope-${getScopeId()}list`);
 
   type NodeEntry = {
     value: TValue[number];
@@ -744,7 +747,7 @@ function Visible(
   condition: SignalValue<boolean>,
   fn: () => ChildPrimitive | ChildPrimitive[],
 ) {
-  const placeholder = document.createComment(`scope-${currentScope.id}visible`);
+  const placeholder = document.createComment(`scope-${getScopeId()}visible`);
   let currentElems: (Element | Text)[] = [];
 
   createEffect(() => {
@@ -788,7 +791,7 @@ function Switch<TValue extends string>(
     [key: string]: () => ChildPrimitive | ChildPrimitive[];
   },
 ) {
-  const placeholder = document.createComment(`scope-${currentScope.id}switch`);
+  const placeholder = document.createComment(`scope-${getScopeId()}switch`);
   let currentElems: (Element | Text)[] = [];
   let oldCase: string | undefined;
 
