@@ -18,7 +18,7 @@ const NODE_TYPE = {
  * @property {Scope[]} nextScopes - child scopes
  * @property {Scope | null} prevScope - parent scope
  * @property {(() => void)[]} cleanups - array of cleanup functions
- * @property {Map<symbol, any>} contexts - Map of context values
+ * @property {Map<symbol, SignalValue<any>>} contexts - Map of context values
  */
 
 /**
@@ -148,6 +148,9 @@ function disposeScope(scope) {
   for (const node of scope.nodes) {
     disposeNode(node);
   }
+  // ???
+  scope.contexts.clear();
+
   if (process.env.NODE_ENV !== "production" && scope.nodes.size > 0) {
     console.warn(
       `Scope "${scope.name ?? scope.id}" still had ${
@@ -875,7 +878,10 @@ function provideContext(id, value, fn) {
   } finally {
     // Restore previous state
     if (hadPrevValue) {
-      parentScope.contexts.set(id, previousValue);
+      parentScope.contexts.set(
+        id,
+        /** @type {NonNullable<typeof previousValue>} */ (previousValue),
+      );
     } else {
       parentScope.contexts.delete(id);
     }
@@ -884,17 +890,18 @@ function provideContext(id, value, fn) {
 
 /**
  * @template TValue
- * @param {symbol} id
- * @param {SignalValue<TValue>|TValue} defaultValue
+//  * @param {Context<TValue>} context
  * @returns {SignalValue<TValue>}
  */
-function getContext(id, defaultValue) {
+function getContext(context) {
+  const id = context.id;
+  const defaultValue = context.defaultValue;
   // Walk up the scope chain to find the context
   /** @type {Scope|null} */
   let scope = currentScope;
   while (scope) {
     if (scope.contexts.has(id)) {
-      return scope.contexts.get(id);
+      return /** @type {SignalValue<any>} */ (scope.contexts.get(id));
     }
     scope = scope.prevScope;
   }
@@ -946,16 +953,6 @@ function createContext(defaultValue, options) {
 
   return context;
 }
-
-/**
- * @template TValue
- * @param {Context<TValue>} context
- */
-function useContext(context) {
-  const value = getContext(context.id, context.defaultValue);
-  return value;
-}
-
 /**
  *
  * @template TValue
@@ -964,8 +961,8 @@ function useContext(context) {
  * @param {(state: TValue) => TSelectorReturn} selector
  * @returns
  */
-function useContextSelector(context, selector) {
-  const value = useContext(context);
+function getContextSelector(context, selector) {
+  const value = getContext(context);
   return createMemo(() => selector(value()));
 }
 
@@ -979,4 +976,7 @@ export {
   createMemo,
   batchSignals,
   untrack,
+  createContext,
+  getContext,
+  getContextSelector,
 };
