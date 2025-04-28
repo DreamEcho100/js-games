@@ -166,7 +166,7 @@ export function injectStylesheetLink(stylesPath, cleanupManager) {
  *   y: number;
  *  }) => void;
  *  debounce?: number;
- *  approach?: "preserve-dpr" // | "preserve-size"
+ *  approach?: "continue-preserve-dpr" // | "preserve-size"
  * }} props
  */
 export function adjustCanvas({
@@ -180,12 +180,12 @@ export function adjustCanvas({
   /** @type {(() => void)[]} */
   const cleanupItems = [];
   const canvasDOMConfig = {
-    width: 0,
-    height: 0,
+    width: canvas.width,
+    height: canvas.height,
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
+    right: canvas.width,
+    bottom: canvas.height,
     x: 0,
     y: 0,
   };
@@ -198,22 +198,20 @@ export function adjustCanvas({
   });
   canvas.setAttribute(`data-${canvasDataId}`, "true");
 
+  function handlePreserveDpr() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = roundToPrecision(canvasDOMConfig.width * dpr, 2);
+    canvas.height = roundToPrecision(canvasDOMConfig.height * dpr, 2);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+    ctx.scale(dpr, dpr);
+  }
+
   const updateCanvasSize = () => {
     isResizeManual = true;
     const boundingBox = canvas.getBoundingClientRect();
 
-    // const dpr = window.devicePixelRatio || 1;
-    // canvas.width = roundToPrecision(boundingBox.width * dpr, 2);
-    // canvas.height = roundToPrecision(boundingBox.height * dpr, 2);
-    // ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-    // ctx.scale(dpr, dpr);
-
-    if (approach === "preserve-dpr") {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = roundToPrecision(boundingBox.width * dpr, 2);
-      canvas.height = roundToPrecision(boundingBox.height * dpr, 2);
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-      ctx.scale(dpr, dpr);
+    if (approach === "continue-preserve-dpr") {
+      handlePreserveDpr();
     }
     // else if (approach === "preserve-size") {
     //   canvas.width = roundToPrecision(boundingBox.width, 2);
@@ -243,13 +241,9 @@ export function adjustCanvas({
     canvasDOMConfig.x = roundToPrecision(boundingBox.x, 2);
     canvasDOMConfig.y = roundToPrecision(boundingBox.y, 2);
 
-    canvas.width = canvasDOMConfig.width;
-    canvas.height = canvasDOMConfig.height;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-    ctx.scale(1, 1);
-
     onUpdateCanvasSize(canvasDOMConfig);
   };
+  handlePreserveDpr();
   updateCanvasSize();
 
   styleSheet.innerHTML = `

@@ -58,4 +58,26 @@ export class CleanupManager {
 
     return cleanup;
   }
+
+  /**
+   * @template {keyof WindowEventMap} TEventName
+   *
+   * @param {{
+   * 	type: TEventName;
+   * 	listener: (this: Window, ev: WindowEventMap[TEventName]) => any;
+   * 	options?: boolean | EventListenerOptions
+   * 	silent?: boolean
+   * }} options
+   */
+  registerWindowEventListener(options) {
+    window.addEventListener(options.type, options.listener, options.options);
+    const cleanup = () => {
+      window.removeEventListener(
+        options.type,
+        options.listener,
+        options.options,
+      );
+    };
+    this.register(cleanup);
+  }
 }
