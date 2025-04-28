@@ -308,6 +308,9 @@ function untrack(fn) {
   }
 }
 
+// Add to options
+const MAX_DEPENDENCIES = 10000;
+
 /**
  * 🧭 Track a read dependency
  *
@@ -329,6 +332,18 @@ function trackAccess(sourceNode) {
   }
 
   if (currentScope.activeObserver) {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      currentScope.activeObserver.sources.size >= MAX_DEPENDENCIES
+    ) {
+      console.warn(
+        `Node ${
+          currentScope.activeObserver.name ?? currentScope.activeObserver.id
+        } has reached max dependencies`,
+      );
+      return;
+    }
+
     // ✅ Prevent duplicate tracking
     if (!currentScope.activeObserver.sources.has(sourceNode)) {
       currentScope.activeObserver.sources.set(sourceNode, sourceNode.version);
@@ -366,6 +381,10 @@ function scheduleMicrotask() {
 
   currentScope.pendingMicrotask = true;
   queueMicrotask(() => {
+    // Check if scope has been disposed
+    if (!currentScope.prevScope && currentScope.id !== rootScope.id) {
+      return; // Scope has been disposed
+    }
     currentScope.pendingMicrotask = false;
     // for (const effect of currentScope.pendingEffects) runNode(effect);
     // currentScope.pendingEffects.clear();
@@ -419,9 +438,17 @@ function disposeNode(node) {
     node.cleanup = undefined;
   }
   cleanupSources(node);
+
+  // Make sure this node is removed from all observers
+  for (const observer of node.observers) {
+    observer.sources.delete(node);
+  }
+  node.observers.clear();
+
   node.scopeRef.pendingEffects.delete(node);
   node.scopeRef.nodes.delete(node);
   node.compute = undefined;
+
   if (process.env.NODE_ENV !== "production") {
     if (node.observers.size > 0 || node.sources.size > 0) {
       console.warn(
@@ -527,6 +554,8 @@ function cleanupSources(node) {
   node.sources = new Map();
 }
 
+const MAX_COMPUTATION_DEPTH = 10000;
+
 /**
  * 🔁 Run a node and handle cycles
  *
@@ -536,6 +565,19 @@ function cleanupSources(node) {
  */
 function runNode(node) {
   if (!node.compute) return false;
+
+  if (
+    process.env.NODE_ENV !== "production" &&
+    computationStack.size > MAX_COMPUTATION_DEPTH
+  ) {
+    const error = new Error(
+      `Maximum computation depth exceeded (${MAX_COMPUTATION_DEPTH})`,
+    );
+    console.error(error);
+    node.error = error;
+    node.dirty = false;
+    return false;
+  }
 
   // 🔁 Detect cycles
   if (computationStack.has(node)) {
@@ -938,6 +980,7 @@ function createContext(defaultValue, options) {
 function getContext(context) {
   const id = context.id;
   const defaultValue = context.defaultValue;
+
   // Walk up the scope chain to find the context
   /** @type {Scope|null} */
   let scope = currentScope;
@@ -946,6 +989,35 @@ function getContext(context) {
       return /** @type {SignalValue<any>} */ (scope.contexts.get(id));
     }
     scope = scope.prevScope;
+
+    if (
+      process.env.NODE_ENV !== "production" &&
+      !scope // Check if it's the root scope parent (null)
+    ) {
+      console.warn(
+        `Context ${
+          context.id.description || "unknown"
+        } not found in scope chain, using default value`,
+      );
+
+      if (
+        !isSignal(defaultValue) // Check if the default value is not a signal
+      ) {
+        console.warn(
+          `Default value for context ${
+            context.id.description || "unknown"
+          } is not a signal, using default value`,
+        );
+
+        if (defaultValue === undefined) {
+          console.warn(
+            `Default value for context ${
+              context.id.description || "unknown"
+            } is undefined`,
+          );
+        }
+      }
+    }
   }
 
   // Return default if no provider found, wrapping in signal if needed

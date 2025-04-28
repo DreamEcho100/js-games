@@ -317,6 +317,9 @@ For events, you could normalize the event listener value to always be a function
 */
 
 // ========== Reactive DOM Components ==========
+// TODO: They should be able to
+// - Take an element, valid primitive, or a scope
+// - Check for transitions
 /**
  * 🧩 List componen
  * t
