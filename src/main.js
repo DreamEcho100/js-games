@@ -134,12 +134,39 @@ const gameScreens = [
       {
         title: "Tile based game development in Javascript & Canvas #1",
         url: "https://youtu.be/txUvD5_ROIU",
+        description:
+          "The first part in my tutorial series on beginner tile based game development, this episode looks at getting set up to draw a simple tile map to a Canvas element on a web page using Javascript.",
+      },
+      {
+        title: "Drawing a Tile Map - Canvas & Javascript",
+        url: "https://technologies4.me/articles/tile-map-canvas-javascript-a1/",
+        description:
+          "Discover the basics of tile maps, using Canvas and Javascript. In this tutorial we'll learn how to draw a simple Tile Map to an HTML Canvas.",
       },
       {
         title: "Tile based game development in Javascript & Canvas #2",
         url: "https://www.youtube.com/watch?v=xsNdwyuuSzo",
         description:
           "In the second part of the tile based game development basics series, we look at adding a character which the player can move around the map with the arrow keys.",
+      },
+      {
+        title: "Character, Movement and Input on a Tile Map",
+        url: "https://technologies4.me/articles/character-movement-input-tile-map-a2/",
+        description:
+          "We now look at adding a Character and converting user input to movement in our tile map tutorial.",
+      },
+      {
+        title:
+          "Viewport, Camera, and Culling on 2D TileMap - Javascript & Canvas gamedev #3",
+        url: "https://www.youtube.com/watch?v=KL4unLXkxCs",
+        description:
+          "In the third part of our Javascript & Canvas tile based game development tutorial, we look at culling, cameras, and the viewport to allowing using maps that are larger than the drawing area of the screen whilst drawing the portion that is visible to the player.",
+      },
+      {
+        title: "Viewport and Culling on a Tile Map",
+        url: "https://technologies4.me/articles/viewport-culling-tile-map-a3/",
+        description:
+          "Displaying maps larger than the visible area by moving the viewport and culling off-screen tiles.",
       },
     ],
   },
