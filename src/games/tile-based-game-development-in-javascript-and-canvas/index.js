@@ -89,14 +89,21 @@ const gameScreen = await initGameScreen({
        * }} options
        */
       constructor(options) {
+        /** The tile coordinates where the character is coming from */
         this.tileFrom = /** @type {[x: number, y: number]} */ ([1, 1]);
+        /** The tile coordinates where the character is moving to */
         this.tileTo = /** @type {[x: number, y: number]} */ ([1, 1]);
-        this.timeMoved = 0;
+        /** The exact pixel coordinates on the screen */
+        this.position = /** @type {[x: number, y: number]} */ ([45, 45]);
+
         this.dimensions = /** @type {[w: number, h:number]} */ ([
           tile.w * 0.75,
           tile.h * 0.75,
         ]);
-        this.position = /** @type {[x: number, y: number]} */ ([45, 45]);
+
+        /** When the movement started */
+        this.timeMoved = 0;
+        /** Movement takes time in ms */
         this.delayMove = 700;
 
         this.directionKeyMap = {
@@ -144,6 +151,10 @@ const gameScreen = await initGameScreen({
       }
 
       /**
+       * @description
+       * Setting both tileFrom and tileTo to the same coordinates
+       * Converting tile coordinates to pixel coordinates
+       * Centering the character in the tile (that's what the * 0.5 part does)
        *
        * @param {number} x
        * @param {number} y
@@ -163,11 +174,23 @@ const gameScreen = await initGameScreen({
       }
 
       /**
+       * @description
+       * Checks if the character is already at its destination
+       * Calculates how much time has passed since movement began
+       * If the movement time is complete, snaps the character to the destination
+       * If still moving, calculates a position between start and end based on elapsed time
+       * Returns true while moving, false when not moving
+       *
+       * The formula for the intermediate position is:
+       *
+       * Start position + (progress × distance)
+       * Where progress is a value from 0.0 to 1.0 representing completion
+       *
        * @param {number} currentFrameTime
        * @returns {boolean}
        */
       processMovement(currentFrameTime) {
-        // We check if the character is at the tile position
+        // Not moving if start and end positions are the same
         if (
           this.tileFrom[0] === this.tileTo[0] &&
           this.tileFrom[1] === this.tileTo[1]
@@ -175,17 +198,17 @@ const gameScreen = await initGameScreen({
           return false;
         }
 
-        // Calculate how much time has passed since we began moving
+        // Calculate elapsed time since movement started
         const elapsed = currentFrameTime - this.timeMoved;
 
         if (elapsed >= this.delayMove) {
-          // We've reached or exceeded the movement delay, snap to destination
+          // Movement finished - snap to destination
           this.placeAt(this.tileTo[0], this.tileTo[1]);
         } else {
           // Calculate movement progress (0.0 to 1.0)
           const progress = elapsed / this.delayMove;
 
-          // Update x position
+          // Update x position based on progress
           if (this.tileTo[0] !== this.tileFrom[0]) {
             const tileDistance = this.tileTo[0] - this.tileFrom[0];
             const moveDistance = tileDistance * progress;
@@ -195,7 +218,7 @@ const gameScreen = await initGameScreen({
               (tile.w - this.dimensions[0]) * 0.5;
           }
 
-          // Update y position
+          // Update y position based on progress
           if (this.tileTo[1] !== this.tileFrom[1]) {
             const tileDistance = this.tileTo[1] - this.tileFrom[1];
             const moveDistance = tileDistance * progress;
@@ -206,7 +229,7 @@ const gameScreen = await initGameScreen({
           }
         }
 
-        return true;
+        return true; // Still moving
       }
 
       /**
@@ -222,19 +245,24 @@ const gameScreen = await initGameScreen({
        * @param {number} currentFrameTime
        */
       update(currentFrameTime) {
-        // If we're currently moving, process the movement
+        // Process ongoing movement first
         const isMoving = this.processMovement(currentFrameTime);
 
-        // Only process new movement if we're not already moving
+        // Only check for new movement if not already moving
         if (!isMoving) {
+          // Check each direction key
           for (const key of this.KeysCollection) {
             const [direction, isPressed] = this.keyDirectionMap[key];
 
+            // Skip keys that aren't pressed
             if (!isPressed) continue;
 
             // Try to move in the pressed direction
             let hadMoved = false;
+
+            // Direction-specific movement logic
             switch (direction) {
+              // Can move up if: not at top row, destination is a path
               case "up":
                 if (
                   this.tileFrom[1] > 0 &&
@@ -246,6 +274,7 @@ const gameScreen = await initGameScreen({
                   hadMoved = true;
                 }
                 break;
+              // Similar logic for other directions...
               case "down":
                 if (
                   this.tileFrom[1] < map.h - 1 &&
@@ -282,8 +311,9 @@ const gameScreen = await initGameScreen({
             }
 
             if (hadMoved) {
+              // Record when movement started
               this.timeMoved = currentFrameTime;
-              break; // Only move in one direction at a time
+              break; // Process only one movement direction
             }
           }
         }
@@ -351,9 +381,16 @@ const gameScreen = await initGameScreen({
         frameCount++;
       }
 
-      // Map drawing code
+      /**
+       * Map drawing code
+       *
+       * 0 represents walls (drawn as gray)
+       *	1 represents paths (drawn as white)
+       *	The character can only move on path tiles (value 1)
+       */
       for (let y = 0; y < map.h; y++) {
         for (let x = 0; x < map.w; x++) {
+          // Draw tiles...
           switch (gameMap[y * map.w + x]) {
             case 0:
               ctx.fillStyle = "#999999";
