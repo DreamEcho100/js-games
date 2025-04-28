@@ -890,30 +890,6 @@ function provideContext(id, value, fn) {
 
 /**
  * @template TValue
-//  * @param {Context<TValue>} context
- * @returns {SignalValue<TValue>}
- */
-function getContext(context) {
-  const id = context.id;
-  const defaultValue = context.defaultValue;
-  // Walk up the scope chain to find the context
-  /** @type {Scope|null} */
-  let scope = currentScope;
-  while (scope) {
-    if (scope.contexts.has(id)) {
-      return /** @type {SignalValue<any>} */ (scope.contexts.get(id));
-    }
-    scope = scope.prevScope;
-  }
-
-  // Return default if no provider found, wrapping in signal if needed
-  return /** @type {SignalValue<TValue>}*/ (
-    isSignal(defaultValue) ? defaultValue : createSignal(defaultValue)
-  );
-}
-
-/**
- * @template TValue
  * @param {SignalValue<TValue>|TValue} defaultValue
  * @param {{ name?: string }} [options]
  * @returns {Context<TValue>}
@@ -953,6 +929,31 @@ function createContext(defaultValue, options) {
 
   return context;
 }
+
+/**
+ * @template TValue
+ * @param {Context<TValue>} context
+ * @returns {SignalValue<TValue>}
+ */
+function getContext(context) {
+  const id = context.id;
+  const defaultValue = context.defaultValue;
+  // Walk up the scope chain to find the context
+  /** @type {Scope|null} */
+  let scope = currentScope;
+  while (scope) {
+    if (scope.contexts.has(id)) {
+      return /** @type {SignalValue<any>} */ (scope.contexts.get(id));
+    }
+    scope = scope.prevScope;
+  }
+
+  // Return default if no provider found, wrapping in signal if needed
+  return /** @type {SignalValue<TValue>}*/ (
+    isSignal(defaultValue) ? defaultValue : createSignal(defaultValue)
+  );
+}
+
 /**
  *
  * @template TValue
