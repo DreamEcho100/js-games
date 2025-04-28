@@ -66,6 +66,8 @@ const gameScreen = await initGameScreen({
       },
     };
 
+    window.canvasConfig = canvasConfig;
+
     createLayout(/* html */ `<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"
@@ -141,8 +143,6 @@ const gameScreen = await initGameScreen({
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
         canvasConfig.dom = boundingBox;
-        canvasConfig.render.width = boundingBox.width;
-        canvasConfig.render.height = boundingBox.height;
       },
     });
     cleanupManager.register(adjustCanvasCleanup);

@@ -105,12 +105,13 @@ const gameScreens = [
       "html",
     ],
   },
+  // {
+  //   title: "🕹 Project 6: Enemy AI <small><em>In Progress</em></small>",
+  //   cb: () => lazyLoad(() => import("./games/Enemy AI/index.js")),
+  // },
   {
-    title: "🕹 Project 6: Enemy AI",
-    cb: () => lazyLoad(() => import("./games/point-and-shoot-game/index.js")),
-  },
-  {
-    title: "Tile based game development in Javascript & Canvas",
+    title:
+      "Tile based game development in Javascript & Canvas <small><em>In Progress</em></small>",
     cb: () =>
       lazyLoad(() =>
         import(

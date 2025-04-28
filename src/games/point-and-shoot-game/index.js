@@ -112,8 +112,7 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small>
-			<div class=" mx-auto max-w-full w-fit relative">
+    createLayout(/* html */ `<div class=" mx-auto max-w-full w-fit relative">
 			<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"
@@ -162,8 +161,6 @@ const gameScreen = await initGameScreen({
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
         canvasConfig.dom = boundingBox;
-        canvasConfig.render.width = boundingBox.width;
-        canvasConfig.render.height = boundingBox.height;
 
         canvas2.width = canvasConfig.render.width;
         canvas2.height = canvasConfig.render.height;
