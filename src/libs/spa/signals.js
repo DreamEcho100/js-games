@@ -18,6 +18,7 @@ const NODE_TYPE = {
  * @property {Scope[]} nextScopes - child scopes
  * @property {Scope | null} prevScope - parent scope
  * @property {(() => void)[]} cleanups - array of cleanup functions
+ * @property {Map<symbol, any>} contexts - Map of context values
  */
 
 /**
@@ -94,6 +95,16 @@ const NODE_TYPE = {
  * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue>} MemoValue
  */
 
+/**
+ * @template TValue
+ * @typedef {{
+ *			id: symbol;
+ *			defaultValue: TValue | SignalValue<TValue>;
+ *			Provider: <TReturn>(valueOrSignal: SignalValue<TValue> | TValue, fn: () => TReturn) => TReturn;
+ * 			DeferredProvider: <TReturn>(valueOrSignal: SignalValue<TValue> | TValue) => (fn: () => TReturn) => TReturn;
+ *	}} Context
+ */
+
 // Symbol used to access internal node (not exported)
 const SIGNAL = Symbol("signal");
 
@@ -112,7 +123,10 @@ let currentScope = {
   nodes: new Set(),
   cleanups: [],
   name: undefined,
+  contexts: new Map(),
 };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const rootScope = currentScope;
 
 /************************ ************************/
 /***************** Create Scope *****************/
@@ -159,7 +173,7 @@ function disposeScope(scope) {
  *
  * @template TValue
  * @param {() => TValue} fn Function to run in the new scope
- * @param {{ detached?: boolean; name?: string }} [options] Options for the scope
+ * @param {{ detached?: boolean; name?: string; deferredProviders?: ReturnType<Context<any>['DeferredProvider']>[]  }} [options] Options for the scope
  * @returns {{ dispose: () => void; result: TValue }} Result of the function and a dispose function
  */
 function createScope(fn, options) {
@@ -179,6 +193,7 @@ function createScope(fn, options) {
     nextScopes: [],
     prevScope: options?.detached ? null : parentScope,
     cleanups: [],
+    contexts: new Map(),
   };
 
   if (!options?.detached) {
@@ -188,13 +203,26 @@ function createScope(fn, options) {
   // $switch to new scope
   currentScope = newScope;
 
-  /** @type {TValue} */
+  /** @type {any} */
   let result;
   try {
-    result = fn();
+    if (options?.deferredProviders) {
+      // Apply each lazy provider
+      for (const lazyProvider of options.deferredProviders) {
+        if (!result) {
+          result = lazyProvider;
+          continue;
+        }
+        result = lazyProvider(result);
+      }
+      // Execute the function within the final context
+      result = result ? result(fn) : fn();
+    } else {
+      // No context providers, execute the function directly
+      result = fn();
+    }
   } finally {
-    // Restore parent scope
-    currentScope = parentScope;
+    currentScope = parentScope; // Restore parent scope
   }
 
   return {
@@ -403,6 +431,14 @@ function disposeNode(node) {
 }
 
 const defaultEquals = Object.is;
+
+/**
+ * @param {*} item
+ * @returns {item is SignalValue<any>}
+ */
+function isSignal(item) {
+  return typeof item === "function" && SIGNAL in item;
+}
 
 /**
  * 🌱 Signal primitive
@@ -812,6 +848,126 @@ function batchSignals(fn) {
 //     });
 //   });
 // });
+
+/************************ ************************/
+/***************** Create Context *****************/
+/************************ ************************/
+
+/**
+ * @template TValue
+ * @template TReturn
+ * @param {symbol} id
+ * @param {SignalValue<TValue>} value
+ * @param {(() => TReturn)} fn
+ */
+function provideContext(id, value, fn) {
+  const parentScope = currentScope;
+  const previousValue = parentScope.contexts.get(id);
+  const hadPrevValue = parentScope.contexts.has(id);
+
+  parentScope.contexts.set(id, value);
+
+  try {
+    return fn();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  } finally {
+    // Restore previous state
+    if (hadPrevValue) {
+      parentScope.contexts.set(id, previousValue);
+    } else {
+      parentScope.contexts.delete(id);
+    }
+  }
+}
+
+/**
+ * @template TValue
+ * @param {symbol} id
+ * @param {SignalValue<TValue>|TValue} defaultValue
+ * @returns {SignalValue<TValue>}
+ */
+function getContext(id, defaultValue) {
+  // Walk up the scope chain to find the context
+  /** @type {Scope|null} */
+  let scope = currentScope;
+  while (scope) {
+    if (scope.contexts.has(id)) {
+      return scope.contexts.get(id);
+    }
+    scope = scope.prevScope;
+  }
+
+  // Return default if no provider found, wrapping in signal if needed
+  return /** @type {SignalValue<TValue>}*/ (
+    isSignal(defaultValue) ? defaultValue : createSignal(defaultValue)
+  );
+}
+
+/**
+ * @template TValue
+ * @param {SignalValue<TValue>|TValue} defaultValue
+ * @param {{ name?: string }} [options]
+ * @returns {Context<TValue>}
+ */
+function createContext(defaultValue, options) {
+  const id = Symbol(options?.name ?? "context");
+  const context = {
+    id,
+    defaultValue,
+    /**
+     * @template TReturn
+     * @param {SignalValue<TValue>|TValue} valueOrSignal
+     * @param {() => TReturn} fn
+     */
+    Provider: (valueOrSignal, fn) => {
+      const value = isSignal(valueOrSignal)
+        ? valueOrSignal
+        : createSignal(valueOrSignal);
+      return provideContext(id, value, fn);
+    },
+    /**
+     * @param {SignalValue<TValue>|TValue} valueOrSignal
+     */
+    DeferredProvider:
+      (valueOrSignal) =>
+      /**
+       * @template TReturn
+       * @param {() => TReturn} fn
+       */
+      (fn) => {
+        const value = isSignal(valueOrSignal)
+          ? valueOrSignal
+          : createSignal(valueOrSignal);
+        return provideContext(id, value, fn);
+      },
+  };
+
+  return context;
+}
+
+/**
+ * @template TValue
+ * @param {Context<TValue>} context
+ */
+function useContext(context) {
+  const value = getContext(context.id, context.defaultValue);
+  return value;
+}
+
+/**
+ *
+ * @template TValue
+ * @template TSelectorReturn
+ * @param {Context<TValue>} context
+ * @param {(state: TValue) => TSelectorReturn} selector
+ * @returns
+ */
+function useContextSelector(context, selector) {
+  const value = useContext(context);
+  return createMemo(() => selector(value()));
+}
 
 export {
   createScope,

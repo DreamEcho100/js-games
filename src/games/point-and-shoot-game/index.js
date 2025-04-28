@@ -62,7 +62,7 @@ const gameScreen = await initGameScreen({
     "./assets/styles/index.css",
     new URL(import.meta.url),
   ),
-  cb: ({ appId, assets, cleanupManager, createLayout }) => {
+  cb: async ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const canvas2Id = `${appId}-canvas2`;
     const [ravenImage, explosionImage, iceAttack2Sfx] = assets;
@@ -112,7 +112,7 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    createLayout(/* html */ `<div class=" mx-auto max-w-full w-fit relative">
+    await createLayout(/* html */ `<div class=" mx-auto max-w-full w-fit relative">
 			<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"

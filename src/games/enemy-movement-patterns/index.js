@@ -39,7 +39,7 @@ const gameScreen = await initGameScreen({
       ),
     },
   ]),
-  cb: ({ appId, assets, cleanupManager, createLayout }) => {
+  cb: async ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const canvasConfig = {
       render: {
@@ -61,7 +61,7 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    createLayout(/* html */ `
+    await createLayout(/* html */ `
 			<canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"

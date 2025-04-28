@@ -18,7 +18,7 @@ const gameScreen = await initGameScreen({
     "./__style.css",
     new URL(import.meta.url),
   ),
-  cb: ({ appId, assets, cleanupManager, createLayout }) => {
+  cb: async ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
     const animationsControlId = `${appId}-animations`;
     const animationsControlGroupId = `${appId}-animations-group`;
@@ -66,7 +66,7 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    createLayout(/* html */ `<canvas
+    await createLayout(/* html */ `<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"
 			height="${canvasConfig.render.height}"

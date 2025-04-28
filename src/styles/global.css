@@ -12,7 +12,34 @@
 @view-transition {
   navigation: auto;
 }
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 
+/* Keyframes for fade-out */
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+#app > :first-child {
+  view-transition-name: default-transition;
+}
+#app > :first-child::view-transition-old(default-transition) {
+  animation: fade-out 0.5s ease-in-out forwards;
+}
+#app > :first-child::view-transition-new(default-transition) {
+  animation: fade-in 0.5s ease-in-out forwards;
+}
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

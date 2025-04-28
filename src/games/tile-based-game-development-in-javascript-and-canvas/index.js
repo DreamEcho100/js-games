@@ -11,7 +11,7 @@ import { adjustCanvas } from "#libs/dom/index.js";
  */
 
 const gameScreen = await initGameScreen({
-  cb: ({ appId, cleanupManager, createLayout }) => {
+  cb: async ({ appId, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
 
     const canvasConfig = {
@@ -34,7 +34,7 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
+    await createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
@@ -368,6 +368,7 @@ const gameScreen = await initGameScreen({
       );
 
       const currentFrameTime = Date.now();
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const timeElapsed = currentFrameTime - lastFrameTime;
 
       const sec = Math.floor(Date.now() * 0.001);

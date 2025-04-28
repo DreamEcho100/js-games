@@ -211,12 +211,14 @@ function setGeneralTagAttribute(
     }
     case "dangerouslySetInnerHTML": {
       handleValueOrCb(valueOrCB, (value) => {
+        // document.startViewTransition(() => {
         if (value == null) {
           element.innerHTML = "";
           return;
         }
 
         element.innerHTML = /** @type {string} */ (value);
+        // });
       });
 
       return true;
@@ -227,12 +229,14 @@ function setGeneralTagAttribute(
           valueOrCB
         );
 
+      // document.startViewTransition(() => {
       if (typeof _value === "function") {
         _value(element);
       } else if (_value && typeof _value === "object" && "current" in _value) {
         _value.current = element;
       }
       return true;
+      // });
     }
   }
 

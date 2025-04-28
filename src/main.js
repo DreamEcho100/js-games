@@ -19,7 +19,10 @@ function lazyLoad(cb) {
       module({
         handleGoPrevScreen: () => {
           localStorage.removeItem(selectedGameScreenLsKey);
-          appElem.innerHTML = baseScreen;
+
+          document.startViewTransition(() => {
+            appElem.innerHTML = baseScreen;
+          });
         },
         appElem,
       });
@@ -193,7 +196,9 @@ if (typeof selectedGameScreen !== "undefined") {
   hasInitialScreen = true;
   const { cb } = gameScreens[selectedGameScreen];
   if (cb) {
-    cb();
+    document.startViewTransition(() => {
+      cb();
+    });
   } else {
     console.error("No callback found for selected game screen");
     localStorage.remove(selectedGameScreenLsKey);
@@ -219,5 +224,7 @@ const baseScreen = /* html */ `
 `;
 
 if (!hasInitialScreen) {
-  appElem.innerHTML = baseScreen;
+  document.startViewTransition(() => {
+    appElem.innerHTML = baseScreen;
+  });
 }
