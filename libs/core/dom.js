@@ -1,4 +1,4 @@
-import{buttonPrimaryClassName as r}from"../class-names.js";import{CleanupManager as u}from"../cleanup.js";import{injectStylesheetLink as d,loadManyAssets as f}from"../dom.js";import"../math.js";async function g(t){const c=`app-${Math.random().toString(36).slice(2)}`,l=`${c}-go-back-button`,a=new u;return t.stylesheetLink&&d(t.stylesheetLink,a),async e=>{function s(){e.handleGoPrevScreen?.(),a.cleanup()}let o;if(t.assetsInfo){e.appElem.innerHTML=`
+import{buttonPrimaryClassName as r}from"../class-names.js";import{CleanupManager as u}from"../cleanup.js";import{injectStylesheetLink as d,loadManyAssets as f}from"../dom/index.js";import"../math.js";async function g(t){const c=`app-${Math.random().toString(36).slice(2)}`,l=`${c}-go-back-button`,a=new u;return t.stylesheetLink&&d(t.stylesheetLink,a),async e=>{function s(){e.handleGoPrevScreen?.(),a.cleanup()}let o;if(t.assetsInfo){e.appElem.innerHTML=`
 			<main class="flex justify-center items-center p-12 text-lg">
 			Loading assets...
 			</main>
