@@ -321,11 +321,11 @@ const tagsHTMLProxy = new Proxy(
     /**
      * @template {keyof HTMLElementTagNameMap} TTagName
      *
-     * @param {TagsHTMLProxy} target - The target object, used for caching.
+     * @param {TagsHTMLProxy} _target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
      * @returns
      */
-    get(target, tagName) {
+    get(_target, tagName) {
       if (!(tagName in _basicTagsCache)) {
         /** @type {Record<string,any>} */ (_basicTagsCache)[tagName] =
           tagFactory(tagName);
@@ -349,10 +349,10 @@ const svgTagsProxy = new Proxy(/** @type {TagSVGMapProxy} */ (_svgsTagsCache), {
   /**
    * @template {keyof de100x.TagNameSVGPropsMap} TTagName
    *
-   * @param {TagSVGMapProxy} target - The target object, used for caching.
+   * @param {TagSVGMapProxy} _target - The target object, used for caching.
    * @param {TTagName} tagName - The name of the element to create.
    */
-  get(target, tagName) {
+  get(_target, tagName) {
     if (!(tagName in _svgsTagsCache)) {
       /** @type {Record<string,any>} */ (_svgsTagsCache)[tagName] =
         tagNSFactory(SVG_NS, tagName);
@@ -375,10 +375,10 @@ const mathMLTagsProxy = new Proxy(
     /**
      * @template {keyof de100x.TagNameMathMLPropsMap} TTagName
      *
-     * @param {TagMathMLMapProxy} target - The target object, used for caching.
+     * @param {TagMathMLMapProxy} _target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
      */
-    get(target, tagName) {
+    get(_target, tagName) {
       if (!(tagName in _mathMLsTagsCache)) {
         /** @type {Record<string,any>} */ (_mathMLsTagsCache)[tagName] =
           tagNSFactory(MathML_NS, tagName);
@@ -402,10 +402,10 @@ const xhtmlTagsProxy = new Proxy(
     /**
      * @template {keyof de100x.TagNameXHTMLPropsMap} TTagName
      *
-     * @param {TagXHTMLMapProxy} target - The target object, used for caching.
+     * @param {TagXHTMLMapProxy} _target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
      */
-    get(target, tagName) {
+    get(_target, tagName) {
       if (!(tagName in _xhtmlsTagsCache)) {
         /** @type {Record<string,any>} */ (_xhtmlsTagsCache)[tagName] =
           tagNSFactory(XHTML_NS, tagName);
@@ -428,22 +428,22 @@ const tagsProxy = new Proxy(
     /**
      * @template {keyof HTMLElementTagNameMap} TTagName
      *
-     * @param {any} target - The target object, used for caching.
+     * @param {any} _target - The target object, used for caching.
      * @param {TTagName} tagName - The name of the element to create.
      * @returns
      */
-    get(target, tagName) {
+    get(_target, tagName) {
       if (tagName in _basicTagsCache) {
         return _basicTagsCache[tagName];
       }
       return tagsHTMLProxy[tagName];
     },
     /**
-     * @param {any} target - The target object, used for caching.
+     * @param {any} _target - The target object, used for caching.
      * @param {any} _thisArg
      * @param {any} argArray - The arguments passed to the function.
      */
-    apply(target, _thisArg, argArray) {
+    apply(_target, _thisArg, argArray) {
       const namespaceURI = argArray[0];
 
       switch (namespaceURI) {

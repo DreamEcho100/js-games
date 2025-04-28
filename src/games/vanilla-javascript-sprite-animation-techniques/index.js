@@ -66,8 +66,6 @@ const gameScreen = await initGameScreen({
       },
     };
 
-    window.canvasConfig = canvasConfig;
-
     createLayout(/* html */ `<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"

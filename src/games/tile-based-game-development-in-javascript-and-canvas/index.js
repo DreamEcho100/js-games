@@ -67,7 +67,7 @@ const gameScreen = await initGameScreen({
     let currentSecond = 0;
     let frameCount = 0;
     let frameLastSecond = 0;
-    // let lastFrameTime = 0;
+    let lastFrameTime = 0;
     const tile = {
       w: 40,
       h: 40,
@@ -368,7 +368,7 @@ const gameScreen = await initGameScreen({
       );
 
       const currentFrameTime = Date.now();
-      // const timeElapsed = currentFrameTime - lastFrameTime;
+      const timeElapsed = currentFrameTime - lastFrameTime;
 
       const sec = Math.floor(Date.now() * 0.001);
       if (sec !== currentSecond) {
@@ -408,7 +408,7 @@ const gameScreen = await initGameScreen({
       ctx.fillStyle = "#ff0000";
       ctx.fillText(`FPS: ${frameLastSecond}`, 10, 20);
 
-      // lastFrameTime = currentFrameTime;
+      lastFrameTime = currentFrameTime;
       animateId = requestAnimationFrame(animate);
     }
 

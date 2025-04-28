@@ -35,7 +35,18 @@ export default defineConfig(async (config) => {
       glob("./src/games/**/*.*"),
       glob("./src/libs/**/*.*"),
       glob("./src/assets/**/*.*"),
-    ]).then((values) => values.flat());
+    ]).then((values) => {
+      const filesPaths: string[] = [];
+      for (const value of values) {
+        for (const path of value) {
+          if (path.endsWith(".md")) {
+            continue;
+          }
+          filesPaths.push(path);
+        }
+      }
+      return filesPaths;
+    });
 
     const input = (rollupOptions.input = {
       main: resolve(__dirname, "index.html"),
