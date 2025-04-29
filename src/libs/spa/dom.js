@@ -157,8 +157,7 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * @param {de100x.Child[]} children
  */
 function appendChildren(element, children) {
-  const childrenCopy = [...children];
-  for (let child of childrenCopy) {
+  for (let child of children) {
     if (child == null) continue;
     if (Array.isArray(child)) {
       appendChildren(element, child);

@@ -1,5 +1,6 @@
 # Todos
 
+- [ ] Figure out how to reconcile/diff-check on the dom-signals components, to avoid re-rendering the whole tree, losing focus, etc.
 - [ ] Add support for view transitions.
 - [ ] Add support for error boundaries.
 - [ ] Add Resources & Async Data Handling

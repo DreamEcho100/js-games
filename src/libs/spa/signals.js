@@ -85,6 +85,7 @@ const NODE_TYPE = {
  * @template TValue
  * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue> & {
  *  set: (value: TValue) => void
+ *  update(fn: (value: TValue) => TValue): void;
  * }} SignalValue
  */
 // interface MemoValue<TValue> {

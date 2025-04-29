@@ -1,6 +1,6 @@
 /**
  * @import { de100x } from "./dom.js";
- * @import { SignalValue } from "./signals.js";
+ * @import { SignalValue, MemoValue } from "./signals.js";
  */
 
 import { createEffect, onScopeCleanup, getScopeId } from "./signals.js";
@@ -131,6 +131,21 @@ function setGeneralTagAttribute(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         element.className = /** @type {string} */ (value);
+      });
+      return true;
+    }
+    case "value": {
+      handleValueOrCb(valueOrCB, (value) => {
+        if (value == null) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          element.value = "";
+          return;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        element.value = /** @type {string} */ (value);
       });
       return true;
     }
@@ -316,16 +331,54 @@ For events, you could normalize the event listener value to always be a function
 (If someone accidentally passed null or non-function, it might cause weird runtime error.)
 */
 
-// ========== Reactive DOM Components ==========
 // TODO: They should be able to
 // - Take an element, valid primitive, or a scope
 // - Check for transitions
+// ========== Reactive DOM Components ==========
+
+//  * @param {de100x.Child[]} children
+//  * @param {(child: Element|Text, counter: number) => void} onNormalize
+//  * @param {DocumentFragment} fragment
+//  * @param {number} [counter]
+/**
+ * @param {{
+ *  children: de100x.Child[];
+ *  onNormalize?: (child: Element|Text, counter: number) => void;
+ *  fragment: DocumentFragment;
+ *  nodeKey?: string|number
+ * }} options
+ * @param {number} [counter]
+ * @returns {number}
+ */
+function normalizeChildren(options, counter = 0) {
+  for (const child of options.children) {
+    if (child instanceof Node) {
+      if (options.nodeKey) {
+        /** @type {HTMLElement} */ (child).dataset.trackId = String(
+          options.nodeKey,
+        );
+      }
+      options.onNormalize?.(/** @type {Element} */ (child), counter++);
+      options.fragment.appendChild(child);
+    } else if (Array.isArray(child)) {
+      counter = normalizeChildren(options, counter);
+    } else {
+      const textNode = document.createTextNode(
+        child == null ? "" : String(child),
+      );
+      options.onNormalize?.(textNode, counter++);
+      options.fragment.appendChild(textNode);
+    }
+  }
+  return counter;
+}
+
 /**
  * 🧩 List componen
  * t
  * @template {any[]} TValue
- * @param {SignalValue<TValue>} list - Signal value to iterate over
- * @param {(item: TValue[number], index: number, items: TValue) => string} key - Function to generate a unique key for each item
+ * @param {SignalValue<TValue>|MemoValue<TValue>} list - Signal value to iterate over
+ * @param {(item: TValue[number], index: number, items: TValue) => string|number} key - Function to generate a unique key for each item
  * @param {(item: TValue[number], index: number, items: TValue) => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements for each item
  * @returns {de100x.ChildPrimitive}
  * @description
@@ -336,68 +389,82 @@ For events, you could normalize the event listener value to always be a function
 function $list(list, key, fn) {
   const placeholder = document.createComment(`scope-${getScopeId()}list`);
 
-  /** @typedef {{ value: TValue[number]; elems: (Element | Text)[] }} NodeEntry */
+  /** @typedef {{ value: TValue[number]; elems: (Element|Text)[] }} NodeEntry */
 
-  /** @type {Map<string, NodeEntry>} */
+  /** @type {Map<string|number, NodeEntry>} */
   let nodes = new Map();
+  let isUnmounted = false;
 
   createEffect(() => {
-    /** @type {Map<string, NodeEntry>} */
+    /** @type {Map<string|number, NodeEntry>} */
     const newNodes = new Map();
     const listValue = list();
     const maxLength = Math.max(listValue.length, nodes.size);
 
-    /** @type {Node} */
-    let prevAnchor = placeholder;
+    queueMicrotask(() => {
+      if (isUnmounted) {
+        return;
+      }
 
-    for (let i = 0; i < maxLength; i++) {
-      const item = listValue[i];
-      const nodeKey = key(item, i, listValue);
-      const oldEntry = nodes.get(nodeKey);
+      /** @type {Node} */
+      let prevAnchor = placeholder;
 
-      if (i < listValue.length && oldEntry && oldEntry.value === item) {
-        // Reuse, but MOVE before previous anchor
-        for (let j = oldEntry.elems.length - 1; j >= 0; j--) {
-          const elem = oldEntry.elems[j];
-          if (prevAnchor.parentNode) {
-            prevAnchor.parentNode.insertBefore(elem, prevAnchor);
+      for (let i = 0; i < maxLength; i++) {
+        const item = listValue[i];
+        const nodeKey = key(item, i, listValue);
+        const oldEntry = nodes.get(nodeKey);
+
+        if (i < listValue.length && oldEntry && oldEntry.value === item) {
+          const fragment = document.createDocumentFragment();
+          normalizeChildren({
+            children: oldEntry.elems,
+            fragment,
+            nodeKey,
+          });
+          prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
+          newNodes.set(nodeKey, oldEntry);
+        } else if (i < listValue.length) {
+          // reusing the old nod or creating a new one
+          const _result =
+            // nodeKey
+            fn(item, i, listValue);
+          const elems = Array.isArray(_result) ? _result : [_result];
+          /** @type {(Element|Text)[]} */
+          const newElems = new Array(elems.length);
+
+          const fragment = document.createDocumentFragment();
+          normalizeChildren({
+            children: elems,
+            onNormalize: (child, counter) => {
+              newElems[counter] = child;
+            },
+            fragment,
+            nodeKey,
+          });
+
+          elems.length = 0;
+          prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
+          newNodes.set(nodeKey, { value: item, elems: newElems });
+        }
+
+        prevAnchor = newNodes.get(nodeKey)?.elems[0] ?? prevAnchor;
+      }
+
+      // Remove any leftover nodes not in new list
+      for (const [oldKey, oldEntry] of nodes) {
+        if (!newNodes.has(oldKey)) {
+          for (const elem of oldEntry.elems) {
+            elem.remove();
           }
         }
-        newNodes.set(nodeKey, oldEntry);
-      } else if (i < listValue.length) {
-        // New node to add
-        const _result = fn(item, i, listValue);
-        const elems = Array.isArray(_result) ? _result : [_result];
-        const normalizedElems = elems.map((elem) =>
-          elem instanceof Node
-            ? /** @type {Element} */ (elem)
-            : document.createTextNode(elem == null ? "" : String(elem)),
-        );
-
-        for (let j = normalizedElems.length - 1; j >= 0; j--) {
-          const elem = normalizedElems[j];
-          prevAnchor.parentNode?.insertBefore(elem, prevAnchor);
-        }
-
-        newNodes.set(nodeKey, { value: item, elems: normalizedElems });
       }
 
-      prevAnchor = newNodes.get(nodeKey)?.elems[0] ?? prevAnchor;
-    }
-
-    // Remove any leftover nodes not in new list
-    for (const [oldKey, oldEntry] of nodes) {
-      if (!newNodes.has(oldKey)) {
-        for (const elem of oldEntry.elems) {
-          elem.remove();
-        }
-      }
-    }
-
-    nodes = newNodes;
+      nodes = newNodes;
+    });
   });
 
   onScopeCleanup(() => {
+    isUnmounted = true;
     for (const { elems } of nodes.values()) {
       for (const elem of elems) {
         elem.remove();
@@ -412,8 +479,7 @@ function $list(list, key, fn) {
 /**
  * 🧩 Toggle component
  *
- * @template TValue
- * @param {SignalValue<TValue>} condition - Signal value to determine visibility
+ * @param {() => boolean | undefined | null} condition - Signal value to determine visibility
  * @param {() => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements
  * @returns {de100x.ChildPrimitive}
  * @description
@@ -423,33 +489,43 @@ function $list(list, key, fn) {
  */
 function $toggle(condition, fn) {
   const placeholder = document.createComment(`scope-${getScopeId()}visible`);
-  /** @type {(Element | Text)[]} */
+  /** @type {(Element|Text)[]} */
   let currentElems = [];
+  let isUnmounted = false;
 
   createEffect(() => {
     const shouldShow = condition();
-
-    if (shouldShow) {
-      const _result = fn();
-      const elems = Array.isArray(_result) ? _result : [_result];
-      currentElems = elems.map((elem) =>
-        elem instanceof Node
-          ? /** @type {Element} */ (elem)
-          : document.createTextNode(elem == null ? "" : String(elem)),
-      );
-
-      for (const elem of currentElems) {
-        placeholder.parentNode?.insertBefore(elem, placeholder);
+    queueMicrotask(() => {
+      if (isUnmounted) {
+        return;
       }
-    } else {
+
       for (const elem of currentElems) {
         elem.remove();
       }
       currentElems = [];
-    }
+
+      if (shouldShow) {
+        const _result = fn();
+        const elems = Array.isArray(_result) ? _result : [_result];
+        const fragment = document.createDocumentFragment();
+
+        normalizeChildren({
+          children: elems,
+          onNormalize: (child, counter) => {
+            currentElems[counter] = child;
+          },
+          fragment,
+        });
+
+        elems.length = 0;
+        placeholder.parentNode?.insertBefore(fragment, placeholder);
+      }
+    });
   });
 
   onScopeCleanup(() => {
+    isUnmounted = true;
     for (const elem of currentElems) {
       elem.remove();
     }
@@ -463,7 +539,7 @@ function $toggle(condition, fn) {
  * 🧩 Switch component
  *
  * @template TValue
- * @param {SignalValue<TValue>} condition - Signal value to determine which case to show
+ * @param {SignalValue<TValue>|MemoValue<TValue>} condition - Signal value to determine which case to show
  * @param {{ [key: string | number]: () => de100x.ChildPrimitive | de100x.ChildPrimitive[] }} cases - Object mapping case keys to functions that generate elements
  * @returns {de100x.ChildPrimitive}
  * @description
@@ -473,10 +549,11 @@ function $toggle(condition, fn) {
  */
 function $switch(condition, cases) {
   const placeholder = document.createComment(`scope-${getScopeId()}switch`);
-  /** @type {(Element | Text)[]} */
+  /** @type {(Element|Text)[]} */
   let currentElems = [];
   /** @type {string | number | null | undefined} */
   let oldCase;
+  let isUnmounted = false;
 
   createEffect(() => {
     const value = /** @type {keyof typeof cases} */ (condition());
@@ -484,29 +561,39 @@ function $switch(condition, cases) {
     if (oldCase === value) {
       return;
     }
-    oldCase = value;
+    queueMicrotask(() => {
+      if (isUnmounted) {
+        return;
+      }
 
-    for (const elem of currentElems) {
-      elem.remove();
-    }
-    currentElems = [];
-
-    if (caseFn) {
-      const _result = caseFn();
-      const elems = Array.isArray(_result) ? _result : [_result];
-      currentElems = elems.map((elem) =>
-        elem instanceof Node
-          ? /** @type {Element} */ (elem)
-          : document.createTextNode(elem == null ? "" : String(elem)),
-      );
+      oldCase = value;
 
       for (const elem of currentElems) {
-        placeholder.parentNode?.insertBefore(elem, placeholder);
+        elem.remove();
       }
-    }
+      currentElems = [];
+
+      if (caseFn) {
+        const _result = caseFn();
+        const elems = Array.isArray(_result) ? _result : [_result];
+        const fragment = document.createDocumentFragment();
+
+        normalizeChildren({
+          children: elems,
+          onNormalize: (child, counter) => {
+            currentElems[counter] = child;
+          },
+          fragment,
+        });
+
+        elems.length = 0;
+        placeholder.parentNode?.insertBefore(fragment, placeholder);
+      }
+    });
   });
 
   onScopeCleanup(() => {
+    isUnmounted = true;
     for (const elem of currentElems) {
       elem.remove();
     }
