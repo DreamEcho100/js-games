@@ -58,7 +58,6 @@ import { adjustCanvas } from "#libs/dom/index.js";
  *   +---------------+---------------+---------------+---------------+
  *  (0,160)        (40,160)       (80,160)      (120,160)      (160,160)
  */
-
 class Character {
   /**
    * The Character class handles:
@@ -451,93 +450,95 @@ class Character {
     // Process ongoing movement first
     const isMoving = this.processMovement(tile, currentFrameTime);
 
-    // Only check for new movement if not already moving
-    if (!isMoving) {
-      // Check each direction key
-      for (const key of this.KeysCollection) {
-        const [direction, isPressed] = this.keyDirectionMap[key];
+    // Only check for new movement if not already ongoing
+    if (isMoving) {
+      return;
+    }
 
-        // Skip keys that aren't pressed
-        if (!isPressed) continue;
+    // Check each direction key
+    for (const key of this.KeysCollection) {
+      const [direction, isPressed] = this.keyDirectionMap[key];
 
-        // Try to move in the pressed direction
-        let hadMoved = false;
+      // Skip keys that aren't pressed
+      if (!isPressed) continue;
 
-        /**
-         * Direction-specific movement logic with collision detection
-         *
-         * For each direction, we:
-         * 1. Check if moving would stay within map boundaries
-         * 2. Check if the destination tile is walkable (value 1)
-         * 3. If both checks pass, update tileTo and mark as moved
-         *
-         * VISUAL EXAMPLE:
-         * - Character at [1,1]
-         * - Trying to move up (decrease y)
-         * - Map has a wall (0) at [1,0]
-         *
-         * +---+---+---+
-         * |   |███|   | <-- Wall at [1,0], can't move up
-         * +---+---+---+
-         * |   | P |   | <-- Character at [1,1]
-         * +---+---+---+
-         * |   |   |   |
-         * +---+---+---+
-         */
-        switch (direction) {
-          // Can move up if: not at top row, destination is a path
-          case "up":
-            if (
-              this.tileFrom[1] > 0 &&
-              gameMap[
-                this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] - 1)
-              ] == 1
-            ) {
-              this.tileTo[1] -= 1;
-              hadMoved = true;
-            }
-            break;
-          // Similar logic for other directions...
-          case "down":
-            if (
-              this.tileFrom[1] < map.h - 1 &&
-              gameMap[
-                this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] + 1)
-              ] == 1
-            ) {
-              this.tileTo[1] += 1;
-              hadMoved = true;
-            }
-            break;
-          case "left":
-            if (
-              this.tileFrom[0] > 0 &&
-              gameMap[
-                this.toMapIndex(map, this.tileFrom[0] - 1, this.tileFrom[1])
-              ] == 1
-            ) {
-              this.tileTo[0] -= 1;
-              hadMoved = true;
-            }
-            break;
-          case "right":
-            if (
-              this.tileFrom[0] < map.w - 1 &&
-              gameMap[
-                this.toMapIndex(map, this.tileFrom[0] + 1, this.tileFrom[1])
-              ] == 1
-            ) {
-              this.tileTo[0] += 1;
-              hadMoved = true;
-            }
-            break;
-        }
+      // Try to move in the pressed direction
+      let hadMoved = false;
 
-        if (hadMoved) {
-          // Record when movement started
-          this.timeMoved = currentFrameTime;
-          break; // Process only one movement direction
-        }
+      /**
+       * Direction-specific movement logic with collision detection
+       *
+       * For each direction, we:
+       * 1. Check if moving would stay within map boundaries
+       * 2. Check if the destination tile is walkable (value 1)
+       * 3. If both checks pass, update tileTo and mark as moved
+       *
+       * VISUAL EXAMPLE:
+       * - Character at [1,1]
+       * - Trying to move up (decrease y)
+       * - Map has a wall (0) at [1,0]
+       *
+       * +---+---+---+
+       * |   |███|   | <-- Wall at [1,0], can't move up
+       * +---+---+---+
+       * |   | P |   | <-- Character at [1,1]
+       * +---+---+---+
+       * |   |   |   |
+       * +---+---+---+
+       */
+      switch (direction) {
+        // Can move up if: not at top row, destination is a path
+        case "up":
+          if (
+            this.tileFrom[1] > 0 &&
+            gameMap[
+              this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] - 1)
+            ] == 1
+          ) {
+            this.tileTo[1] -= 1;
+            hadMoved = true;
+          }
+          break;
+        // Similar logic for other directions...
+        case "down":
+          if (
+            this.tileFrom[1] < map.h - 1 &&
+            gameMap[
+              this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] + 1)
+            ] == 1
+          ) {
+            this.tileTo[1] += 1;
+            hadMoved = true;
+          }
+          break;
+        case "left":
+          if (
+            this.tileFrom[0] > 0 &&
+            gameMap[
+              this.toMapIndex(map, this.tileFrom[0] - 1, this.tileFrom[1])
+            ] == 1
+          ) {
+            this.tileTo[0] -= 1;
+            hadMoved = true;
+          }
+          break;
+        case "right":
+          if (
+            this.tileFrom[0] < map.w - 1 &&
+            gameMap[
+              this.toMapIndex(map, this.tileFrom[0] + 1, this.tileFrom[1])
+            ] == 1
+          ) {
+            this.tileTo[0] += 1;
+            hadMoved = true;
+          }
+          break;
+      }
+
+      if (hadMoved) {
+        // Record when movement started
+        this.timeMoved = currentFrameTime;
+        break; // Process only one movement direction
       }
     }
   }
@@ -964,6 +965,7 @@ class Viewport {
      */
     for (let y = this.startTile[1]; y <= this.endTile[1]; y++) {
       for (let x = this.startTile[0]; x <= this.endTile[0]; x++) {
+        // Draw tiles...
         // Choose tile color based on map data
         switch (gameMap[y * map.w + x]) {
           case 0: // Wall tiles
@@ -973,7 +975,6 @@ class Viewport {
             ctx.fillStyle = "#eeeeee"; // White
             break;
         }
-
         /**
          * Draw the tile at the correct position using the offset
          *

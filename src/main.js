@@ -123,7 +123,7 @@ const gameScreens = [
         ),
       ),
     description:
-      "This project demonstrates how to create a tile based game using Javascript and Canvas. It includes a simple game where the player can control a character and make it perform different animations.",
+      "This project demonstrates how to create a tile based game using Javascript and Canvas. It includes a simple game where the player can control a character and make it perform different animations. Note: if the website is not working maybe try to open on the wayback machine :P.",
     tags: [
       "@technologies4me999",
       "tile",
@@ -136,7 +136,7 @@ const gameScreens = [
       "css",
     ],
     references: [
-      //
+      // 1st
       {
         title: "Tile based game development in Javascript & Canvas #1",
         url: "https://youtu.be/txUvD5_ROIU",
@@ -149,7 +149,7 @@ const gameScreens = [
         description:
           "Discover the basics of tile maps, using Canvas and Javascript. In this tutorial we'll learn how to draw a simple Tile Map to an HTML Canvas.",
       },
-      //
+      // 2nd
       {
         title: "Tile based game development in Javascript & Canvas #2",
         url: "https://www.youtube.com/watch?v=xsNdwyuuSzo",
@@ -162,7 +162,7 @@ const gameScreens = [
         description:
           "We now look at adding a Character and converting user input to movement in our tile map tutorial.",
       },
-      //
+      // 3rd
       {
         title:
           "Viewport, Camera, and Culling on 2D TileMap - Javascript & Canvas gamedev #3",
@@ -176,7 +176,22 @@ const gameScreens = [
         description:
           "Displaying maps larger than the visible area by moving the viewport and culling off-screen tiles.",
       },
+      // 4th
       //
+      {
+        title:
+          "Tile & Floor type management - 2D Canvas & Javascript tile map tutorial #4",
+        url: "https://www.youtube.com/watch?v=jWsUIDG2vAA",
+        description:
+          "In this tutorial we'll look at a better way to manage tile and floor types, and expand on the tile types we're currently using.",
+      },
+      {
+        title: "More Tile Types for the Tile Map",
+        url: "https://technologies4.me/articles/more-tile-types-map-a4/",
+        description:
+          "Making it simple to add more types of tiles to our map, and creating some helper functions for Character movement.",
+      },
+      // 5th
     ],
   },
 ];
