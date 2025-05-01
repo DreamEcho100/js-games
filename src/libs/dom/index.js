@@ -289,7 +289,9 @@ export function adjustCanvas({
 
   const canvasBoxSizing = /** @type {"border-box"|"content-box"} */ (
     /** @type {{ value?: CanvasRenderingContext2D }} */ (
-      canvas.computedStyleMap().get("box-sizing")
+      "computedStyleMap" in canvas
+        ? canvas.computedStyleMap().get("box-sizing")
+        : undefined
     )?.value ??
       getComputedStyle(canvas).boxSizing ??
       canvas.style.boxSizing

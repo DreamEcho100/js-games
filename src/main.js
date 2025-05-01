@@ -1,6 +1,27 @@
 // import { initializeTodoApp } from "#/libs/spa/example";
 /** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
+// import "view-transitions-polyfill";
+
+if (!("startViewTransition" in document)) {
+  /**
+   * @param {ViewTransitionUpdateCallback} callbackOptions
+   * @returns {ViewTransition}
+   */
+  window.document.startViewTransition = (callbackOptions) => {
+    callbackOptions();
+    return {
+      ready: Promise.resolve(void 0),
+      finished: Promise.resolve(void 0),
+      skipTransition: () => {},
+      updateCallbackDone: Promise.resolve(void 0),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      types: new Set(),
+    };
+  };
+}
+
 import { buttonPrimaryClassName } from "#libs/class-names.js";
 
 const selectedGameScreenLsKey = "selectedGameScreen";

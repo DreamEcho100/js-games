@@ -287,11 +287,11 @@ class Character {
     this.position = /** @type {[number, number]} */ ([
       // `x` is multiplied by the tile width + the padding
       // (half the difference between the tile width and the character width)
-      x * tile.w + (tile.w - this.dimensions[0]) * 0.5,
+      Math.floor(x * tile.w + (tile.w - this.dimensions[0]) * 0.5),
 
       // `y` is multiplied by the tile height + the padding
       // (half the difference between the tile height and the character height)
-      y * tile.h + (tile.h - this.dimensions[1]) * 0.5,
+      Math.floor(y * tile.h + (tile.h - this.dimensions[1]) * 0.5),
     ]);
   }
 
@@ -374,9 +374,10 @@ class Character {
         const tileDistance = this.tileTo[0] - this.tileFrom[0];
         const moveDistance = tileDistance * progress;
 
-        this.position[0] =
+        this.position[0] = Math.floor(
           (this.tileFrom[0] + moveDistance) * tile.w +
-          (tile.w - this.dimensions[0]) * 0.5;
+            (tile.w - this.dimensions[0]) * 0.5,
+        );
       }
 
       // Update y position based on progress (same logic as x)
@@ -384,9 +385,10 @@ class Character {
         const tileDistance = this.tileTo[1] - this.tileFrom[1];
         const moveDistance = tileDistance * progress;
 
-        this.position[1] =
+        this.position[1] = Math.floor(
           (this.tileFrom[1] + moveDistance) * tile.h +
-          (tile.h - this.dimensions[1]) * 0.5;
+            (tile.h - this.dimensions[1]) * 0.5,
+        );
       }
     }
 
@@ -761,8 +763,8 @@ class Viewport {
      * This is just like moving a camera - we're not moving the player,
      * we're moving the entire world to make the player centered.
      */
-    this.offset[0] = Math.floor(this.screen[0] / 2 - px);
-    this.offset[1] = Math.floor(this.screen[1] / 2 - py);
+    this.offset[0] = Math.floor(this.screen[0] * 0.5 - px);
+    this.offset[1] = Math.floor(this.screen[1] * 0.5 - py);
 
     /**
      * STEP 2: Find the tile coordinates the player is standing on
@@ -807,7 +809,7 @@ class Viewport {
      *
      *
      *
-     * Example with 400px screen, 40px tiles, player at tile x=12:
+     * Another Example with 400px screen, 40px tiles, player at tile x=12:
      * startTile.x = 12 - 1 - ceil((400/2)/40) = 12 - 1 - 5 = 6
      *
      * Visual representation:
@@ -819,9 +821,9 @@ class Viewport {
      *                           startTile                      playerTile
      */
     this.startTile[0] =
-      playerTile[0] - 1 - Math.ceil(this.screen[0] / 2 / tile.w);
+      playerTile[0] - 1 - Math.ceil((this.screen[0] * 0.5) / tile.w);
     this.startTile[1] =
-      playerTile[1] - 1 - Math.ceil(this.screen[1] / 2 / tile.h);
+      playerTile[1] - 1 - Math.ceil((this.screen[1] * 0.5) / tile.h);
     /**
      * STEP 4: Make sure we don't try to draw tiles that are outside the map bounds
      *
@@ -864,9 +866,9 @@ class Viewport {
      *                           startTile         playerTile                  endTile
      */
     this.endTile[0] =
-      playerTile[0] + 1 + Math.ceil(this.screen[0] / 2 / tile.w);
+      playerTile[0] + 1 + Math.ceil((this.screen[0] * 0.5) / tile.w);
     this.endTile[1] =
-      playerTile[1] + 1 + Math.ceil(this.screen[1] / 2 / tile.h);
+      playerTile[1] + 1 + Math.ceil((this.screen[1] * 0.5) / tile.h);
 
     /**
      * STEP 6: Make sure we don't try to draw tiles beyond the map boundaries
@@ -975,6 +977,7 @@ class Viewport {
             ctx.fillStyle = "#eeeeee"; // White
             break;
         }
+
         /**
          * Draw the tile at the correct position using the offset
          *
@@ -992,10 +995,10 @@ class Viewport {
          * [500, 400] + [-300, -200] = [200, 200]
          */
         ctx.fillRect(
-          this.offset[0] + x * tile.w, // X position = offset + tile position
-          this.offset[1] + y * tile.h, // Y position = offset + tile position
-          tile.w, // Tile width
-          tile.h, // Tile height
+          Math.floor(this.offset[0] + x * tile.w), // X position = offset + tile position
+          Math.floor(this.offset[1] + y * tile.h), // Y position = offset + tile position
+          tile.w + 0.9, // Tile width - adding `0.9` to avoid gaps between tiles when moving :(
+          tile.h + 0.9, // Tile height - adding `0.9` to avoid gaps between tiles when moving :(
         );
       }
     }
@@ -1143,6 +1146,7 @@ const gameScreen = await initGameScreen({
     if (!canvas) {
       throw new Error("Couldn't find the canvas!");
     }
+    canvas.style.imageRendering = "pixelated";
 
     const ctx = /** @type {CanvasRenderingContext2D} */ (
       canvas.getContext("2d")
@@ -1150,6 +1154,9 @@ const gameScreen = await initGameScreen({
     if (!ctx) {
       throw new Error("Couldn't get the canvas context!");
     }
+    // ctx.translate(1, 1); // Aligns stroke/fill operations to pixel boundaries
+    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingQuality = "low";
 
     const adjustCanvasCleanup = adjustCanvas({
       canvas,
@@ -1159,11 +1166,78 @@ const gameScreen = await initGameScreen({
       },
     });
     cleanupManager.register(adjustCanvasCleanup);
+    ctx.imageSmoothingEnabled = false;
 
     let currentSecond = 0;
     let frameCount = 0;
     let frameLastSecond = 0;
     let lastFrameTime = 0;
+
+    // // prettier-ignore
+    // const gameMap = [
+    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
+    // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    // 	0, 1, 0, 1, 0, 0, 1, 1, 1, 0,
+    // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    // 	0, 1, 0, 0, 0, 0, 1, 1, 0, 0,
+    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
+    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    // ]
+    //
+    // prettier-ignore
+    const gameMap = [
+    	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
+    	0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0,
+    	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
+    	0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0,
+    	0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
+    	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
+    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0,
+    	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0,
+    	0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0,
+    	0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    	0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    	0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+    	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+    	0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0,
+    	0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
+    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+    // // prettier-ignore
+    // const gameMap = [
+    // 	0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    // 	0, 2, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
+    // 	0, 2, 3, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
+    // 	0, 2, 3, 1, 4, 4, 1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 0,
+    // 	0, 2, 3, 1, 1, 4, 4, 1, 2, 3, 3, 2, 1, 1, 2, 1, 0, 0, 0, 0,
+    // 	0, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0,
+    // 	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
+    // 	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
+    // 	0, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 1, 0,
+    // 	0, 1, 1, 1, 1, 2, 3, 2, 1, 1, 4, 1, 1, 1, 1, 3, 3, 2, 1, 0,
+    // 	0, 1, 2, 2, 2, 2, 1, 2, 1, 1, 4, 1, 1, 1, 1, 1, 3, 2, 1, 0,
+    // 	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4,
+    // 	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0,
+    // 	0, 1, 2, 3, 4, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 0,
+    // 	0, 3, 2, 3, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 1, 0, 1, 2, 1, 0,
+    // 	0, 3, 2, 3, 4, 4, 3, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
+    // 	0, 3, 2, 3, 4, 1, 3, 2, 1, 3, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
+    // 	0, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 3, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 4, 0,
+    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    // ];
+
+    // ctx.filter =
+    //   // "url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxmaWx0ZXIgaWQ9ImZpbHRlciIgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVDb21wb25lbnRUcmFuc2Zlcj48ZmVGdW5jUiB0eXBlPSJpZGVudGl0eSIvPjxmZUZ1bmNHIHR5cGU9ImlkZW50aXR5Ii8+PGZlRnVuY0IgdHlwZT0iaWRlbnRpdHkiLz48ZmVGdW5jQSB0eXBlPSJkaXNjcmV0ZSIgdGFibGVWYWx1ZXM9IjAgMSIvPjwvZmVDb21wb25lbnRUcmFuc2Zlcj48L2ZpbHRlcj48L3N2Zz4=#filter)";
+    //   `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="f" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer></filter></svg>#f')`;
+
     const tile = {
       w: 40,
       h: 40,
@@ -1186,49 +1260,11 @@ const gameScreen = await initGameScreen({
       },
       tile,
     });
-
-    // [
-    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 0, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 0, 0, 0, 1, 1, 0, 0,
-    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
-    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // ]
-    // prettier-ignore
-    const gameMap = [
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
-			0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
-			0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0,
-			0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0,
-			0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0,
-			0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0,
-			0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-			0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-			0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-			0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
-			0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0,
-			0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		];
     ctx.font = "bold 10pt sans-serif";
 
     const viewport = new Viewport({
       screen: [canvasConfig.render.width, canvasConfig.render.height],
     });
-
-    console.log("___ viewport", viewport);
 
     /** @type {number|undefined} */
     let animateId;
@@ -1260,11 +1296,6 @@ const gameScreen = await initGameScreen({
         character.position[0] + character.dimensions[0] / 2,
         character.position[1] + character.dimensions[1] / 2,
       );
-
-      // const centerX = (character.tileFrom[0] + 0.5) * tile.w;
-      // const centerY = (character.tileFrom[1] + 0.5) * tile.h;
-
-      // viewport.update(tile, map, centerX, centerY);
 
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, viewport.screen[0], viewport.screen[1]);

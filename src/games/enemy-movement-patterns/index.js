@@ -139,7 +139,7 @@ const gameScreen = await initGameScreen({
     });
     cleanupManager.register(adjustCanvasCleanup);
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
+    ctx.imageSmoothingQuality = "medium";
     let gameFrame = 0;
     const [enemyImg1, enemyImg2, enemyImg3, enemyImg4] = assets;
 

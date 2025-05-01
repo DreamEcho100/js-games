@@ -244,14 +244,18 @@ function setGeneralTagAttribute(
           valueOrCB
         );
 
-      // document.startViewTransition(() => {
-      if (typeof _value === "function") {
-        _value(element);
-      } else if (_value && typeof _value === "object" && "current" in _value) {
-        _value.current = element;
-      }
-      return true;
-      // });
+      document.startViewTransition(() => {
+        if (typeof _value === "function") {
+          _value(element);
+        } else if (
+          _value &&
+          typeof _value === "object" &&
+          "current" in _value
+        ) {
+          _value.current = element;
+        }
+        return true;
+      });
     }
   }
 
