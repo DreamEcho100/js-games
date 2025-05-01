@@ -446,9 +446,11 @@ class Character {
    * @param {{ w: number; h: number }} tile - Tile dimensions
    * @param {{ w: number; h: number }} map - Map dimensions
    * @param {number[]} gameMap - 1D array of map data (0 = wall, 1 = path)
+   * @param {Record<number, { color: string; floor: number }>} tileTypes
+   * @param {Record<string, number>} floorTypes
    * @param {number} currentFrameTime - Current game time in milliseconds
    */
-  update(tile, map, gameMap, currentFrameTime) {
+  update(tile, map, gameMap, tileTypes, floorTypes, currentFrameTime) {
     // Process ongoing movement first
     const isMoving = this.processMovement(tile, currentFrameTime);
 
@@ -492,10 +494,12 @@ class Character {
         // Can move up if: not at top row, destination is a path
         case "up":
           if (
-            this.tileFrom[1] > 0 &&
-            gameMap[
-              this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] - 1)
-            ] == 1
+            this.canMoveUp(map, gameMap, tileTypes, floorTypes)
+            // &&
+            // this.tileFrom[1] > 0 &&
+            // gameMap[
+            //   this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] - 1)
+            // ] == 1
           ) {
             this.tileTo[1] -= 1;
             hadMoved = true;
@@ -504,10 +508,12 @@ class Character {
         // Similar logic for other directions...
         case "down":
           if (
-            this.tileFrom[1] < map.h - 1 &&
-            gameMap[
-              this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] + 1)
-            ] == 1
+            this.canMoveDown(map, gameMap, tileTypes, floorTypes)
+            // &&
+            // this.tileFrom[1] < map.h - 1 &&
+            // gameMap[
+            //   this.toMapIndex(map, this.tileFrom[0], this.tileFrom[1] + 1)
+            // ] == 1
           ) {
             this.tileTo[1] += 1;
             hadMoved = true;
@@ -515,10 +521,12 @@ class Character {
           break;
         case "left":
           if (
-            this.tileFrom[0] > 0 &&
-            gameMap[
-              this.toMapIndex(map, this.tileFrom[0] - 1, this.tileFrom[1])
-            ] == 1
+            this.canMoveLeft(map, gameMap, tileTypes, floorTypes)
+            // &&
+            // this.tileFrom[0] > 0 &&
+            // gameMap[
+            //   this.toMapIndex(map, this.tileFrom[0] - 1, this.tileFrom[1])
+            // ] == 1
           ) {
             this.tileTo[0] -= 1;
             hadMoved = true;
@@ -526,10 +534,12 @@ class Character {
           break;
         case "right":
           if (
-            this.tileFrom[0] < map.w - 1 &&
-            gameMap[
-              this.toMapIndex(map, this.tileFrom[0] + 1, this.tileFrom[1])
-            ] == 1
+            this.canMoveRight(map, gameMap, tileTypes, floorTypes)
+            // &&
+            // this.tileFrom[0] < map.w - 1 &&
+            // gameMap[
+            //   this.toMapIndex(map, this.tileFrom[0] + 1, this.tileFrom[1])
+            // ] == 1
           ) {
             this.tileTo[0] += 1;
             hadMoved = true;
@@ -561,6 +571,96 @@ class Character {
       offset[1] + this.position[1],
       this.dimensions[0],
       this.dimensions[1],
+    );
+  }
+
+  /**
+   * Checks if the character can move to a specific tile
+   *
+   * @param {{ w: number; h:number }} map
+   * @param {number[]} gameMap
+   * @param {Record<number, { color: string; floor: number }>} tileTypes
+   * @param {Record<string, number>} floorTypes
+   * @param {number} x - The tile x-coordinate
+   * @param {number} y - The tile y-coordinate
+   * @returns {boolean} - True if the character can move to the tile, false otherwise
+   */
+  canMoveTo(map, gameMap, tileTypes, floorTypes, x, y) {
+    if (x < 0 || x >= map.w || y < 0 || y >= map.h) {
+      return false;
+    }
+
+    if (
+      tileTypes[gameMap[this.toMapIndex(map, x, y)]].floor !== floorTypes.path
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+  /**
+	//  * 
+  //  * @param {{ w: number; h:number }} map
+  //  * @param {number[]} gameMap
+  //  * @param {Record<number, { color: string; floor: number }>} tileTypes
+  //  * @param {Record<string, number>} floorTypes
+   */
+  canMoveUp(map, gameMap, tileTypes, floorTypes) {
+    return this.canMoveTo(
+      map,
+      gameMap,
+      tileTypes,
+      floorTypes,
+      this.tileFrom[0],
+      this.tileFrom[1] - 1,
+    );
+  }
+  /**
+   * @param {{ w: number; h:number }} map
+   * @param {number[]} gameMap
+   * @param {Record<number, { color: string; floor: number }>} tileTypes
+   * @param {Record<string, number>} floorTypes
+   */
+  canMoveDown(map, gameMap, tileTypes, floorTypes) {
+    return this.canMoveTo(
+      map,
+      gameMap,
+      tileTypes,
+      floorTypes,
+      this.tileFrom[0],
+      this.tileFrom[1] + 1,
+    );
+  }
+  /**
+   * @param {{ w: number; h:number }} map
+   * @param {number[]} gameMap
+   * @param {Record<number, { color: string; floor: number }>} tileTypes
+   * @param {Record<string, number>} floorTypes
+   */
+  canMoveLeft(map, gameMap, tileTypes, floorTypes) {
+    return this.canMoveTo(
+      map,
+      gameMap,
+      tileTypes,
+      floorTypes,
+      this.tileFrom[0] - 1,
+      this.tileFrom[1],
+    );
+  }
+  /**
+   * @param {{ w: number; h:number }} map
+   * @param {number[]} gameMap
+   * @param {Record<number, { color: string; floor: number }>} tileTypes
+   * @param {Record<string, number>} floorTypes
+   */
+  canMoveRight(map, gameMap, tileTypes, floorTypes) {
+    return this.canMoveTo(
+      map,
+      gameMap,
+      tileTypes,
+      floorTypes,
+      this.tileFrom[0] + 1,
+      this.tileFrom[1],
     );
   }
 }
@@ -951,8 +1051,9 @@ class Viewport {
    * @param {{ w: number; h: number }} tile - Tile dimensions in pixels
    * @param {{ w: number; h: number }} map - Map dimensions in tiles
    * @param {number[]} gameMap - The map data (0 = wall, 1 = path)
+   * @param {Record<number, { color: string; floor: number }>} tileTypes
    */
-  draw(ctx, tile, map, gameMap) {
+  draw(ctx, tile, map, gameMap, tileTypes) {
     /**
      * Loop only through the visible tiles (culling optimization)
      *
@@ -969,14 +1070,11 @@ class Viewport {
       for (let x = this.startTile[0]; x <= this.endTile[0]; x++) {
         // Draw tiles...
         // Choose tile color based on map data
-        switch (gameMap[y * map.w + x]) {
-          case 0: // Wall tiles
-            ctx.fillStyle = "#999999"; // Gray
-            break;
-          default: // Path tiles
-            ctx.fillStyle = "#eeeeee"; // White
-            break;
+        const tileType = tileTypes[gameMap[y * map.w + x]];
+        if (!tileType) {
+          continue;
         }
+        ctx.fillStyle = tileType.color;
 
         /**
          * Draw the tile at the correct position using the offset
@@ -1157,6 +1255,9 @@ const gameScreen = await initGameScreen({
     // ctx.translate(1, 1); // Aligns stroke/fill operations to pixel boundaries
     ctx.imageSmoothingEnabled = false;
     ctx.imageSmoothingQuality = "low";
+    // ctx.filter =
+    //   // "url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxmaWx0ZXIgaWQ9ImZpbHRlciIgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVDb21wb25lbnRUcmFuc2Zlcj48ZmVGdW5jUiB0eXBlPSJpZGVudGl0eSIvPjxmZUZ1bmNHIHR5cGU9ImlkZW50aXR5Ii8+PGZlRnVuY0IgdHlwZT0iaWRlbnRpdHkiLz48ZmVGdW5jQSB0eXBlPSJkaXNjcmV0ZSIgdGFibGVWYWx1ZXM9IjAgMSIvPjwvZmVDb21wb25lbnRUcmFuc2Zlcj48L2ZpbHRlcj48L3N2Zz4=#filter)";
+    //   `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="f" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer></filter></svg>#f')`;
 
     const adjustCanvasCleanup = adjustCanvas({
       canvas,
@@ -1187,56 +1288,65 @@ const gameScreen = await initGameScreen({
     // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     // ]
     //
-    // prettier-ignore
-    const gameMap = [
-    	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
-    	0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0,
-    	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
-    	0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0,
-    	0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
-    	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
-    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0,
-    	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0,
-    	0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0,
-    	0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    	0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    	0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-    	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
-    	0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0,
-    	0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
-    	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-    ];
     // // prettier-ignore
     // const gameMap = [
-    // 	0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // 	0, 2, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
-    // 	0, 2, 3, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
-    // 	0, 2, 3, 1, 4, 4, 1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 0,
-    // 	0, 2, 3, 1, 1, 4, 4, 1, 2, 3, 3, 2, 1, 1, 2, 1, 0, 0, 0, 0,
-    // 	0, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0,
-    // 	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
-    // 	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
-    // 	0, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 1, 0,
-    // 	0, 1, 1, 1, 1, 2, 3, 2, 1, 1, 4, 1, 1, 1, 1, 3, 3, 2, 1, 0,
-    // 	0, 1, 2, 2, 2, 2, 1, 2, 1, 1, 4, 1, 1, 1, 1, 1, 3, 2, 1, 0,
-    // 	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4,
-    // 	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0,
-    // 	0, 1, 2, 3, 4, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 0,
-    // 	0, 3, 2, 3, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 1, 0, 1, 2, 1, 0,
-    // 	0, 3, 2, 3, 4, 4, 3, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
-    // 	0, 3, 2, 3, 4, 1, 3, 2, 1, 3, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
-    // 	0, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 3, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 4, 0,
+    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
+    // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
+    // 	0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0,
+    // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0,
+    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0,
+    // 	0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0,
+    // 	0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    // 	0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    // 	0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+    // 	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+    // 	0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0,
+    // 	0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
+    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
     // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     // ];
+    // prettier-ignore
+    const gameMap = [
+    	0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 2, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
+    	0, 2, 3, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
+    	0, 2, 3, 1, 4, 4, 1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 0,
+    	0, 2, 3, 1, 1, 4, 4, 1, 2, 3, 3, 2, 1, 1, 2, 1, 0, 0, 0, 0,
+    	0, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0,
+    	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
+    	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
+    	0, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 1, 0,
+    	0, 1, 1, 1, 1, 2, 3, 2, 1, 1, 4, 1, 1, 1, 1, 3, 3, 2, 1, 0,
+    	0, 1, 2, 2, 2, 2, 1, 2, 1, 1, 4, 1, 1, 1, 1, 1, 3, 2, 1, 0,
+    	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4,
+    	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0,
+    	0, 1, 2, 3, 4, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 0,
+    	0, 3, 2, 3, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 1, 0, 1, 2, 1, 0,
+    	0, 3, 2, 3, 4, 4, 3, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
+    	0, 3, 2, 3, 4, 1, 3, 2, 1, 3, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
+    	0, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 3, 0,
+    	0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 4, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
 
-    // ctx.filter =
-    //   // "url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxmaWx0ZXIgaWQ9ImZpbHRlciIgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVDb21wb25lbnRUcmFuc2Zlcj48ZmVGdW5jUiB0eXBlPSJpZGVudGl0eSIvPjxmZUZ1bmNHIHR5cGU9ImlkZW50aXR5Ii8+PGZlRnVuY0IgdHlwZT0iaWRlbnRpdHkiLz48ZmVGdW5jQSB0eXBlPSJkaXNjcmV0ZSIgdGFibGVWYWx1ZXM9IjAgMSIvPjwvZmVDb21wb25lbnRUcmFuc2Zlcj48L2ZpbHRlcj48L3N2Zz4=#filter)";
-    //   `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="f" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer></filter></svg>#f')`;
+    const FLOOR_TYPES = {
+      solid: 0,
+      path: 1,
+      water: 2,
+    };
+    const TILE_TYPES = {
+      0: { color: "#685b48", floor: FLOOR_TYPES.solid },
+      1: { color: "#5aa457", floor: FLOOR_TYPES.path },
+      2: { color: "#e8bd7a", floor: FLOOR_TYPES.path },
+      3: { color: "#286625", floor: FLOOR_TYPES.solid },
+      4: { color: "#678fd9", floor: FLOOR_TYPES.water },
+    };
 
     const tile = {
       w: 40,
@@ -1289,7 +1399,14 @@ const gameScreen = await initGameScreen({
         frameCount++;
       }
 
-      character.update(tile, map, gameMap, currentFrameTime);
+      character.update(
+        tile,
+        map,
+        gameMap,
+        TILE_TYPES,
+        FLOOR_TYPES,
+        currentFrameTime,
+      );
       viewport.update(
         tile,
         map,
@@ -1299,7 +1416,7 @@ const gameScreen = await initGameScreen({
 
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, viewport.screen[0], viewport.screen[1]);
-      viewport.draw(ctx, tile, map, gameMap);
+      viewport.draw(ctx, tile, map, gameMap, TILE_TYPES, FLOOR_TYPES);
       character.draw(ctx, viewport.offset);
 
       // FPS counter
