@@ -215,6 +215,26 @@ const gameScreens = [
       // 5th
     ],
   },
+  {
+    title:
+      "Physics for JavaScript Games, Animation, and Simulations: with HTML5 Canvas -- By Dev Ramtal and Adrian Dobre",
+    cb: () =>
+      lazyLoad(() =>
+        import(
+          "./games/physics-for-javascript-games-animation-and-simulations-with-html5-canvas-by-dev-ramtal-and-adrian-dobre/index.js"
+        ),
+      ),
+    description:
+      "Have you ever wanted to include believable physical behaviors in your games and projects to give them that extra edge? Physics for JavaScript Games, Animation, and Simulations teaches you how to incorporate real physics, such as gravity, friction, and buoyancy, into your HTML5 games, animations, and simulations. It also includes more advanced topics, such as particle systems, which are essential for creating effects such as sparks or smoke. The book also addresses the key issue of balancing accuracy and simplicity in your games and simulations, and the final chapters provide you with the information and the code to make the right choice for your project.\n\nPhysics for JavaScript Games, Animation, and Simulations assumes you have a basic knowledge of JavaScript and HTML5. However, no previous knowledge of physics is required—only some very basic math skills. The authors present everything from basic principles to advanced concepts in an approachable way, so you'll be able to follow the logic and easily adapt the principles to your own applications.\n\nThe book is packed full of practical examples of how you can apply physics to your own games and applications. Spring behaviors can be used for anything from tweaking lowrider suspension to creating cloth simulation; flotation mechanics enable the simulation of submersibles or dirigibles; you can even create your own solar system with accurate orbits and gravity. It doesn't matter if you're modeling the Lorentz force in an electromagnetic field or you're modeling the lift force in a flight simulator, Physics for JavaScript Games, Animation, and Simulations enables you to fill your games and applications with accurate and realistic effects.",
+    references: [
+      {
+        title:
+          "Physics for JavaScript Games, Animation, and Simulations: with HTML5 Canvas",
+        url: "https://www.amazon.com/Physics-JavaScript-Games-Animation-Simulations/dp/1430263377",
+      },
+    ],
+    tags: ["physics", "javascript", "canvas", "html", "css"],
+  },
 ];
 
 let selectedGameScreen_ls = localStorage.getItem(selectedGameScreenLsKey);

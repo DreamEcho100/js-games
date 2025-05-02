@@ -164,7 +164,7 @@ export function injectStylesheetLink(stylesPath, cleanupManager) {
  *   bottom: number;
  *   x: number;
  *   y: number;
- *  }) => void;
+ *  }) => void | { shouldUpdateCanvasSize: boolean };
  *  debounce?: number;
  *  approach?: "continue-preserve-dpr" // | "preserve-size"
  * }} props
@@ -213,9 +213,8 @@ export function adjustCanvas({
     if (approach === "continue-preserve-dpr") {
       handlePreserveDpr();
     }
+
     // else if (approach === "preserve-size") {
-    //   canvas.width = roundToPrecision(boundingBox.width, 2);
-    //   canvas.height = roundToPrecision(boundingBox.height, 2);
     //   ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
     //   ctx.scale(1, 1);
     // }
@@ -241,7 +240,13 @@ export function adjustCanvas({
     canvasDOMConfig.x = roundToPrecision(boundingBox.x, 2);
     canvasDOMConfig.y = roundToPrecision(boundingBox.y, 2);
 
-    onUpdateCanvasSize(canvasDOMConfig);
+    const { shouldUpdateCanvasSize } =
+      onUpdateCanvasSize(canvasDOMConfig) ?? {};
+
+    if (shouldUpdateCanvasSize) {
+      canvas.width = canvasDOMConfig.width;
+      canvas.height = canvasDOMConfig.height;
+    }
   };
   handlePreserveDpr();
   updateCanvasSize();

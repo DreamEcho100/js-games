@@ -1341,11 +1341,11 @@ const gameScreen = await initGameScreen({
       water: 2,
     };
     const TILE_TYPES = {
-      0: { color: "#685b48", floor: FLOOR_TYPES.solid },
-      1: { color: "#5aa457", floor: FLOOR_TYPES.path },
-      2: { color: "#e8bd7a", floor: FLOOR_TYPES.path },
-      3: { color: "#286625", floor: FLOOR_TYPES.solid },
-      4: { color: "#678fd9", floor: FLOOR_TYPES.water },
+      0: { color: "#685b48", floor: FLOOR_TYPES.solid, name: "wall" },
+      1: { color: "#5aa457", floor: FLOOR_TYPES.path, name: "path" },
+      2: { color: "#e8bd7a", floor: FLOOR_TYPES.path, name: "grass" },
+      3: { color: "#286625", floor: FLOOR_TYPES.solid, name: "tree" },
+      4: { color: "#678fd9", floor: FLOOR_TYPES.water, name: "water" },
     };
 
     const tile = {

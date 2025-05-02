@@ -20,7 +20,7 @@ import { injectStylesheetLink, loadManyAssets } from "#libs/dom/index.js";
  * 		appId: string;
  * 		goBackButtonId: string;
  * 		goBack: () => void;
- * 		createLayout: (children: string) => void;
+ * 		createLayout: (children: string) => void | Promise<void>;
  * 	}) => Promise<void> | void;
  * }} initOptions
  * @returns {Promise<(props: ScreenHandlerParams) => Promise<void>>}
