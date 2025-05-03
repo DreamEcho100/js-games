@@ -8,7 +8,7 @@
  *   fixedUpdate?: FixedUpdateCallback,
  *   fps?: number,
  *   fixedFps?: number,
- *   maxDelta?: number,
+ *   maxElapsedTimeMS?: number,
  *   render: RenderCallback,
  *   onBeforeUpdate?: () => void,
  *   onAfterUpdate?: () => void,
@@ -20,8 +20,6 @@
  *  fixedStepClamp?: number,
  * }} GameLoopOptions
  */
-
-import { limitDecimalPlaces } from "./math";
 
 let nextGameLoopDefaultId = 0;
 
@@ -56,14 +54,15 @@ export class GameLoop {
   constructor(options) {
     this.name = options.name ?? `game-loop-${nextGameLoopDefaultId++}`;
 
-    if (options.maxDelta && options.maxDelta <= 0) {
+    if (options.maxElapsedTimeMS && options.maxElapsedTimeMS <= 0) {
       throw new Error(`[${this.name}] \`maxDelta\` must be a positive number.`);
     }
 
     this.fps = options.fps ?? 60;
     this.fixedFps = options.fixedFps ?? this.fps;
     this.fixedStepClamp = options.fixedStepClamp ?? 5;
-    this.maxDelta = options.maxDelta ?? 0.1;
+    this.maxElapsedTimeMS = options.maxElapsedTimeMS ?? 100;
+    // this.minElapsedTimeS = options.maxElapsedTimeMS ?? 0.1;
 
     if (this.fixedFps > this.fps) {
       console.warn(
@@ -72,8 +71,8 @@ export class GameLoop {
     }
 
     // Calculate target FPS delta and inverses for faster calculations
-    this.targetDelta = limitDecimalPlaces(1 / this.fps, 2);
-    this.fixedDelta = limitDecimalPlaces(1 / this.fixedFps, 2);
+    this.targetDelta = 1 / this.fps;
+    this.fixedDelta = 1 / this.fixedFps;
 
     this.updateEvents = /** @type {UpdateCallback[]} */ (
       [options.onBeforeUpdate, options.update, options.onAfterUpdate].filter(
@@ -100,13 +99,12 @@ export class GameLoop {
             this.rafId = requestAnimationFrame(this.loop);
             if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) return;
 
-            this.elapsedTimeMS = limitDecimalPlaces(now - this.lastTime, 3);
-            this.elapsedTimeS = limitDecimalPlaces(
-              this.elapsedTimeMS * 0.001,
-              2,
-            ); // delta in seconds
+            this.elapsedTimeMS = Math.min(
+              now - this.lastTime,
+              this.maxElapsedTimeMS,
+            );
             this.lastTime = now;
-            this.elapsedTimeS = Math.min(this.elapsedTimeS, this.maxDelta);
+            this.elapsedTimeS = this.elapsedTimeMS * 0.001; // delta in seconds
 
             // Update the game state
             for (const fn of this.updateEvents) {
@@ -139,7 +137,7 @@ export class GameLoop {
             // Only render when we've accumulated enough time for a frame at target FPS
             if (this.frameAccumulator >= this.targetDelta) {
               // Reset this.accumulator, keeping remainder for smooth timing
-              this.frameAccumulator = this.frameAccumulator % this.targetDelta;
+              this.frameAccumulator -= this.targetDelta;
 
               for (const fn of this.renderEvents) {
                 fn();
@@ -150,10 +148,12 @@ export class GameLoop {
             this.rafId = requestAnimationFrame(this.loop);
             if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) return;
 
-            this.elapsedTimeMS = now - this.lastTime;
-            this.elapsedTimeS = this.elapsedTimeMS * 0.001; // delta in seconds
+            this.elapsedTimeMS = Math.min(
+              now - this.lastTime,
+              this.maxElapsedTimeMS,
+            );
             this.lastTime = now;
-            this.elapsedTimeS = Math.min(this.elapsedTimeS, this.maxDelta);
+            this.elapsedTimeS = this.elapsedTimeMS * 0.001; // delta in seconds
 
             // Update the game state
             for (const fn of this.updateEvents) {
@@ -166,7 +166,7 @@ export class GameLoop {
             // Only render when we've accumulated enough time for a frame at target FPS
             if (this.frameAccumulator >= this.targetDelta) {
               // Reset this.accumulator, keeping remainder for smooth timing
-              this.frameAccumulator = this.frameAccumulator % this.targetDelta;
+              this.frameAccumulator -= this.targetDelta;
 
               for (const fn of this.renderEvents) {
                 fn();
@@ -174,44 +174,77 @@ export class GameLoop {
             }
           };
   }
-
   /**
-   * Start the game loop.
+   * Starts the game loop if it isn't already running.
+   * Resets the accumulator and frame accumulator.
+   * The loop begins by requesting an animation frame, triggering the game update/render cycle.
+   * If the game loop is already running, this method does nothing.
+   *
    * @returns {void}
    */
   start() {
-    if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) {
-      this.gameLoopState = GAME_LOOP_STATE.RUNNING;
-      this.accumulator = 0;
-      this.frameAccumulator = 0;
-      this.rafId = requestAnimationFrame((now) => {
-        this.lastTime = now;
-        this.rafId = requestAnimationFrame(this.loop);
-      });
+    if (this.gameLoopState === GAME_LOOP_STATE.RUNNING) {
+      return;
     }
+    this.gameLoopState = GAME_LOOP_STATE.RUNNING;
+    this.accumulator = 0;
+    this.frameAccumulator = 0;
+    this.rafId = requestAnimationFrame((now) => {
+      this.lastTime = now;
+      this.rafId = requestAnimationFrame(this.loop);
+    });
   }
 
   /**
-   * Stop the game loop.
+   * Stops the game loop if it is currently running.
+   * Resets the accumulator and frame accumulator.
+   * Cancels any pending animation frames.
+   * If the loop is not running, this method does nothing.
+   *
    * @returns {void}
    */
   stop() {
+    if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) {
+      return;
+    }
+    this.accumulator = 0;
+    this.frameAccumulator = 0;
     this.gameLoopState = GAME_LOOP_STATE.STOPPED;
     cancelAnimationFrame(this.rafId);
   }
 
+  /**
+   * Pauses the game loop if it is currently running.
+   * Cancels the current animation frame, halting the game update/render cycle.
+   * The game loop state is set to `PAUSED`, which can later be resumed.
+   * If the loop is not running, this method does nothing.
+   *
+   * @returns {void}
+   */
   pause() {
-    if (this.gameLoopState === GAME_LOOP_STATE.RUNNING) {
-      this.gameLoopState = GAME_LOOP_STATE.PAUSED;
-      cancelAnimationFrame(this.rafId);
+    if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) {
+      return;
     }
+    this.gameLoopState = GAME_LOOP_STATE.PAUSED;
+    cancelAnimationFrame(this.rafId);
   }
 
+  /**
+   * Resumes the game loop if it is currently paused.
+   * The game loop state is set to `RUNNING`, and a new animation frame is requested to continue the update/render cycle.
+   * If the game loop is not paused, this method does nothing.
+   *
+   * @returns {void}
+   */
   resume() {
-    if (this.gameLoopState === GAME_LOOP_STATE.PAUSED) {
-      this.gameLoopState = GAME_LOOP_STATE.RUNNING;
-      this.rafId = requestAnimationFrame(this.loop);
+    if (this.gameLoopState !== GAME_LOOP_STATE.PAUSED) {
+      return;
     }
+    this.gameLoopState = GAME_LOOP_STATE.RUNNING;
+    this.rafId = requestAnimationFrame((now) => {
+      this.lastTime = now;
+      this.rafId = requestAnimationFrame(this.loop);
+    });
   }
 
   getGameLoopState() {
@@ -262,8 +295,7 @@ export class GameLoop {
     }
 
     this.fps = newFPS;
-    this.targetDelta = limitDecimalPlaces(1 / this.fps, 2);
-    this.targetDelta = limitDecimalPlaces(1 / this.targetDelta, 2);
+    this.targetDelta = 1 / this.fps;
   }
 
   /**
@@ -281,7 +313,7 @@ export class GameLoop {
     }
 
     this.fixedFps = newFixedFps;
-    this.fixedDelta = limitDecimalPlaces(1 / newFixedFps, 2);
+    this.fixedDelta = 1 / newFixedFps;
   }
 
   /**

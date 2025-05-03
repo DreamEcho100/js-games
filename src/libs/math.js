@@ -47,7 +47,7 @@ export function clamp(value, min, max) {
 }
 
 /**
- * @description Rounds a number to passed precision.
+ * @description truncate a number to passed precision.
  *
  * @param {number} n
  * @param {number} precision - The number of decimal places to round to.
