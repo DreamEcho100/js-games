@@ -53,10 +53,10 @@ export function clamp(value, min, max) {
  * @param {number} precision - The number of decimal places to round to.
  * @returns number
  */
-export const roundToPrecision = (n, precision) =>
+export const limitDecimalPlaces = (n, precision) =>
   Math.round((n + Number.EPSILON) * Math.pow(10, precision)) /
   Math.pow(10, precision);
-// export const round = (n, precision = 2) => {
+// export const round = (n, precision) => {
 // 	const factor = Math.pow(10, precision);
 // 	return Math.round(n * factor) / factor;
 // }

@@ -21,6 +21,8 @@
  * }} GameLoopOptions
  */
 
+import { limitDecimalPlaces } from "./math";
+
 let nextGameLoopDefaultId = 0;
 
 const GAME_LOOP_STATE = {
@@ -70,8 +72,8 @@ export class GameLoop {
     }
 
     // Calculate target FPS delta and inverses for faster calculations
-    this.targetDelta = 1 / this.fps;
-    this.fixedDelta = 1 / this.fixedFps;
+    this.targetDelta = limitDecimalPlaces(1 / this.fps, 2);
+    this.fixedDelta = limitDecimalPlaces(1 / this.fixedFps, 2);
 
     this.updateEvents = /** @type {UpdateCallback[]} */ (
       [options.onBeforeUpdate, options.update, options.onAfterUpdate].filter(
@@ -98,17 +100,21 @@ export class GameLoop {
             this.rafId = requestAnimationFrame(this.loop);
             if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) return;
 
-            let delta = (now - this.lastTime) * 0.001; // delta in seconds
+            this.elapsedTimeMS = limitDecimalPlaces(now - this.lastTime, 3);
+            this.elapsedTimeS = limitDecimalPlaces(
+              this.elapsedTimeMS * 0.001,
+              2,
+            ); // delta in seconds
             this.lastTime = now;
-            delta = Math.min(delta, this.maxDelta);
+            this.elapsedTimeS = Math.min(this.elapsedTimeS, this.maxDelta);
 
             // Update the game state
             for (const fn of this.updateEvents) {
-              fn(delta);
+              fn(this.elapsedTimeS);
             }
 
             // Handle physics updates at fixed intervals
-            this.accumulator += delta;
+            this.accumulator += this.elapsedTimeS;
             // Process fixed steps (e.g., physics updates) and accumulate remaining time, while not exceeding the clamp
             let steps = 0;
             while (
@@ -128,7 +134,7 @@ export class GameLoop {
             }
 
             // FPS control for rendering
-            this.frameAccumulator += delta;
+            this.frameAccumulator += this.elapsedTimeS;
 
             // Only render when we've accumulated enough time for a frame at target FPS
             if (this.frameAccumulator >= this.targetDelta) {
@@ -144,17 +150,18 @@ export class GameLoop {
             this.rafId = requestAnimationFrame(this.loop);
             if (this.gameLoopState !== GAME_LOOP_STATE.RUNNING) return;
 
-            let delta = (now - this.lastTime) * 0.001; // delta in seconds
+            this.elapsedTimeMS = now - this.lastTime;
+            this.elapsedTimeS = this.elapsedTimeMS * 0.001; // delta in seconds
             this.lastTime = now;
-            delta = Math.min(delta, this.maxDelta);
+            this.elapsedTimeS = Math.min(this.elapsedTimeS, this.maxDelta);
 
             // Update the game state
             for (const fn of this.updateEvents) {
-              fn(delta);
+              fn(this.elapsedTimeS);
             }
 
             // FPS control for rendering
-            this.frameAccumulator += delta;
+            this.frameAccumulator += this.elapsedTimeS;
 
             // Only render when we've accumulated enough time for a frame at target FPS
             if (this.frameAccumulator >= this.targetDelta) {
@@ -255,8 +262,8 @@ export class GameLoop {
     }
 
     this.fps = newFPS;
-    this.targetDelta = 1 / this.fps;
-    this.targetDelta = 1 / this.targetDelta;
+    this.targetDelta = limitDecimalPlaces(1 / this.fps, 2);
+    this.targetDelta = limitDecimalPlaces(1 / this.targetDelta, 2);
   }
 
   /**
@@ -274,7 +281,7 @@ export class GameLoop {
     }
 
     this.fixedFps = newFixedFps;
-    this.fixedDelta = 1 / newFixedFps;
+    this.fixedDelta = limitDecimalPlaces(1 / newFixedFps, 2);
   }
 
   /**

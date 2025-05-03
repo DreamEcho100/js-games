@@ -63,7 +63,7 @@ const gameScreen = await initGameScreen({
     });
     cleanupManager.register(adjustCanvasCleanup);
 
-    const gravity = 0.1; // acceleration due to gravity
+    const gravity = 9.8; // gravity acceleration in pixels per second squared
     class Ball {
       /**
        *
@@ -81,15 +81,17 @@ const gameScreen = await initGameScreen({
         this.vx = vx;
         this.vy = vy;
         this.color = color;
+        this.canUpdate = true;
       }
 
       update() {
-        if (isDragging) {
+        if (!this.canUpdate) {
           return;
         }
+        const et = game.elapsedTimeS;
         this.vy += gravity; // gravity increases the vertical speed
-        this.x += this.vx; // horizontal speed increases horizontal position
-        this.y += this.vy; // vertical speed increases vertical position
+        this.x += this.vx * et; // horizontal speed increases horizontal position
+        this.y += this.vy * et; // vertical speed increases vertical position
         if (this.y > groundPosY - this.radius) {
           // if ball hits the ground
           this.y = groundPosY - this.radius; // reposition it at the ground
@@ -114,12 +116,11 @@ const gameScreen = await initGameScreen({
     const color = "#0000ff";
     const x = 50; // initial horizontal position
     const y = 50; // initial vertical position
-    const vx = 2; // initial horizontal speed
+    const vx = 500; // initial horizontal speed
     const vy = 0; // initial vertical speed
 
     const ball = new Ball(x, y, radius, vx, vy, color);
 
-    let isDragging = false;
     let oldState = {
       vx: ball.vx,
       vy: ball.vy,
@@ -128,7 +129,7 @@ const gameScreen = await initGameScreen({
       elem: canvas,
       type: "mousedown",
       listener: (e) => {
-        isDragging = true;
+        ball.canUpdate = false;
 
         ball.x = e.clientX - canvasConfig.dom.left;
         ball.y = e.clientY - canvasConfig.dom.top;
@@ -144,7 +145,7 @@ const gameScreen = await initGameScreen({
       elem: canvas,
       type: "mouseup",
       listener: () => {
-        isDragging = false;
+        ball.canUpdate = true;
         ball.vx = oldState.vx;
         ball.vy = oldState.vy;
       },
@@ -153,7 +154,7 @@ const gameScreen = await initGameScreen({
       elem: canvas,
       type: "mousemove",
       listener: (e) => {
-        if (!isDragging) {
+        if (ball.canUpdate) {
           return;
         }
 
@@ -167,10 +168,10 @@ const gameScreen = await initGameScreen({
       elem: canvas,
       type: "mouseleave",
       listener: () => {
-        if (!isDragging) {
+        if (ball.canUpdate) {
           return;
         }
-        isDragging = false;
+        ball.canUpdate = true;
         ball.vx = oldState.vx;
         ball.vy = oldState.vy;
       },

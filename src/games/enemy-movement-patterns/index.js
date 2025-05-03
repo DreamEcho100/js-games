@@ -5,7 +5,7 @@
 import initGameScreen from "#libs/core/dom.js";
 import { adjustCanvas } from "#libs/dom/index.js";
 import { scale2dSizeToFit } from "#libs/math.js";
-import { roundToPrecision } from "#libs/math.js";
+import { limitDecimalPlaces } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 
 const gameScreen = await initGameScreen({
@@ -271,7 +271,7 @@ const gameScreen = await initGameScreen({
      */
     function createEnemyMeta(options) {
       const spriteMeta = options.spriteMeta ?? {
-        width: roundToPrecision(options.img.naturalWidth / options.frames, 2),
+        width: limitDecimalPlaces(options.img.naturalWidth / options.frames, 2),
         height: options.img.naturalHeight,
       };
 

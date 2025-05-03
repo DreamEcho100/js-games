@@ -4,7 +4,7 @@
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import _commonTypes from "#libs/types/common.js";
-import { roundToPrecision } from "../math";
+import { limitDecimalPlaces } from "../math";
 
 /**
  * Loads an image from a given source and returns its dimensions.
@@ -199,9 +199,9 @@ export function adjustCanvas({
   canvas.setAttribute(`data-${canvasDataId}`, "true");
 
   function handlePreserveDpr() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = roundToPrecision(canvasDOMConfig.width * dpr, 2);
-    canvas.height = roundToPrecision(canvasDOMConfig.height * dpr, 2);
+    const dpr = window.devicePixelRatio ?? 1;
+    canvas.width = limitDecimalPlaces(canvasDOMConfig.width * dpr, 2);
+    canvas.height = limitDecimalPlaces(canvasDOMConfig.height * dpr, 2);
     ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
     ctx.scale(dpr, dpr);
   }
@@ -231,14 +231,14 @@ export function adjustCanvas({
     // 		}
     // 	`;
 
-    canvasDOMConfig.width = roundToPrecision(boundingBox.width, 2);
-    canvasDOMConfig.height = roundToPrecision(boundingBox.height, 2);
-    canvasDOMConfig.top = roundToPrecision(boundingBox.top, 2);
-    canvasDOMConfig.left = roundToPrecision(boundingBox.left, 2);
-    canvasDOMConfig.right = roundToPrecision(boundingBox.right, 2);
-    canvasDOMConfig.bottom = roundToPrecision(boundingBox.bottom, 2);
-    canvasDOMConfig.x = roundToPrecision(boundingBox.x, 2);
-    canvasDOMConfig.y = roundToPrecision(boundingBox.y, 2);
+    canvasDOMConfig.width = limitDecimalPlaces(boundingBox.width, 2);
+    canvasDOMConfig.height = limitDecimalPlaces(boundingBox.height, 2);
+    canvasDOMConfig.top = limitDecimalPlaces(boundingBox.top, 2);
+    canvasDOMConfig.left = limitDecimalPlaces(boundingBox.left, 2);
+    canvasDOMConfig.right = limitDecimalPlaces(boundingBox.right, 2);
+    canvasDOMConfig.bottom = limitDecimalPlaces(boundingBox.bottom, 2);
+    canvasDOMConfig.x = limitDecimalPlaces(boundingBox.x, 2);
+    canvasDOMConfig.y = limitDecimalPlaces(boundingBox.y, 2);
 
     const { shouldUpdateCanvasSize } =
       onUpdateCanvasSize(canvasDOMConfig) ?? {};
@@ -255,7 +255,7 @@ export function adjustCanvas({
     		[data-${canvasDataId}] {
     			width: ${canvasDOMConfig.width}px;
     			/* height: ${canvasDOMConfig.height}px; */
-    			aspect-ratio: ${roundToPrecision(
+    			aspect-ratio: ${limitDecimalPlaces(
             canvasDOMConfig.width / canvasDOMConfig.height,
             2,
           )};
