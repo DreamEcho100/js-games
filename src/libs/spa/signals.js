@@ -5,6 +5,11 @@ const NODE_TYPE = {
 };
 
 /**
+ * @template TValue
+ * @typedef {{ dispose: () => void; result: TValue }} ScopeResult
+ */
+
+/**
  * @typedef {object} Scope
  * @property {number} id - unique identifier
  * @property {string} [name] - optional name for debugging
@@ -178,7 +183,7 @@ function disposeScope(scope) {
  * @template TValue
  * @param {() => TValue} fn Function to run in the new scope
  * @param {{ detached?: boolean; name?: string; deferredProviders?: ReturnType<Context<any>['DeferredProvider']>[]  }} [options] Options for the scope
- * @returns {{ dispose: () => void; result: TValue }} Result of the function and a dispose function
+ * @returns {ScopeResult<TValue>} Result of the function and a dispose function
  */
 function createScope(fn, options) {
   const parentScope = currentScope;
@@ -789,112 +794,6 @@ function batchSignals(fn) {
   }
 }
 
-// // example of usage
-// function createScope2() {
-//   return createScope(() => {
-//     const counter = createSignal(0);
-//     const scopeId = getScopeId();
-
-//     const secondScopeSection = document.createElement("div");
-//     const incrementButton = document.createElement("button");
-//     incrementButton.textContent = "Increment";
-//     incrementButton.addEventListener("click", () => {
-//       counter.set(counter() + 1);
-//     });
-//     secondScopeSection.appendChild(incrementButton);
-//     const decrementButton = document.createElement("button");
-//     decrementButton.textContent = "Decrement";
-//     decrementButton.addEventListener("click", () => {
-//       counter.set(counter() - 1);
-//     });
-//     secondScopeSection.appendChild(decrementButton);
-//     const resetButton = document.createElement("button");
-//     resetButton.textContent = "Reset";
-//     resetButton.addEventListener("click", () => {
-//       counter.set(0);
-//     });
-//     secondScopeSection.appendChild(resetButton);
-//     const counterDisplay = document.createElement("h2");
-//     counterDisplay.id = `second-scope-counter-${scopeId}`;
-//     counterDisplay.textContent = `Second Scope Counter: ${counter.peek()}`;
-//     secondScopeSection.appendChild(counterDisplay);
-//     createEffect(() => {
-//       counterDisplay.textContent = `Second Scope Counter: ${counter()}`;
-//     });
-//     onScopeCleanup(() => {
-//       secondScopeSection.remove();
-//     });
-
-//     return secondScopeSection;
-//   });
-// }
-
-// batchSignals(() => {
-//   createScope(() => {
-//     const scopeId = getScopeId();
-//     const counter = createSignal(0);
-//     const increment = () => {
-//       counter.set(counter() + 1);
-//     };
-//     const decrement = () => {
-//       counter.set(counter() - 1);
-//     };
-//     const reset = () => {
-//       counter.set(0);
-//     };
-//     const double = createMemo(() => counter() * 2);
-
-//     document.body.innerHTML = `
-// 		<div>
-// 			<h1 id=${`counter-${scopeId}`}>Counter: ${counter.peek()}</h1>
-// 			<button id=${`increment-${scopeId}`}>Increment</button>
-// 			<button id=${`decrement-${scopeId}`}>Decrement</button>
-// 			<button id=${`reset-${scopeId}`}>Reset</button>
-// 			<p id=${`double-${scopeId}`}>Double: ${double.peek()}</p>
-// 		</div>
-// 		<hr />
-// 		<section>
-// 			<h1>Second Scope Toggle</h1>
-// 			<button id=${`toggleSecondScope-${scopeId}`}>Toggle Second Scope</button>
-// 		</section>
-// 	`;
-//     document
-//       .getElementById(`increment-${scopeId}`)
-//       ?.addEventListener("click", increment);
-//     document
-//       .getElementById(`decrement-${scopeId}`)
-//       ?.addEventListener("click", decrement);
-//     document
-//       .getElementById(`reset-${scopeId}`)
-//       ?.addEventListener("click", reset);
-
-//     /** @type {ReturnType<typeof createScope2> | null} */
-//     let secondScope;
-//     document
-//       .getElementById(`toggleSecondScope-${scopeId}`)
-//       ?.addEventListener("click", () => {
-//         if (secondScope) {
-//           secondScope.dispose();
-//           secondScope = null;
-//         } else {
-//           secondScope = createScope2();
-//           document.body.appendChild(secondScope.result);
-//         }
-//       });
-
-//     createEffect(() => {
-//       const element = document.getElementById(`counter-${scopeId}`);
-
-//       if (element) element.textContent = `Counter: ${counter()}`;
-//     });
-//     createEffect(() => {
-//       const element = document.getElementById(`double-${scopeId}`);
-
-//       if (element) element.textContent = `Double: ${double()}`;
-//     });
-//   });
-// });
-
 /************************ ************************/
 /***************** Create Context *****************/
 /************************ ************************/
@@ -1054,3 +953,109 @@ export {
   getContext,
   getContextSelector,
 };
+
+// // example of usage
+// function createScope2() {
+//   return createScope(() => {
+//     const counter = createSignal(0);
+//     const scopeId = getScopeId();
+
+//     const secondScopeSection = document.createElement("div");
+//     const incrementButton = document.createElement("button");
+//     incrementButton.textContent = "Increment";
+//     incrementButton.addEventListener("click", () => {
+//       counter.set(counter() + 1);
+//     });
+//     secondScopeSection.appendChild(incrementButton);
+//     const decrementButton = document.createElement("button");
+//     decrementButton.textContent = "Decrement";
+//     decrementButton.addEventListener("click", () => {
+//       counter.set(counter() - 1);
+//     });
+//     secondScopeSection.appendChild(decrementButton);
+//     const resetButton = document.createElement("button");
+//     resetButton.textContent = "Reset";
+//     resetButton.addEventListener("click", () => {
+//       counter.set(0);
+//     });
+//     secondScopeSection.appendChild(resetButton);
+//     const counterDisplay = document.createElement("h2");
+//     counterDisplay.id = `second-scope-counter-${scopeId}`;
+//     counterDisplay.textContent = `Second Scope Counter: ${counter.peek()}`;
+//     secondScopeSection.appendChild(counterDisplay);
+//     createEffect(() => {
+//       counterDisplay.textContent = `Second Scope Counter: ${counter()}`;
+//     });
+//     onScopeCleanup(() => {
+//       secondScopeSection.remove();
+//     });
+
+//     return secondScopeSection;
+//   });
+// }
+
+// batchSignals(() => {
+//   createScope(() => {
+//     const scopeId = getScopeId();
+//     const counter = createSignal(0);
+//     const increment = () => {
+//       counter.set(counter() + 1);
+//     };
+//     const decrement = () => {
+//       counter.set(counter() - 1);
+//     };
+//     const reset = () => {
+//       counter.set(0);
+//     };
+//     const double = createMemo(() => counter() * 2);
+
+//     document.body.innerHTML = `
+// 		<div>
+// 			<h1 id=${`counter-${scopeId}`}>Counter: ${counter.peek()}</h1>
+// 			<button id=${`increment-${scopeId}`}>Increment</button>
+// 			<button id=${`decrement-${scopeId}`}>Decrement</button>
+// 			<button id=${`reset-${scopeId}`}>Reset</button>
+// 			<p id=${`double-${scopeId}`}>Double: ${double.peek()}</p>
+// 		</div>
+// 		<hr />
+// 		<section>
+// 			<h1>Second Scope Toggle</h1>
+// 			<button id=${`toggleSecondScope-${scopeId}`}>Toggle Second Scope</button>
+// 		</section>
+// 	`;
+//     document
+//       .getElementById(`increment-${scopeId}`)
+//       ?.addEventListener("click", increment);
+//     document
+//       .getElementById(`decrement-${scopeId}`)
+//       ?.addEventListener("click", decrement);
+//     document
+//       .getElementById(`reset-${scopeId}`)
+//       ?.addEventListener("click", reset);
+
+//     /** @type {ReturnType<typeof createScope2> | null} */
+//     let secondScope;
+//     document
+//       .getElementById(`toggleSecondScope-${scopeId}`)
+//       ?.addEventListener("click", () => {
+//         if (secondScope) {
+//           secondScope.dispose();
+//           secondScope = null;
+//         } else {
+//           secondScope = createScope2();
+//           document.body.appendChild(secondScope.result);
+//         }
+//       });
+
+//     createEffect(() => {
+//       const element = document.getElementById(`counter-${scopeId}`);
+
+//       if (element) element.textContent = `Counter: ${counter()}`;
+//     });
+//     createEffect(() => {
+//       const element = document.getElementById(`double-${scopeId}`);
+
+//       if (element) element.textContent = `Double: ${double()}`;
+//     });
+//   });
+// });

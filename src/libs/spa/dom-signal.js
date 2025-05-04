@@ -1,9 +1,16 @@
 /**
  * @import { de100x } from "./dom.js";
- * @import { SignalValue, MemoValue } from "./signals.js";
+ * @import { SignalValue, MemoValue, ScopeResult } from "./signals.js";
  */
 
-import { createEffect, onScopeCleanup, getScopeId } from "./signals.js";
+import {
+  createEffect,
+  onScopeCleanup,
+  getScopeId,
+  createScope,
+  createSignal,
+  createMemo,
+} from "./signals.js";
 
 /*
 valueOrCB
@@ -325,29 +332,137 @@ function setTagAttributeNS(
   });
 }
 
-export { setGeneralTagAttribute, setTagAttribute, setTagAttributeNS };
+// TODO: Should handle scopes too
+/**
+ * @param {Element} element
+ * @param {de100x.Child} child
+ */
+function appendChild(element, child) {
+  if (child == null) return;
+  if (Array.isArray(child)) {
+    appendChildren(element, child);
+    return;
+  }
 
-/*
-In handleValueOrValueMap, when you check typeof _mapValue === "function", technically you could allow signals that are not functions but have .get() methods later (if you expand your reactive system).
-Not needed now, but possible future expansion if you go there.
+  if (typeof child === "function") {
+    /** @type {Element|Text|null|undefined} */
+    let oldChild;
 
-For events, you could normalize the event listener value to always be a function.
-(If someone accidentally passed null or non-function, it might cause weird runtime error.)
-*/
+    createEffect(() => {
+      const newChild = child();
 
-// TODO: They should be able to
-// - Take an element, valid primitive, or a scope
-// - Check for transitions
-// ========== Reactive DOM Components ==========
+      if (Array.isArray(newChild)) {
+        return appendChildren(element, newChild);
+      }
 
-//  * @param {de100x.Child[]} children
-//  * @param {(child: Element|Text, counter: number) => void} onNormalize
-//  * @param {DocumentFragment} fragment
-//  * @param {number} [counter]
+      if (typeof newChild === "function") {
+        return appendChild(element, newChild);
+      }
+
+      const elementToBeInserted = /** @type {Element} */ (
+        typeof newChild === "string" || typeof newChild === "number"
+          ? document.createTextNode(String(newChild))
+          : newChild
+      );
+
+      if (oldChild) {
+        if (elementToBeInserted) {
+          oldChild.parentNode?.insertBefore(oldChild, elementToBeInserted);
+        }
+
+        oldChild.remove();
+        oldChild = elementToBeInserted;
+      } else {
+        if (newChild) {
+          element.append(elementToBeInserted);
+        }
+        oldChild = elementToBeInserted;
+      }
+    });
+    return;
+  }
+
+  element.append(
+    typeof child === "string" || typeof child === "number"
+      ? document.createTextNode(String(child))
+      : child,
+  );
+}
+
+/**
+ * @param {Element} element
+ * @param {de100x.Child[]} children
+ */
+function appendChildren(element, children) {
+  for (let child of children) {
+    appendChild(element, child);
+  }
+}
+
+export {
+  setGeneralTagAttribute,
+  setTagAttribute,
+  setTagAttributeNS,
+  appendChildren,
+};
+
+/**
+ * @param {{
+ *  child: de100x.Child;
+ *  isLastRenderedChild: boolean;
+ *  onNormalize?: (options: {
+ * 		elementToBeInserted: Element|Text,
+ * 		originalChild: de100x.Child,
+ * 		counter: number,
+ * 		isLastRenderedChild: boolean,
+ * 	}) => void;
+ *  fragment: DocumentFragment;
+ *  nodeKey?: string|number
+ * }} options
+ * @param {number} [counter]
+ * @returns {number}
+ */
+function normalizeChild(options, counter = 0) {
+  const child = options.child;
+  if (child instanceof Node) {
+    if (options.nodeKey) {
+      /** @type {HTMLElement} */ (child).dataset.trackId = String(
+        options.nodeKey,
+      );
+    }
+    options.onNormalize?.({
+      elementToBeInserted: /** @type {Element} */ (child),
+      originalChild: child,
+      counter: counter++,
+      isLastRenderedChild: options.isLastRenderedChild,
+    });
+    options.fragment.appendChild(child);
+  } else if (Array.isArray(child)) {
+    counter = normalizeChildren({ ...options, children: child }, counter);
+  } else {
+    const textNode = document.createTextNode(
+      child == null ? "" : String(child),
+    );
+    options.onNormalize?.({
+      elementToBeInserted: textNode,
+      originalChild: child,
+      counter: counter++,
+      isLastRenderedChild: options.isLastRenderedChild,
+    });
+    options.fragment.appendChild(textNode);
+  }
+  return counter;
+}
+
 /**
  * @param {{
  *  children: de100x.Child[];
- *  onNormalize?: (child: Element|Text, counter: number) => void;
+ *  onNormalize?: (options: {
+ * 		elementToBeInserted: Element|Text,
+ * 		originalChild: de100x.Child,
+ * 		counter: number,
+ * 		isLastRenderedChild: boolean,
+ * 	}) => void;
  *  fragment: DocumentFragment;
  *  nodeKey?: string|number
  * }} options
@@ -355,35 +470,30 @@ For events, you could normalize the event listener value to always be a function
  * @returns {number}
  */
 function normalizeChildren(options, counter = 0) {
-  for (const child of options.children) {
-    if (child instanceof Node) {
-      if (options.nodeKey) {
-        /** @type {HTMLElement} */ (child).dataset.trackId = String(
-          options.nodeKey,
-        );
-      }
-      options.onNormalize?.(/** @type {Element} */ (child), counter++);
-      options.fragment.appendChild(child);
-    } else if (Array.isArray(child)) {
-      counter = normalizeChildren(options, counter);
-    } else {
-      const textNode = document.createTextNode(
-        child == null ? "" : String(child),
-      );
-      options.onNormalize?.(textNode, counter++);
-      options.fragment.appendChild(textNode);
-    }
+  for (let i = 0; i < options.children.length; i++) {
+    const child = options.children[i];
+
+    counter = normalizeChild(
+      {
+        child,
+        isLastRenderedChild: i === options.children.length - 1,
+        onNormalize: options.onNormalize,
+        fragment: options.fragment,
+        nodeKey: options.nodeKey,
+      },
+      counter,
+    );
   }
   return counter;
 }
 
 /**
- * 🧩 List componen
+ * 🧩 List component
  * t
  * @template {any[]} TValue
  * @param {SignalValue<TValue>|MemoValue<TValue>} list - Signal value to iterate over
  * @param {(item: TValue[number], index: number, items: TValue) => string|number} key - Function to generate a unique key for each item
- * @param {(item: TValue[number], index: number, items: TValue) => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements for each item
+ * @param {(item: SignalValue<TValue[number]>, index: number, items: TValue) => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements for each item
  * @returns {de100x.ChildPrimitive}
  * @description
  * Creates a list of elements based on a signal value.
@@ -391,19 +501,25 @@ function normalizeChildren(options, counter = 0) {
  * The `fn` function is called for each item in the list to generate the corresponding DOM elements.
  */
 function $list(list, key, fn) {
-  const placeholder = document.createComment(`scope-${getScopeId()}list`);
+  const placeholder = document.createComment(`scope-${getScopeId()}-list`);
 
-  /** @typedef {{ value: TValue[number]; elems: (Element|Text)[] }} NodeEntry */
+  /**
+   * @typedef {{
+   *  signal: SignalValue<any>
+   *  scope: ScopeResult<void>
+   *  lastElementToBeInserted: Element|Text
+   * }} NodeEntry
+   */
 
   /** @type {Map<string|number, NodeEntry>} */
-  let nodes = new Map();
+  let entries = new Map();
   let isUnmounted = false;
 
   createEffect(() => {
     /** @type {Map<string|number, NodeEntry>} */
     const newNodes = new Map();
     const listValue = list();
-    const maxLength = Math.max(listValue.length, nodes.size);
+    const maxLength = Math.max(listValue.length, entries.size);
 
     queueMicrotask(() => {
       if (isUnmounted) {
@@ -413,68 +529,95 @@ function $list(list, key, fn) {
       /** @type {Node} */
       let prevAnchor = placeholder;
 
+      // Loop through the list and update or create DOM nodes as necessary
       for (let i = 0; i < maxLength; i++) {
         const item = listValue[i];
         const nodeKey = key(item, i, listValue);
-        const oldEntry = nodes.get(nodeKey);
+        const oldEntry = entries.get(nodeKey);
 
-        if (i < listValue.length && oldEntry && oldEntry.value === item) {
-          const fragment = document.createDocumentFragment();
-          normalizeChildren({
-            children: oldEntry.elems,
-            fragment,
-            nodeKey,
-          });
-          prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
+        if (oldEntry) {
+          // Reuse the old node if the signal value hasn't changed _(it has a dirty check eternally)_
+          oldEntry.signal.set(item);
+          prevAnchor = oldEntry.lastElementToBeInserted;
           newNodes.set(nodeKey, oldEntry);
-        } else if (i < listValue.length) {
-          // reusing the old nod or creating a new one
-          const _result =
-            // nodeKey
-            fn(item, i, listValue);
-          const elems = Array.isArray(_result) ? _result : [_result];
-          /** @type {(Element|Text)[]} */
-          const newElems = new Array(elems.length);
+        } else {
+          // Create a new node with a scope and memoized signal for the item
+          const scope = createScope(() => {
+            console.log("___ createScope item", item);
+            const signal = createSignal(item);
+            signal();
 
-          const fragment = document.createDocumentFragment();
-          normalizeChildren({
-            children: elems,
-            onNormalize: (child, counter) => {
-              newElems[counter] = child;
-            },
-            fragment,
-            nodeKey,
+            const elems = fn(signal, i, listValue);
+            const memoizedElems = Array.isArray(elems) ? elems : [elems];
+
+            /** @type {Map<de100x.Child, (Element|Text)>} */
+            const childrenMemo = new Map();
+            const fragment = document.createDocumentFragment();
+            /** @type {Element|Text|undefined} */
+            let lastElementToBeInserted;
+
+            normalizeChildren({
+              children: memoizedElems,
+              onNormalize: (options) => {
+                childrenMemo.set(
+                  options.originalChild,
+                  options.elementToBeInserted,
+                );
+                if (options.isLastRenderedChild) {
+                  lastElementToBeInserted = options.elementToBeInserted;
+                }
+              },
+              fragment,
+              nodeKey,
+            });
+
+            queueMicrotask(() => {
+              if (isUnmounted) {
+                return;
+              }
+
+              if (!lastElementToBeInserted) {
+                scope.dispose();
+                return;
+              }
+
+              prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
+              newNodes.set(nodeKey, { signal, scope, lastElementToBeInserted });
+              prevAnchor = lastElementToBeInserted;
+            });
+
+            // // create an effect to update the elements when the signal changes
+            // // Create and compare with the `childrenMemo` array
+            // createEffect(() => {});
+
+            // Cleanup the scope when the node is removed
+            onScopeCleanup(() => {
+              for (const [, elem] of childrenMemo) {
+                elem.remove();
+              }
+              newNodes.delete(nodeKey);
+            });
           });
-
-          elems.length = 0;
-          prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
-          newNodes.set(nodeKey, { value: item, elems: newElems });
         }
-
-        prevAnchor = newNodes.get(nodeKey)?.elems[0] ?? prevAnchor;
       }
 
-      // Remove any leftover nodes not in new list
-      for (const [oldKey, oldEntry] of nodes) {
+      // Remove leftover nodes not in the new list
+      for (const [oldKey, oldEntry] of entries) {
         if (!newNodes.has(oldKey)) {
-          for (const elem of oldEntry.elems) {
-            elem.remove();
-          }
+          oldEntry.scope.dispose();
         }
       }
 
-      nodes = newNodes;
+      entries = newNodes;
     });
   });
 
   onScopeCleanup(() => {
     isUnmounted = true;
-    for (const { elems } of nodes.values()) {
-      for (const elem of elems) {
-        elem.remove();
-      }
+    for (const [, entry] of entries) {
+      entry.scope.dispose();
     }
-    nodes.clear();
+    entries.clear();
   });
 
   return placeholder;
@@ -492,48 +635,60 @@ function $list(list, key, fn) {
  * The elements are removed from the DOM when not visible.
  */
 function $toggle(condition, fn) {
-  const placeholder = document.createComment(`scope-${getScopeId()}visible`);
-  /** @type {(Element|Text)[]} */
-  let currentElems = [];
-  let isUnmounted = false;
+  const placeholder = document.createComment(`scope-${getScopeId()}-visible`);
+  createScope(() => {
+    /** @type {(Element|Text)[]} */
+    let currentElems = [];
+    let isUnmounted = false;
+    const shouldShowMemo = createMemo(() => !!condition());
+    /** @type {boolean|undefined} */
+    let prevShouldShow;
 
-  createEffect(() => {
-    const shouldShow = condition();
-    queueMicrotask(() => {
-      if (isUnmounted) {
-        return;
-      }
+    createEffect(() => {
+      const shouldShow = shouldShowMemo();
 
+      queueMicrotask(() => {
+        if (isUnmounted) {
+          return;
+        }
+
+        if (prevShouldShow === shouldShow) {
+          return;
+        }
+
+        if (shouldShow) {
+          currentElems = [];
+          const _result = fn();
+          const elems = Array.isArray(_result) ? _result : [_result];
+          const fragment = document.createDocumentFragment();
+
+          normalizeChildren({
+            children: elems,
+            onNormalize: (options) => {
+              currentElems[options.counter] = options.elementToBeInserted;
+            },
+            fragment,
+          });
+
+          elems.length = 0;
+          placeholder.parentNode?.insertBefore(fragment, placeholder);
+        } else {
+          for (const elem of currentElems) {
+            elem.remove();
+          }
+        }
+
+        prevShouldShow = shouldShow;
+      });
+    });
+
+    onScopeCleanup(() => {
+      isUnmounted = true;
       for (const elem of currentElems) {
         elem.remove();
       }
       currentElems = [];
-
-      if (shouldShow) {
-        const _result = fn();
-        const elems = Array.isArray(_result) ? _result : [_result];
-        const fragment = document.createDocumentFragment();
-
-        normalizeChildren({
-          children: elems,
-          onNormalize: (child, counter) => {
-            currentElems[counter] = child;
-          },
-          fragment,
-        });
-
-        elems.length = 0;
-        placeholder.parentNode?.insertBefore(fragment, placeholder);
-      }
     });
-  });
-
-  onScopeCleanup(() => {
-    isUnmounted = true;
-    for (const elem of currentElems) {
-      elem.remove();
-    }
-    currentElems = [];
   });
 
   return placeholder;
@@ -552,7 +707,7 @@ function $toggle(condition, fn) {
  * The elements are removed from the DOM when not visible.
  */
 function $switch(condition, cases) {
-  const placeholder = document.createComment(`scope-${getScopeId()}switch`);
+  const placeholder = document.createComment(`scope-${getScopeId()}-switch`);
   /** @type {(Element|Text)[]} */
   let currentElems = [];
   /** @type {string | number | null | undefined} */
@@ -584,8 +739,8 @@ function $switch(condition, cases) {
 
         normalizeChildren({
           children: elems,
-          onNormalize: (child, counter) => {
-            currentElems[counter] = child;
+          onNormalize: (options) => {
+            currentElems[options.counter] = options.elementToBeInserted;
           },
           fragment,
         });
@@ -608,3 +763,25 @@ function $switch(condition, cases) {
 }
 
 export { $list, $toggle, $switch };
+
+// dom.js
+// dom-signal.js
+// signals.js
+
+/*
+In handleValueOrValueMap, when you check typeof _mapValue === "function", technically you could allow signals that are not functions but have .get() methods later (if you expand your reactive system).
+Not needed now, but possible future expansion if you go there.
+
+For events, you could normalize the event listener value to always be a function.
+(If someone accidentally passed null or non-function, it might cause weird runtime error.)
+*/
+
+// TODO: They should be able to
+// - Take an element, valid primitive, or a scope
+// - Check for transitions
+// ========== Reactive DOM Components ==========
+
+//  * @param {de100x.Child[]} children
+//  * @param {(child: Element|Text, counter: number) => void} onNormalize
+//  * @param {DocumentFragment} fragment
+//  * @param {number} [counter]

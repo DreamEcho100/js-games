@@ -3,6 +3,7 @@
  */
 
 import {
+  appendChildren,
   setGeneralTagAttribute,
   setTagAttribute,
   setTagAttributeNS,
@@ -11,7 +12,7 @@ import {
 /**
  *
  * @typedef {string|number|Node|undefined|null} de100x.ChildPrimitive
- * @typedef {de100x.ChildPrimitive|de100x.ChildPrimitive[]} de100x.Child
+ * @typedef {de100x.ChildPrimitive|de100x.ChildPrimitive[]|(() => de100x.Child)} de100x.Child
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -151,25 +152,6 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/createElementNS)
  */
-
-/**
- * @param {Element} element
- * @param {de100x.Child[]} children
- */
-function appendChildren(element, children) {
-  for (let child of children) {
-    if (child == null) continue;
-    if (Array.isArray(child)) {
-      appendChildren(element, child);
-      continue;
-    }
-    element.append(
-      typeof child === "string" || typeof child === "number"
-        ? document.createTextNode(String(child))
-        : child,
-    );
-  }
-}
 
 /**
  * Create an element with the given tag name, attributes, and children.

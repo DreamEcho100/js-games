@@ -114,7 +114,7 @@ function NewTodoInput({ newTodoText, todos }) {
 
 /**
  * @param {{
- * 	todo: Todo
+ * 	todo: SignalValue<Todo>
  *  todos: SignalValue<Todo[]>
  * }} props
  */
@@ -165,12 +165,11 @@ function TodoItem({ todo, todos }) {
 
   return t.li(
     {
-      // key: todo.id,
       className:
         "group flex items-center border-b py-3 px-2 transition-all hover:bg-gray-50",
     },
     $toggle(
-      () => !todo.editing,
+      () => !todo().editing,
       () => [
         t.div(
           {
@@ -180,39 +179,39 @@ function TodoItem({ todo, todos }) {
             type: "checkbox",
             className:
               "mr-3 h-5 w-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500",
-            checked: () => !!todo.completed,
-            onchange: () => toggleTodo(todo.id),
+            checked: () => !!todo().completed,
+            onchange: () => toggleTodo(todo().id),
             ariaLabel: () =>
-              `Mark "${todo.text}" as ${
-                todo.completed ? "incomplete" : "complete"
+              `Mark "${todo().text}" as ${
+                todo().completed ? "incomplete" : "complete"
               }`,
           }),
           t.span(
             {
               className: () =>
                 `flex-1 text-lg ${
-                  todo.completed
+                  todo().completed
                     ? "line-through text-gray-400"
                     : "text-gray-700"
                 }`,
-              ondblclick: () => editTodo(todo.id),
+              ondblclick: () => editTodo(todo().id),
             },
-            todo.text,
+            () => todo().text,
           ),
         ),
         t.button(
           {
             className:
               "opacity-90 group-hover:opacity-100 text-red-500 hover:text-red-700 px-2 transition-opacity",
-            onclick: () => removeTodo(todo.id),
-            ariaLabel: `Delete ${todo.text}`,
+            onclick: () => removeTodo(todo().id),
+            ariaLabel: `Delete ${todo().text}`,
           },
           "×",
         ),
       ],
     ),
     $toggle(
-      () => todo.editing,
+      () => todo().editing,
       () =>
         t.form(
           {
@@ -220,13 +219,13 @@ function TodoItem({ todo, todos }) {
             onsubmit: (e) => {
               e.preventDefault();
               const input = e.target.querySelector("input");
-              updateTodoText(todo.id, input?.value ?? "");
+              updateTodoText(todo().id, input?.value ?? "");
             },
             onkeydown: (e) => {
               if (e.key === "Escape") {
                 todos.update((current) =>
                   current.map((t) =>
-                    t.id === todo.id ? { ...t, editing: false } : t,
+                    t.id === todo().id ? { ...t, editing: false } : t,
                   ),
                 );
               }
@@ -234,9 +233,9 @@ function TodoItem({ todo, todos }) {
           },
           t.input({
             className:
-              "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
-            value: todo.text,
-            onblur: (e) => updateTodoText(todo.id, e.target.value),
+              "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg text-gray-700",
+            value: todo().text,
+            onblur: (e) => updateTodoText(todo().id, e.target.value),
             ref: (el) =>
               setTimeout(() => {
                 el.focus();
