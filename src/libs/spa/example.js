@@ -10,6 +10,8 @@ import {
 import { tagsProxy as t } from "#libs/spa/dom.js";
 import { $list, $toggle } from "#libs/spa/dom-signal.js";
 
+t.h1({});
+
 /**
  * @typedef {{
  * 	completed?: boolean;

@@ -1,7 +1,7 @@
 import { clamp } from "#libs/math.js";
 
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 
 const gameScreen = await initGameScreen({
   assetsInfo: /** @type {const} */ ([
@@ -50,31 +50,17 @@ const gameScreen = await initGameScreen({
     const speedIndicatorId = `${appId}-show-game-speed`;
     const gameSpeedInputId = `${appId}-game-speed`;
 
-    const canvasConfig = {
-      render: {
-        width: 800,
-        height: 700,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 800,
-        height: 700,
-        top: 0,
-        left: 0,
-        right: 800,
-        bottom: 700,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 800, height: 700 },
+      maxSize: { width: 1024 },
+    });
 
     await createLayout(/* html */ `<canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
+				class="border border-solid border-gray-300 dark:border-gray-700  mx-auto w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>
 			<div class="flex flex-col gap-4">
 				<label>Game speed: <span id="${speedIndicatorId}">${gameSpeed}</span></label>
@@ -120,7 +106,12 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);

@@ -1,7 +1,7 @@
 /** @import { SpriteInfoInput, SpriteInfo } from "#libs/types/core.js"; */
 
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 import { scale2dSizeToFit } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { resolveBaseImportUrl } from "#libs/urls.js";
@@ -92,38 +92,27 @@ const gameScreen = await initGameScreen({
       },
     );
 
-    const canvasConfig = {
-      render: {
-        width: 500,
-        height: 700,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 500,
-        height: 700,
-        top: 0,
-        left: 0,
-        right: 500,
-        bottom: 700,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 500, height: 700 },
+      maxSize: { width: 1024 },
+    });
 
-    await createLayout(/* html */ `<div class=" mx-auto max-w-full w-fit relative">
+    // TODO: a full screen game
+    await createLayout(/* html */ `<div class=" mx-auto max-w-full w-fit relative" style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
+			>
 			<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"
 			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 max-w-full"
+			class="border border-solid border-gray-300 dark:border-gray-700 w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>
 			<canvas
 				id="${canvas2Id}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				class="border border-solid border-gray-300 dark:border-gray-700 max-w-full absolute top-0 left-0 opacity-0"
+				class="border border-solid border-gray-300 dark:border-gray-700 w-full absolute top-0 left-0 opacity-0"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>
 			</div>
 		`);
@@ -160,10 +149,12 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
-
-        canvas2.width = canvasConfig.render.width;
-        canvas2.height = canvasConfig.render.height;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);

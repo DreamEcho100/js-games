@@ -3,7 +3,7 @@
  */
 
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 import { scale2dSizeToFit } from "#libs/math.js";
 import { limitDecimalPlaces } from "#libs/math.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
@@ -41,32 +41,19 @@ const gameScreen = await initGameScreen({
   ]),
   cb: async ({ appId, assets, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
-    const canvasConfig = {
-      render: {
-        width: 500,
-        height: 700,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 500,
-        height: 700,
-        top: 0,
-        left: 0,
-        right: 500,
-        bottom: 700,
-        x: 0,
-        y: 0,
-      },
-    };
+
+    const canvasConfig = new CanvasConfig({
+      size: { width: 500, height: 700 },
+      maxSize: { width: 1024 },
+    });
 
     await createLayout(/* html */ `
 			<canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
+				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>
 	
 			<fieldset class="flex flex-wrap gap-4 justify-center items-center">
@@ -134,7 +121,12 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);

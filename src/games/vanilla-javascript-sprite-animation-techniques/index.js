@@ -1,5 +1,5 @@
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { reduceToString } from "#libs/string.js";
 
@@ -46,31 +46,17 @@ const gameScreen = await initGameScreen({
     /** @type {keyof typeof playerAnimationsStates} */
     let currentAnimation = "idle";
 
-    const canvasConfig = {
-      render: {
-        width: 600,
-        height: 600,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 600,
-        height: 600,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 400, height: 400 },
+      maxSize: { width: 1024 },
+    });
 
     await createLayout(/* html */ `<canvas
 			id="${canvasId}"
 			width="${canvasConfig.render.width}"
 			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
+			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 		></canvas>
 		<div
 			class="flex flex-col gap-4 mt-8 grow overflow-y-auto text-center"
@@ -140,7 +126,12 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);

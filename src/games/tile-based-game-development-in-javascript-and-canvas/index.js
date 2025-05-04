@@ -1,5 +1,7 @@
+/** @import { CleanupManager } from "#libs/cleanup.js"; */
+
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 
 /**
  * ========================================================
@@ -1171,6 +1173,177 @@ class Viewport {
  */
 
 /**
+ * @param {{
+ *  ctx: CanvasRenderingContext2D;
+ *  canvasConfig: CanvasConfig;
+ *  cleanupManager: CleanupManager;
+ * }} props
+ */
+function initGame({ ctx, canvasConfig, cleanupManager }) {
+  let currentSecond = 0;
+  let frameCount = 0;
+  let frameLastSecond = 0;
+  let lastFrameTime = 0;
+
+  // // prettier-ignore
+  // const gameMap = [
+  // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
+  // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+  // 	0, 1, 0, 1, 0, 0, 1, 1, 1, 0,
+  // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+  // 	0, 1, 0, 0, 0, 0, 1, 1, 0, 0,
+  // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
+  // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  // ]
+  //
+  // // prettier-ignore
+  // const gameMap = [
+  // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
+  // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
+  // 	0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0,
+  // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0,
+  // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0,
+  // 	0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0,
+  // 	0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+  // 	0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+  // 	0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
+  // 	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+  // 	0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0,
+  // 	0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
+  // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+  // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  // ];
+  // prettier-ignore
+  const gameMap = [
+		0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 2, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
+		0, 2, 3, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
+		0, 2, 3, 1, 4, 4, 1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 0,
+		0, 2, 3, 1, 1, 4, 4, 1, 2, 3, 3, 2, 1, 1, 2, 1, 0, 0, 0, 0,
+		0, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 1, 0,
+		0, 1, 1, 1, 1, 2, 3, 2, 1, 1, 4, 1, 1, 1, 1, 3, 3, 2, 1, 0,
+		0, 1, 2, 2, 2, 2, 1, 2, 1, 1, 4, 1, 1, 1, 1, 1, 3, 2, 1, 0,
+		0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4,
+		0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0,
+		0, 1, 2, 3, 4, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 0,
+		0, 3, 2, 3, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 1, 0, 1, 2, 1, 0,
+		0, 3, 2, 3, 4, 4, 3, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
+		0, 3, 2, 3, 4, 1, 3, 2, 1, 3, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
+		0, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 3, 0,
+		0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 4, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	];
+
+  const FLOOR_TYPES = {
+    solid: 0,
+    path: 1,
+    water: 2,
+  };
+  const TILE_TYPES = {
+    0: { color: "#685b48", floor: FLOOR_TYPES.solid, name: "wall" },
+    1: { color: "#5aa457", floor: FLOOR_TYPES.path, name: "path" },
+    2: { color: "#e8bd7a", floor: FLOOR_TYPES.path, name: "grass" },
+    3: { color: "#286625", floor: FLOOR_TYPES.solid, name: "tree" },
+    4: { color: "#678fd9", floor: FLOOR_TYPES.water, name: "water" },
+  };
+
+  const tile = {
+    w: 40,
+    h: 40,
+  };
+  const map = {
+    w: 20,
+    h: 20,
+  };
+
+  const character = new Character({
+    registerEvents: (options) => {
+      cleanupManager.registerWindowEventListener({
+        type: "keyup",
+        listener: options.keyupCb,
+      });
+      cleanupManager.registerWindowEventListener({
+        type: "keydown",
+        listener: options.keydownCb,
+      });
+    },
+    tile,
+  });
+  ctx.font = "bold 10pt sans-serif";
+
+  const viewport = new Viewport({
+    screen: [canvasConfig.render.width, canvasConfig.render.height],
+  });
+
+  /** @type {number|undefined} */
+  let animateId;
+  function animate() {
+    ctx.clearRect(0, 0, canvasConfig.render.width, canvasConfig.render.height);
+
+    const currentFrameTime = Date.now();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const timeElapsed = currentFrameTime - lastFrameTime;
+
+    const sec = Math.floor(Date.now() * 0.001);
+    if (sec !== currentSecond) {
+      currentSecond = sec;
+      frameLastSecond = frameCount;
+      frameCount = 1;
+    } else {
+      frameCount++;
+    }
+
+    character.update(
+      tile,
+      map,
+      gameMap,
+      TILE_TYPES,
+      FLOOR_TYPES,
+      currentFrameTime,
+    );
+    viewport.update(
+      tile,
+      map,
+      character.position[0] + character.dimensions[0] / 2,
+      character.position[1] + character.dimensions[1] / 2,
+    );
+
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, viewport.screen[0], viewport.screen[1]);
+    viewport.draw(ctx, tile, map, gameMap, TILE_TYPES);
+    character.draw(ctx, viewport.offset);
+
+    // FPS counter
+    ctx.fillStyle = "#ff0000";
+    ctx.fillText(`FPS: ${frameLastSecond}`, 10, 20);
+
+    lastFrameTime = currentFrameTime;
+    animateId = requestAnimationFrame(animate);
+  }
+
+  cleanupManager.register(() => {
+    if (!animateId) {
+      return;
+    }
+    cancelAnimationFrame(animateId);
+  });
+
+  animate();
+}
+
+/**
  * ========================================================
  * SUMMARY
  * ========================================================
@@ -1211,31 +1384,17 @@ const gameScreen = await initGameScreen({
   cb: async ({ appId, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
 
-    const canvasConfig = {
-      render: {
-        width: 400,
-        height: 400,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 400,
-        height: 400,
-        top: 0,
-        left: 0,
-        right: 400,
-        bottom: 400,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 400, height: 400 },
+      maxSize: { width: 1024 },
+    });
 
     await createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
+				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
@@ -1259,182 +1418,27 @@ const gameScreen = await initGameScreen({
     //   // "url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxmaWx0ZXIgaWQ9ImZpbHRlciIgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVDb21wb25lbnRUcmFuc2Zlcj48ZmVGdW5jUiB0eXBlPSJpZGVudGl0eSIvPjxmZUZ1bmNHIHR5cGU9ImlkZW50aXR5Ii8+PGZlRnVuY0IgdHlwZT0iaWRlbnRpdHkiLz48ZmVGdW5jQSB0eXBlPSJkaXNjcmV0ZSIgdGFibGVWYWx1ZXM9IjAgMSIvPjwvZmVDb21wb25lbnRUcmFuc2Zlcj48L2ZpbHRlcj48L3N2Zz4=#filter)";
     //   `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="f" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer></filter></svg>#f')`;
 
+    ctx.imageSmoothingEnabled = false;
+
     const adjustCanvasCleanup = adjustCanvas({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);
-    ctx.imageSmoothingEnabled = false;
 
-    let currentSecond = 0;
-    let frameCount = 0;
-    let frameLastSecond = 0;
-    let lastFrameTime = 0;
-
-    // // prettier-ignore
-    // const gameMap = [
-    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 0, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 0, 0, 0, 1, 1, 0, 0,
-    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
-    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // ]
-    //
-    // // prettier-ignore
-    // const gameMap = [
-    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
-    // 	0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0,
-    // 	0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0,
-    // 	0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0,
-    // 	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
-    // 	0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0,
-    // 	0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
-    // 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    // 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-    // ];
-    // prettier-ignore
-    const gameMap = [
-    	0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    	0, 2, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
-    	0, 2, 3, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0,
-    	0, 2, 3, 1, 4, 4, 1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 0,
-    	0, 2, 3, 1, 1, 4, 4, 1, 2, 3, 3, 2, 1, 1, 2, 1, 0, 0, 0, 0,
-    	0, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0,
-    	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
-    	0, 1, 1, 1, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0,
-    	0, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 1, 0,
-    	0, 1, 1, 1, 1, 2, 3, 2, 1, 1, 4, 1, 1, 1, 1, 3, 3, 2, 1, 0,
-    	0, 1, 2, 2, 2, 2, 1, 2, 1, 1, 4, 1, 1, 1, 1, 1, 3, 2, 1, 0,
-    	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4,
-    	0, 1, 2, 3, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0,
-    	0, 1, 2, 3, 4, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 0,
-    	0, 3, 2, 3, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 1, 0, 1, 2, 1, 0,
-    	0, 3, 2, 3, 4, 4, 3, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
-    	0, 3, 2, 3, 4, 1, 3, 2, 1, 3, 1, 1, 1, 2, 1, 1, 1, 2, 3, 0,
-    	0, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 3, 0,
-    	0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 4, 0,
-    	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-    ];
-
-    const FLOOR_TYPES = {
-      solid: 0,
-      path: 1,
-      water: 2,
-    };
-    const TILE_TYPES = {
-      0: { color: "#685b48", floor: FLOOR_TYPES.solid, name: "wall" },
-      1: { color: "#5aa457", floor: FLOOR_TYPES.path, name: "path" },
-      2: { color: "#e8bd7a", floor: FLOOR_TYPES.path, name: "grass" },
-      3: { color: "#286625", floor: FLOOR_TYPES.solid, name: "tree" },
-      4: { color: "#678fd9", floor: FLOOR_TYPES.water, name: "water" },
-    };
-
-    const tile = {
-      w: 40,
-      h: 40,
-    };
-    const map = {
-      w: 20,
-      h: 20,
-    };
-
-    const character = new Character({
-      registerEvents: (options) => {
-        cleanupManager.registerWindowEventListener({
-          type: "keyup",
-          listener: options.keyupCb,
-        });
-        cleanupManager.registerWindowEventListener({
-          type: "keydown",
-          listener: options.keydownCb,
-        });
-      },
-      tile,
+    initGame({
+      ctx,
+      canvasConfig,
+      cleanupManager,
     });
-    ctx.font = "bold 10pt sans-serif";
-
-    const viewport = new Viewport({
-      screen: [canvasConfig.render.width, canvasConfig.render.height],
-    });
-
-    /** @type {number|undefined} */
-    let animateId;
-    function animate() {
-      ctx.clearRect(
-        0,
-        0,
-        canvasConfig.render.width,
-        canvasConfig.render.height,
-      );
-
-      const currentFrameTime = Date.now();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const timeElapsed = currentFrameTime - lastFrameTime;
-
-      const sec = Math.floor(Date.now() * 0.001);
-      if (sec !== currentSecond) {
-        currentSecond = sec;
-        frameLastSecond = frameCount;
-        frameCount = 1;
-      } else {
-        frameCount++;
-      }
-
-      character.update(
-        tile,
-        map,
-        gameMap,
-        TILE_TYPES,
-        FLOOR_TYPES,
-        currentFrameTime,
-      );
-      viewport.update(
-        tile,
-        map,
-        character.position[0] + character.dimensions[0] / 2,
-        character.position[1] + character.dimensions[1] / 2,
-      );
-
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, viewport.screen[0], viewport.screen[1]);
-      viewport.draw(ctx, tile, map, gameMap, TILE_TYPES, FLOOR_TYPES);
-      character.draw(ctx, viewport.offset);
-
-      // FPS counter
-      ctx.fillStyle = "#ff0000";
-      ctx.fillText(`FPS: ${frameLastSecond}`, 10, 20);
-
-      lastFrameTime = currentFrameTime;
-      animateId = requestAnimationFrame(animate);
-    }
-
-    cleanupManager.register(() => {
-      if (!animateId) {
-        return;
-      }
-      cancelAnimationFrame(animateId);
-    });
-
-    animate();
   },
 });
 

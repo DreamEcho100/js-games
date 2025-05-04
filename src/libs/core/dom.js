@@ -20,7 +20,7 @@ import { injectStylesheetLink, loadManyAssets } from "#libs/dom/index.js";
  * 		appId: string;
  * 		goBackButtonId: string;
  * 		goBack: () => void;
- * 		createLayout: (children: string) => void | Promise<void>;
+ * 		createLayout: (children: string|Element) => void | Promise<void>;
  * 	}) => Promise<void> | void;
  * }} initOptions
  * @returns {Promise<(props: ScreenHandlerParams) => Promise<void>>}
@@ -91,7 +91,7 @@ export default async function initGameScreen(initOptions) {
       assets = /** @type {TCurrentAssets} */ (_assets);
     }
 
-    /** @param {string} children */
+    /** @param {string|Element} children */
     const createLayout = async (children) => {
       const transition = document.startViewTransition(() => {
         props.appElem.innerHTML = /* html */ `<main
@@ -102,8 +102,18 @@ export default async function initGameScreen(initOptions) {
         ? `<button id="${goBackButtonId}" class="${buttonPrimaryClassName}">Go Back</button>`
         : ""
     }
-		${children}
 	</main>`;
+
+        const mainElem = document.querySelector("main");
+        if (!mainElem) {
+          throw new Error("Couldn't find the main element!");
+        }
+
+        if (typeof children === "string") {
+          mainElem.innerHTML += children;
+        } else if (children instanceof Element) {
+          mainElem.appendChild(children);
+        }
 
         cleanupManager.registerEventListener({
           elem: document.getElementById(goBackButtonId),

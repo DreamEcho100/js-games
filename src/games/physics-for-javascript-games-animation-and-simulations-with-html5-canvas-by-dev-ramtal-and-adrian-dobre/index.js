@@ -1,38 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import initGameScreen from "#libs/core/dom.js";
 import { GameLoop } from "#libs/create-game-loop.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 
 const gravityBallDemo = await initGameScreen({
   cb: async ({ appId, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
 
-    const canvasConfig = {
-      render: {
-        width: 700,
-        height: 500,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 700,
-        height: 500,
-        top: 0,
-        left: 0,
-        right: 700,
-        bottom: 500,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 700, height: 500 },
+      maxSize: { width: 1024 },
+    });
 
     await createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				style="max-width: ${canvasConfig.render.width}px; max-height: ${canvasConfig.render.height}px; width: 100%; height: 100%;"
-				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl bg-white"
+				class="border border-solid border-gray-300 dark:border-gray-700 bg-white mx-auto w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
@@ -54,12 +39,14 @@ const gravityBallDemo = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
-        canvasConfig.render.width = boundingBox.width;
-        canvasConfig.render.height = boundingBox.height;
-        groundPosY = canvasConfig.render.height - 10;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
 
-        return { shouldUpdateCanvasSize: true };
+        groundPosY = canvasConfig.render.height - 10;
       },
     });
     cleanupManager.register(adjustCanvasCleanup);
@@ -757,32 +744,17 @@ const gameScreen = await initGameScreen({
   cb: async ({ appId, cleanupManager, createLayout }) => {
     const canvasId = `${appId}-canvas`;
 
-    const canvasConfig = {
-      render: {
-        width: 700,
-        height: 500,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 700,
-        height: 500,
-        top: 0,
-        left: 0,
-        right: 700,
-        bottom: 500,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 700, height: 500 },
+      maxSize: { width: 1024 },
+    });
 
     await createLayout(/* html */ `<small class='block text-center'><em>In Progress</em></small><canvas
 				id="${canvasId}"
 				width="${canvasConfig.render.width}"
 				height="${canvasConfig.render.height}"
-				style="max-width: ${canvasConfig.render.width}px; max-height: ${canvasConfig.render.height}px; width: 100%; height: 100%;"
-				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl bg-white"
+				class="border border-solid border-gray-300 dark:border-gray-700 mx-auto bg-white mx-auto w-full"
+				style="max-width: ${canvasConfig.initial.renderMaxSize?.width}px;"
 			></canvas>`);
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
@@ -803,10 +775,12 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
-        canvasConfig.render.width = boundingBox.width;
-        canvasConfig.render.height = boundingBox.height;
-        return { shouldUpdateCanvasSize: true };
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          canvas,
+          canvasActions: ["setSize", "setStyleWidth"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);

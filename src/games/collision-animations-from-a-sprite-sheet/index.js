@@ -1,8 +1,9 @@
 /** @import { SpriteInfoInput, SpriteInfo } from "#libs/types/core.js"; */
 
 import initGameScreen from "#libs/core/dom.js";
-import { adjustCanvas } from "#libs/dom/index.js";
+import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 import { scale2dSizeToFit } from "#libs/math.js";
+import { tagsProxy as t } from "#libs/spa/dom.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { resolveBaseImportUrl } from "#libs/urls.js";
 
@@ -57,32 +58,25 @@ const gameScreen = await initGameScreen({
       { width: explosionImageDW, height: explosionImageDH },
     );
 
-    const canvasConfig = {
-      render: {
-        width: 500,
-        height: 700,
-      },
-      // The canvas bounding box is the bounding box of the canvas element
-      // in the DOM. It is used to calculate the position of the canvas element
-      // in the DOM and to adjust its size.
-      dom: {
-        width: 500,
-        height: 700,
-        top: 0,
-        left: 0,
-        right: 500,
-        bottom: 700,
-        x: 0,
-        y: 0,
-      },
-    };
+    const canvasConfig = new CanvasConfig({
+      size: { width: 500, height: 700 },
+      maxSize: { width: 1024 },
+    });
 
-    await createLayout(/* html */ `<canvas
-			id="${canvasId}"
-			width="${canvasConfig.render.width}"
-			height="${canvasConfig.render.height}"
-			class="border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full w-5xl"
-		></canvas>`);
+    await createLayout(
+      t.canvas({
+        id: canvasId,
+        width: canvasConfig.render.width,
+        height: canvasConfig.render.height,
+        className:
+          "border border-solid border-gray-300 dark:border-gray-700 mx-auto max-w-full",
+        style: {
+          width: "100%",
+          maxWidth: `${canvasConfig.initial.renderMaxSize?.width}px`,
+          aspectRatio: `${canvasConfig.initial.renderAspectRatio}`,
+        },
+      }),
+    );
 
     const canvas = /** @type {HTMLCanvasElement|null} */ (
       document.getElementById(canvasId)
@@ -102,7 +96,12 @@ const gameScreen = await initGameScreen({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
-        canvasConfig.dom = boundingBox;
+        canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
+          ctx,
+          ctxActions: ["scaleBasedImageSmoothing"],
+          canvas,
+          canvasActions: ["setSize", "setStyleSize"],
+        });
       },
     });
     cleanupManager.register(adjustCanvasCleanup);
@@ -149,6 +148,11 @@ const gameScreen = await initGameScreen({
       draw() {
         ctx.save();
         ctx.translate(this.x + this.width * 0.5, this.y + this.height * 0.5);
+
+        console.log(this.x + this.width * 0.5, 0 - this.width * 0.5);
+        // TODO: Fix the scaling
+        // Instead of scaling here, maybe scale the sizes themselves on the constructor?
+        ctx.scale(canvasConfig.scale[0], canvasConfig.scale[1]);
         ctx.rotate(this.angle);
         ctx.drawImage(
           this.sprite.img,
