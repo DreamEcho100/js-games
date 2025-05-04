@@ -771,76 +771,80 @@ const gameScreen = await initGameScreen({
       throw new Error("Couldn't get the canvas context!");
     }
 
+    const initGame = () => {
+      // // Create a new Graph instance
+      // // const graph = new Graph(-10, 10, -10, 10, 300, 200, 500, 350);
+      // // const graph = new GraphV({
+      // //   xmin: -10,
+      // //   xmax: 10,
+      // //   ymin: -10,
+      // //   ymax: 10,
+      // //   originX: canvasConfig.render.width / 2,
+      // //   originY: canvasConfig.render.height / 2,
+      // //   pixelWidth: canvasConfig.render.width,
+      // //   pixelHeight: canvasConfig.render.height,
+      // // });
+      // const graph = new GraphV3(-10, 10, -10, 10, 300, 200, 500, 350);
+
+      // // Draw the grid on the canvas (major and minor spacing values)
+      // graph.drawGrid(ctx, 2, 1, 2, 1); // Major grid spacing of 2, minor grid spacing of 1 for both axes
+
+      // // Draw the axes with labels
+      // graph.drawAxes(ctx, "X-Axis", "Y-Axis");
+
+      // // const game = new GameLoop({
+      // //   fixedUpdate() {},
+      // //   // Render with interpolation (alpha is fraction of leftover time, not needed here)
+      // //   render() {},
+
+      // //   name: "bounce-ball-demo",
+      // // });
+
+      // // game.start();
+
+      // // cleanupManager.register(game.cleanup);
+
+      const graph = new GraphV3(
+        -10,
+        10, // xmin, xmax
+        -10,
+        10, // ymin, ymax
+        canvas.width / 2, // originX (centered)
+        canvas.height / 2, // originY (centered)
+        canvas.width,
+        canvas.height,
+      );
+
+      graph.drawGrid(ctx, 1, 0.5, 1, 0.5);
+      graph.drawAxes(ctx);
+
+      // Generate some math data: y = sin(x)
+      const xArr = [];
+      const yArr = [];
+      for (let x = -10; x <= 10; x += 0.1) {
+        xArr.push(x);
+        yArr.push(Math.sin(x));
+      }
+
+      // Plot the function
+      graph.plot(ctx, xArr, yArr, "#f00", false, true);
+    };
+
     const adjustCanvasCleanup = adjustCanvas({
       canvas,
       ctx,
       onUpdateCanvasSize: (boundingBox) => {
         canvasConfig.updateDomConfig(boundingBox).adjustRenderScale({
           ctx,
-          ctxActions: ["scaleBasedImageSmoothing", "setScale"],
+          ctxActions: ["scaleBasedImageSmoothing"],
           canvas,
           canvasActions: ["setSize", "setStyleWidth"],
         });
+
+        initGame();
       },
     });
     cleanupManager.register(adjustCanvasCleanup);
-
-    // // Create a new Graph instance
-    // // const graph = new Graph(-10, 10, -10, 10, 300, 200, 500, 350);
-    // // const graph = new GraphV({
-    // //   xmin: -10,
-    // //   xmax: 10,
-    // //   ymin: -10,
-    // //   ymax: 10,
-    // //   originX: canvasConfig.render.width / 2,
-    // //   originY: canvasConfig.render.height / 2,
-    // //   pixelWidth: canvasConfig.render.width,
-    // //   pixelHeight: canvasConfig.render.height,
-    // // });
-    // const graph = new GraphV3(-10, 10, -10, 10, 300, 200, 500, 350);
-
-    // // Draw the grid on the canvas (major and minor spacing values)
-    // graph.drawGrid(ctx, 2, 1, 2, 1); // Major grid spacing of 2, minor grid spacing of 1 for both axes
-
-    // // Draw the axes with labels
-    // graph.drawAxes(ctx, "X-Axis", "Y-Axis");
-
-    // // const game = new GameLoop({
-    // //   fixedUpdate() {},
-    // //   // Render with interpolation (alpha is fraction of leftover time, not needed here)
-    // //   render() {},
-
-    // //   name: "bounce-ball-demo",
-    // // });
-
-    // // game.start();
-
-    // // cleanupManager.register(game.cleanup);
-
-    const graph = new GraphV3(
-      -10,
-      10, // xmin, xmax
-      -10,
-      10, // ymin, ymax
-      canvas.width / 2, // originX (centered)
-      canvas.height / 2, // originY (centered)
-      canvas.width,
-      canvas.height,
-    );
-
-    graph.drawGrid(ctx, 1, 0.5, 1, 0.5);
-    graph.drawAxes(ctx);
-
-    // Generate some math data: y = sin(x)
-    const xArr = [];
-    const yArr = [];
-    for (let x = -10; x <= 10; x += 0.1) {
-      xArr.push(x);
-      yArr.push(Math.sin(x));
-    }
-
-    // Plot the function
-    graph.plot(ctx, xArr, yArr, "#f00", false, true);
   },
 });
 
