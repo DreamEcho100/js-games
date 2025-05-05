@@ -1,12 +1,6 @@
 /** @import { SignalValue, MemoValue } from "#libs/spa/signals"; */
 
-import {
-  createEffect,
-  createSignal,
-  createMemo,
-  createScope,
-  // onScopeCleanup,
-} from "#libs/spa/signals.js";
+import { createSignal, createMemo, createScope } from "#libs/spa/signals.js";
 import { tagsProxy as t } from "#libs/spa/dom.js";
 import { $list, $toggle } from "#libs/spa/dom-signal.js";
 
@@ -25,7 +19,8 @@ t.h1({});
  *
  * @param {{
  * 	newTodoText: SignalValue<string>
- *  todos: SignalValue<Todo[]>
+ *  getFilteredTodos: () => Todo[]
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
  * }} props
  */
 function Header(props) {
@@ -45,15 +40,16 @@ function Header(props) {
  *
  * @param {{
  * 	newTodoText: SignalValue<string>
- *  todos: SignalValue<Todo[]>
+ *  getFilteredTodos: () => Todo[]
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
  * }} props
  */
-function NewTodoInput({ newTodoText, todos }) {
+function NewTodoInput({ newTodoText, getFilteredTodos, updateTodos }) {
   /** @param {string} text  */
   function addTodo(text) {
     if (!text.trim()) return;
 
-    todos.update((current) => [
+    updateTodos((current) => [
       ...current,
       {
         id: Date.now(),
@@ -68,7 +64,7 @@ function NewTodoInput({ newTodoText, todos }) {
 
   /** @param {boolean} completed  */
   function toggleAll(completed) {
-    todos.update((current) => current.map((todo) => ({ ...todo, completed })));
+    updateTodos((current) => current.map((todo) => ({ ...todo, completed })));
   }
 
   return t.div(
@@ -90,17 +86,21 @@ function NewTodoInput({ newTodoText, todos }) {
       }),
     ),
     $toggle(
-      () => todos().length > 0,
+      () => getFilteredTodos().length > 0,
       () =>
         t.button(
           {
             className: "text-gray-400 hover:text-gray-700 transition-colors",
             onclick: () => {
-              const allCompleted = todos().every((todo) => todo.completed);
+              const allCompleted = getFilteredTodos().every(
+                (todo) => todo.completed,
+              );
               toggleAll(!allCompleted);
             },
             ariaLabel: () => {
-              const allCompleted = todos().every((todo) => todo.completed);
+              const allCompleted = getFilteredTodos().every(
+                (todo) => todo.completed,
+              );
               return allCompleted
                 ? "Mark all as incomplete"
                 : "Mark all as complete";
@@ -114,14 +114,14 @@ function NewTodoInput({ newTodoText, todos }) {
 
 /**
  * @param {{
- * 	todo: SignalValue<Todo>
- *  todos: SignalValue<Todo[]>
+ * 	getTodo: SignalValue<Todo>
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
  * }} props
  */
-function TodoItem({ todo, todos }) {
+function TodoItem({ getTodo, updateTodos }) {
   /** @param {number} id  */
   function toggleTodo(id) {
-    todos.update((current) =>
+    updateTodos((current) =>
       current.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo,
       ),
@@ -130,7 +130,7 @@ function TodoItem({ todo, todos }) {
 
   /** @param {number} id  */
   function editTodo(id) {
-    todos.update((current) =>
+    updateTodos((current) =>
       current.map((todo) =>
         todo.id === id
           ? { ...todo, editing: true }
@@ -141,7 +141,7 @@ function TodoItem({ todo, todos }) {
 
   /** @param {number} id  */
   function removeTodo(id) {
-    todos.update((current) => current.filter((todo) => todo.id !== id));
+    updateTodos((current) => current.filter((todo) => todo.id !== id));
   }
 
   /**
@@ -156,7 +156,7 @@ function TodoItem({ todo, todos }) {
       return;
     }
 
-    todos.update((current) =>
+    updateTodos((current) =>
       current.map((todo) =>
         todo.id === id ? { ...todo, text: text.trim(), editing: false } : todo,
       ),
@@ -169,7 +169,7 @@ function TodoItem({ todo, todos }) {
         "group flex items-center border-b py-3 px-2 transition-all hover:bg-gray-50",
     },
     $toggle(
-      () => !todo().editing,
+      () => !getTodo().editing,
       () => [
         t.div(
           {
@@ -179,39 +179,39 @@ function TodoItem({ todo, todos }) {
             type: "checkbox",
             className:
               "mr-3 h-5 w-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500",
-            checked: () => !!todo().completed,
-            onchange: () => toggleTodo(todo().id),
+            checked: () => !!getTodo().completed,
+            onchange: () => toggleTodo(getTodo().id),
             ariaLabel: () =>
-              `Mark "${todo().text}" as ${
-                todo().completed ? "incomplete" : "complete"
+              `Mark "${getTodo().text}" as ${
+                getTodo().completed ? "incomplete" : "complete"
               }`,
           }),
           t.span(
             {
               className: () =>
                 `flex-1 text-lg ${
-                  todo().completed
+                  getTodo().completed
                     ? "line-through text-gray-400"
                     : "text-gray-700"
                 }`,
-              ondblclick: () => editTodo(todo().id),
+              ondblclick: () => editTodo(getTodo().id),
             },
-            () => todo().text,
+            () => getTodo().text,
           ),
         ),
         t.button(
           {
             className:
               "opacity-90 group-hover:opacity-100 text-red-500 hover:text-red-700 px-2 transition-opacity",
-            onclick: () => removeTodo(todo().id),
-            ariaLabel: `Delete ${todo().text}`,
+            onclick: () => removeTodo(getTodo().id),
+            ariaLabel: `Delete ${getTodo().text}`,
           },
           "×",
         ),
       ],
     ),
     $toggle(
-      () => todo().editing,
+      () => getTodo().editing,
       () =>
         t.form(
           {
@@ -219,13 +219,13 @@ function TodoItem({ todo, todos }) {
             onsubmit: (e) => {
               e.preventDefault();
               const input = e.target.querySelector("input");
-              updateTodoText(todo().id, input?.value ?? "");
+              updateTodoText(getTodo().id, input?.value ?? "");
             },
             onkeydown: (e) => {
               if (e.key === "Escape") {
-                todos.update((current) =>
+                updateTodos((current) =>
                   current.map((t) =>
-                    t.id === todo().id ? { ...t, editing: false } : t,
+                    t.id === getTodo().id ? { ...t, editing: false } : t,
                   ),
                 );
               }
@@ -234,8 +234,8 @@ function TodoItem({ todo, todos }) {
           t.input({
             className:
               "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg text-gray-700",
-            value: todo().text,
-            onblur: (e) => updateTodoText(todo().id, e.target.value),
+            value: getTodo().text,
+            onblur: (e) => updateTodoText(getTodo().id, e.target.value),
             ref: (el) =>
               setTimeout(() => {
                 el.focus();
@@ -249,29 +249,29 @@ function TodoItem({ todo, todos }) {
 
 /**
  * @param {{
- *  todos: SignalValue<Todo[]>
- *  filteredTodos: MemoValue<Todo[]>
+ *  filteredTodosSignal: MemoValue<Todo[]>
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
  * }} props
  */
-function Main({ todos, filteredTodos }) {
+function Main({ filteredTodosSignal, updateTodos }) {
   return t.section(
     { className: "mb-6" },
     $toggle(
-      () => todos().length > 0,
+      () => filteredTodosSignal().length > 0,
       () =>
         t.ul(
           {
             className: "divide-y divide-gray-200 border-t border-b",
           },
           $list(
-            filteredTodos,
+            filteredTodosSignal,
             (todo) => todo.id,
-            (todo) => TodoItem({ todo, todos }),
+            (todo) => TodoItem({ getTodo: todo, updateTodos }),
           ),
         ),
     ),
     $toggle(
-      () => todos().length === 0,
+      () => filteredTodosSignal().length === 0,
       () =>
         t.div(
           { className: "py-8 text-center text-gray-500" },
@@ -284,19 +284,26 @@ function Main({ todos, filteredTodos }) {
 
 /**
  * @param {{
- *  todos: SignalValue<Todo[]>
+ *  getTodos: () => Todo[]
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
  *  remainingCount: MemoValue<number>
  *  hasCompleted: MemoValue<boolean>
  *  filter: SignalValue<string>
  * }} props
  */
-function Footer({ todos, remainingCount, hasCompleted, filter }) {
+function Footer({
+  getTodos,
+  updateTodos,
+  remainingCount,
+  hasCompleted,
+  filter,
+}) {
   function clearCompleted() {
-    todos.update((current) => current.filter((todo) => !todo.completed));
+    updateTodos((current) => current.filter((todo) => !todo.completed));
   }
 
   return $toggle(
-    () => todos().length > 0,
+    () => getTodos().length > 0,
     () =>
       t.footer(
         {
@@ -305,11 +312,10 @@ function Footer({ todos, remainingCount, hasCompleted, filter }) {
         },
         t.span(
           { className: "mr-4 my-1" },
-          // Needs to make a reactive children function
-          // () => {
-          // 	const count = remainingCount();
-          // 	return `${count} item${count !== 1 ? "s" : ""} left`;
-          // }
+          () => {
+            const count = remainingCount();
+            return `${count} item${count !== 1 ? "s" : ""} left`;
+          },
           `${remainingCount.peek()} item${
             remainingCount.peek() !== 1 ? "s" : ""
           } left`,
@@ -334,8 +340,6 @@ function Footer({ todos, remainingCount, hasCompleted, filter }) {
   );
 }
 
-// * @param {string} filterName
-// * @param {string} label
 /**
  * @param {{
  * 	filterName: string;
@@ -362,7 +366,10 @@ function Info() {
   return t.footer(
     { className: "mt-8 text-center text-sm text-gray-500" },
     t.p({}, "Double-click to edit a todo"),
-    t.p({ className: "mt-2" }, "Created using signals.js and tailwindcss"),
+    t.p(
+      { className: "mt-2" },
+      "Created using tailwindcss, a custom DOM generator, and a custom signal library.",
+    ),
   );
 }
 
@@ -387,26 +394,34 @@ function TodoApp() {
           return allTodos;
       }
     });
-
     const remainingCount = createMemo(() => {
       return todos().filter((todo) => !todo.completed).length;
     });
-
     const hasCompleted = createMemo(() => {
       return todos().some((todo) => todo.completed);
     });
 
-    // Persist to localStorage whenever todos change
-    createEffect(() => {
-      const currentTodos = todos();
-      localStorage.setItem("todos", JSON.stringify(currentTodos));
-    });
+    // // Persist to localStorage whenever todos change
+    // createEffect(() => {
+    //   const currentTodos = todos();
+    //   localStorage.setItem("todos", JSON.stringify(currentTodos));
+    // });
 
     // Helper functions
     /** @returns {Todo[]} */
     function loadFromLocalStorage() {
       const saved = localStorage.getItem("todos");
       return saved ? JSON.parse(saved) : [];
+    }
+    /** @param {(value: Todo[]) => Todo[]} cb */
+    function updateTodos(cb) {
+      todos.update((prev) => {
+        const newValue = cb(prev);
+        queueMicrotask(() => {
+          localStorage.setItem("todos", JSON.stringify(newValue));
+        });
+        return newValue;
+      });
     }
 
     // Main app container
@@ -415,9 +430,22 @@ function TodoApp() {
         className:
           "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full",
       },
-      Header({ newTodoText, todos }),
-      Main({ todos, filteredTodos }),
-      Footer({ todos, remainingCount, hasCompleted, filter }),
+      Header({
+        newTodoText,
+        getFilteredTodos: filteredTodos,
+        updateTodos: updateTodos,
+      }),
+      Main({
+        filteredTodosSignal: filteredTodos,
+        updateTodos: updateTodos,
+      }),
+      Footer({
+        getTodos: todos,
+        updateTodos: updateTodos,
+        remainingCount,
+        hasCompleted,
+        filter,
+      }),
       Info(),
     );
 

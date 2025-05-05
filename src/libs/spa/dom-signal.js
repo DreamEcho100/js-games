@@ -512,14 +512,114 @@ function $list(list, key, fn) {
    */
 
   /** @type {Map<string|number, NodeEntry>} */
-  let entries = new Map();
+  let prevEntries = new Map();
   let isUnmounted = false;
+
+  /**
+   *
+   * @param {{
+   *  item: SignalValue<any>
+   *  nodeKey: string|number
+   *  oldEntry: NodeEntry
+   *  prevAnchor: Node
+   *  newNodes: Map<string|number, NodeEntry>
+   * }} props
+   */
+  function updateNodeEntry(props) {
+    // Reuse the old node if the signal value hasn't changed _(it has a dirty check eternally)_
+    props.oldEntry.signal.set(props.item);
+    props.prevAnchor = props.oldEntry.lastElementToBeInserted;
+    props.newNodes.set(props.nodeKey, props.oldEntry);
+  }
+
+  /**
+   * @param {{
+   *  item: SignalValue<any>
+   *  nodeKey: string | number
+   *  i: number
+   *  listValue: TValue
+   *  prevAnchor: Node
+   *  newNodes: Map<string|number, NodeEntry>
+   * }} props
+   */
+  function generateScopedSignal(props) {
+    const scope = createScope(() => {
+      const signal = createSignal(props.item);
+      signal();
+
+      const elems = fn(signal, props.i, props.listValue);
+      const memoizedElems = Array.isArray(elems) ? elems : [elems];
+
+      /** @type {Map<de100x.Child, (Element|Text)>} */
+      const childrenMemo = new Map();
+      const fragment = document.createDocumentFragment();
+      /** @type {Element|Text|undefined} */
+      let lastElementToBeInserted;
+      normalizeChildren({
+        children: memoizedElems,
+        onNormalize: (options) => {
+          childrenMemo.set(options.originalChild, options.elementToBeInserted);
+          if (options.isLastRenderedChild) {
+            lastElementToBeInserted = options.elementToBeInserted;
+          }
+        },
+        fragment,
+        nodeKey: props.nodeKey,
+      });
+
+      queueMicrotask(() => {
+        if (isUnmounted) {
+          return;
+        }
+
+        if (!lastElementToBeInserted) {
+          scope.dispose();
+          return;
+        }
+
+        props.prevAnchor.parentNode?.insertBefore(fragment, props.prevAnchor);
+        props.newNodes.set(props.nodeKey, {
+          signal,
+          scope,
+          lastElementToBeInserted,
+        });
+        props.prevAnchor = lastElementToBeInserted;
+      });
+
+      // // create an effect to update the elements when the signal changes
+      // // Create and compare with the `childrenMemo` array
+      // createEffect(() => {});
+
+      // Cleanup the scope when the node is removed
+      onScopeCleanup(() => {
+        for (const [, elem] of childrenMemo) {
+          elem.remove();
+        }
+        props.newNodes.delete(props.nodeKey);
+      });
+    });
+  }
+
+  /**
+   * @param {{
+   *  newNodes: Map<string|number, NodeEntry>
+   * }} props
+   */
+  function removeLeftoverNodes(props) {
+    for (const [oldKey, oldEntry] of prevEntries) {
+      if (!props.newNodes.has(oldKey)) {
+        oldEntry.scope.dispose();
+      }
+    }
+  }
 
   createEffect(() => {
     /** @type {Map<string|number, NodeEntry>} */
     const newNodes = new Map();
     const listValue = list();
-    const maxLength = Math.max(listValue.length, entries.size);
+    const oldSize = prevEntries.size;
+    const newSize = listValue.length;
+    const maxLength = Math.max(oldSize, newSize);
 
     queueMicrotask(() => {
       if (isUnmounted) {
@@ -532,92 +632,52 @@ function $list(list, key, fn) {
       // Loop through the list and update or create DOM nodes as necessary
       for (let i = 0; i < maxLength; i++) {
         const item = listValue[i];
-        const nodeKey = key(item, i, listValue);
-        const oldEntry = entries.get(nodeKey);
+        const nodeKey =
+          typeof item !== "undefined" ? key(item, i, listValue) : undefined;
+        const oldEntry = nodeKey ? prevEntries.get(nodeKey) : undefined;
+
+        if (!nodeKey) {
+          // If the nodeKey is undefined, skip this iteration
+          continue;
+        }
 
         if (oldEntry) {
           // Reuse the old node if the signal value hasn't changed _(it has a dirty check eternally)_
-          oldEntry.signal.set(item);
-          prevAnchor = oldEntry.lastElementToBeInserted;
-          newNodes.set(nodeKey, oldEntry);
+          updateNodeEntry({
+            item,
+            newNodes,
+            nodeKey,
+            oldEntry,
+            prevAnchor,
+          });
+          // Delete the old entry from the previous entries, so that the leftover nodes can be removed
+          prevEntries.delete(nodeKey);
         } else {
           // Create a new node with a scope and memoized signal for the item
-          const scope = createScope(() => {
-            console.log("___ createScope item", item);
-            const signal = createSignal(item);
-            signal();
-
-            const elems = fn(signal, i, listValue);
-            const memoizedElems = Array.isArray(elems) ? elems : [elems];
-
-            /** @type {Map<de100x.Child, (Element|Text)>} */
-            const childrenMemo = new Map();
-            const fragment = document.createDocumentFragment();
-            /** @type {Element|Text|undefined} */
-            let lastElementToBeInserted;
-
-            normalizeChildren({
-              children: memoizedElems,
-              onNormalize: (options) => {
-                childrenMemo.set(
-                  options.originalChild,
-                  options.elementToBeInserted,
-                );
-                if (options.isLastRenderedChild) {
-                  lastElementToBeInserted = options.elementToBeInserted;
-                }
-              },
-              fragment,
-              nodeKey,
-            });
-
-            queueMicrotask(() => {
-              if (isUnmounted) {
-                return;
-              }
-
-              if (!lastElementToBeInserted) {
-                scope.dispose();
-                return;
-              }
-
-              prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
-              newNodes.set(nodeKey, { signal, scope, lastElementToBeInserted });
-              prevAnchor = lastElementToBeInserted;
-            });
-
-            // // create an effect to update the elements when the signal changes
-            // // Create and compare with the `childrenMemo` array
-            // createEffect(() => {});
-
-            // Cleanup the scope when the node is removed
-            onScopeCleanup(() => {
-              for (const [, elem] of childrenMemo) {
-                elem.remove();
-              }
-              newNodes.delete(nodeKey);
-            });
+          generateScopedSignal({
+            item,
+            nodeKey,
+            i,
+            listValue,
+            prevAnchor,
+            newNodes,
           });
         }
       }
 
       // Remove leftover nodes not in the new list
-      for (const [oldKey, oldEntry] of entries) {
-        if (!newNodes.has(oldKey)) {
-          oldEntry.scope.dispose();
-        }
-      }
+      removeLeftoverNodes({ newNodes });
 
-      entries = newNodes;
+      prevEntries = newNodes;
     });
   });
 
   onScopeCleanup(() => {
     isUnmounted = true;
-    for (const [, entry] of entries) {
+    for (const [, entry] of prevEntries) {
       entry.scope.dispose();
     }
-    entries.clear();
+    prevEntries.clear();
   });
 
   return placeholder;
@@ -708,55 +768,58 @@ function $toggle(condition, fn) {
  */
 function $switch(condition, cases) {
   const placeholder = document.createComment(`scope-${getScopeId()}-switch`);
-  /** @type {(Element|Text)[]} */
-  let currentElems = [];
-  /** @type {string | number | null | undefined} */
-  let oldCase;
-  let isUnmounted = false;
 
-  createEffect(() => {
-    const value = /** @type {keyof typeof cases} */ (condition());
-    const caseFn = cases[value];
-    if (oldCase === value) {
-      return;
-    }
-    queueMicrotask(() => {
-      if (isUnmounted) {
+  createScope(() => {
+    /** @type {(Element|Text)[]} */
+    let currentElems = [];
+    /** @type {string | number | null | undefined} */
+    let oldCase;
+    let isUnmounted = false;
+
+    createEffect(() => {
+      const value = /** @type {keyof typeof cases} */ (condition());
+      const caseFn = cases[value];
+      if (oldCase === value) {
         return;
       }
+      queueMicrotask(() => {
+        if (isUnmounted) {
+          return;
+        }
 
-      oldCase = value;
+        oldCase = value;
 
+        for (const elem of currentElems) {
+          elem.remove();
+        }
+        currentElems = [];
+
+        if (caseFn) {
+          const _result = caseFn();
+          const elems = Array.isArray(_result) ? _result : [_result];
+          const fragment = document.createDocumentFragment();
+
+          normalizeChildren({
+            children: elems,
+            onNormalize: (options) => {
+              currentElems[options.counter] = options.elementToBeInserted;
+            },
+            fragment,
+          });
+
+          elems.length = 0;
+          placeholder.parentNode?.insertBefore(fragment, placeholder);
+        }
+      });
+    });
+
+    onScopeCleanup(() => {
+      isUnmounted = true;
       for (const elem of currentElems) {
         elem.remove();
       }
       currentElems = [];
-
-      if (caseFn) {
-        const _result = caseFn();
-        const elems = Array.isArray(_result) ? _result : [_result];
-        const fragment = document.createDocumentFragment();
-
-        normalizeChildren({
-          children: elems,
-          onNormalize: (options) => {
-            currentElems[options.counter] = options.elementToBeInserted;
-          },
-          fragment,
-        });
-
-        elems.length = 0;
-        placeholder.parentNode?.insertBefore(fragment, placeholder);
-      }
     });
-  });
-
-  onScopeCleanup(() => {
-    isUnmounted = true;
-    for (const elem of currentElems) {
-      elem.remove();
-    }
-    currentElems = [];
   });
 
   return placeholder;
