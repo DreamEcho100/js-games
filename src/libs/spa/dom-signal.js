@@ -333,6 +333,7 @@ function setTagAttributeNS(
 }
 
 // TODO: Should handle scopes too
+
 /**
  * @param {Element} element
  * @param {de100x.Child} child
@@ -500,6 +501,11 @@ function normalizeChildren(options, counter = 0) {
  * The `key` function is used to identify each item in the list.
  * The `fn` function is called for each item in the list to generate the corresponding DOM elements.
  */
+//
+// In a sense when an item signal on $list, is it disposed properly?
+// and I don't think the prev result on a valid change for the `$toggle` and the `$switch`, need a way to clear the scope dependencies not without the scope it self, before adding new
+//
+
 function $list(list, key, fn) {
   const placeholder = document.createComment(`scope-${getScopeId()}-list`);
 

@@ -131,7 +131,6 @@ let currentScope = {
   name: undefined,
   contexts: new Map(),
 };
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rootScope = currentScope;
 
 /************************ ************************/
