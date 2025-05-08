@@ -349,6 +349,7 @@ function appendChild(element, child) {
     /** @type {Element|Text|null|undefined} */
     let oldChild;
 
+    // Todo: use a scope for better cleanup
     createEffect(() => {
       const newChild = child();
 
@@ -694,14 +695,15 @@ function $list(list, key, fn) {
  *
  * @param {() => boolean | undefined | null} condition - Signal value to determine visibility
  * @param {() => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements
- * @param {"remove"|"keep"} [behaviorOnUnmount] - Behavior on unmount _("remove" | "keep")_, not implemented for now
+ * @param {object} [options] - Options for the toggle component
+ * @param {"remove"|"keep"} [options.behaviorOnUnmount] - Behavior on unmount _("remove" | "keep")_, not implemented for now
  * @returns {de100x.ChildPrimitive}
  * @description
  * Creates a toggle component that shows or hides elements based on a signal value.
  * The `fn` function is called to generate the elements to be shown or hidden.
  * The elements are removed from the DOM when not visible.
  */
-function $toggle(condition, fn, behaviorOnUnmount = "remove") {
+function $toggle(condition, fn, { behaviorOnUnmount = "remove" } = {}) {
   const placeholder = document.createComment(`scope-${getScopeId()}-visible`);
 
   const outerScope = createScope(() => {
@@ -833,69 +835,131 @@ function $toggle(condition, fn, behaviorOnUnmount = "remove") {
 /**
  * 🧩 Switch component
  *
- * @template TValue
- * @param {SignalValue<TValue>|MemoValue<TValue>} condition - Signal value to determine which case to show
- * @param {{ [key: string | number]: () => de100x.ChildPrimitive | de100x.ChildPrimitive[] }} cases - Object mapping case keys to functions that generate elements
+ * @template {string|number} TKey
+ * @param {{ [Key in TKey]: () => de100x.ChildPrimitive | de100x.ChildPrimitive[] }} cases - Object mapping case keys to functions that generate elements
+ * @param {SignalValue<TKey>|MemoValue<TKey>} condition - Signal value to determine which case to show
+ * @param {object} [options] - Options for the switch component
+ * @param {"remove"|"keep"} [options.behaviorOnUnmount] - Behavior on unmount (not implemented yet for "keep")
+ * @param {() => de100x.ChildPrimitive | de100x.ChildPrimitive[]} [options.defaultCase] - Default case function to generate elements if no case matches
  * @returns {de100x.ChildPrimitive}
- * @description
- * Creates a switch component that shows different elements based on a signal value.
- * The `cases` object maps case keys to functions that generate the elements to be shown.
- * The elements are removed from the DOM when not visible.
  */
-function $switch(condition, cases) {
+function $switch(
+  cases,
+  condition,
+  { behaviorOnUnmount = "remove", defaultCase } = {},
+) {
   const placeholder = document.createComment(`scope-${getScopeId()}-switch`);
 
-  createScope(() => {
+  const outerScope = createScope(() => {
+    let isOuterUnmounted = false;
+    const valueMemo = createMemo(() => condition());
+
+    /** @type {TKey|undefined} */
+    let prevValue;
+    /** @type {TKey} */
+    let currentValue;
+
     /** @type {(Element|Text)[]} */
     let currentElems = [];
-    /** @type {string | number | null | undefined} */
-    let oldCase;
-    let isUnmounted = false;
 
-    createEffect(() => {
-      const value = /** @type {keyof typeof cases} */ (condition());
-      const caseFn = cases[value];
-      if (oldCase === value) {
-        return;
-      }
-      queueMicrotask(() => {
-        if (isUnmounted) {
-          return;
-        }
+    // /** @type {Map<string|number, DocumentFragment>} */
+    // let caseCache = new Map();
 
-        oldCase = value;
-
+    function clearCurrentElems() {
+      if (behaviorOnUnmount === "remove") {
         for (const elem of currentElems) {
           elem.remove();
         }
-        currentElems = [];
+        currentElems.length = 0;
+      } else {
+        throw new Error(
+          "Behavior on unmount other than 'remove' is not implemented yet.",
+        );
+      }
+    }
 
-        if (caseFn) {
-          const _result = caseFn();
-          const elems = Array.isArray(_result) ? _result : [_result];
-          const fragment = document.createDocumentFragment();
+    /** @param {TKey|undefined} value */
+    function render(value) {
+      clearCurrentElems();
 
-          normalizeChildren({
-            children: elems,
-            onNormalize: (options) => {
-              currentElems[options.counter] = options.elementToBeInserted;
-            },
-            fragment,
-          });
+      const caseFn = value != null ? cases[value] ?? defaultCase : undefined;
+      if (!caseFn) return;
 
-          elems.length = 0;
-          placeholder.parentNode?.insertBefore(fragment, placeholder);
+      const _result = caseFn();
+      const elems = Array.isArray(_result) ? _result : [_result];
+      const fragment = document.createDocumentFragment();
+
+      normalizeChildren({
+        children: elems,
+        onNormalize: (options) => {
+          currentElems[options.counter] = options.elementToBeInserted;
+        },
+        fragment,
+      });
+
+      elems.length = 0;
+
+      queueMicrotask(() => {
+        if (isOuterUnmounted) return;
+
+        placeholder.parentNode?.insertBefore(fragment, placeholder);
+      });
+    }
+
+    /**
+     * @param {TKey|undefined} value
+     * @returns {ScopeResult<void>}
+     */
+    function createInnerScope(value) {
+      return createScope(() => {
+        render(value);
+
+        onScopeCleanup(() => {
+          clearCurrentElems();
+        });
+      });
+    }
+
+    let innerScope = createInnerScope(valueMemo.peek());
+
+    function shouldOuterHaltInitUpdate() {
+      return isOuterUnmounted || prevValue === valueMemo.peek();
+    }
+
+    createEffect(() => {
+      currentValue = valueMemo();
+
+      queueMicrotask(() => {
+        if (shouldOuterHaltInitUpdate()) return;
+
+        if (behaviorOnUnmount === "remove") {
+          // Dispose previous case's scope
+          innerScope.dispose();
+
+          // Create a new scope for current case
+          innerScope = createInnerScope(currentValue);
+        } else {
+          // For future "keep" implementation:
+          // Needs to mark the scope effects and it's nested scopes effects as inactive/halted/stopped
+          // - Store rendered elements in cache
+          // - Retrieve from cache when switching back
+          throw new Error(
+            "Behavior on unmount other than 'remove' is not implemented yet.",
+          );
         }
+
+        prevValue = currentValue;
       });
     });
 
     onScopeCleanup(() => {
-      isUnmounted = true;
-      for (const elem of currentElems) {
-        elem.remove();
-      }
-      currentElems = [];
+      isOuterUnmounted = true;
+      innerScope.dispose();
     });
+  });
+
+  onScopeCleanup(() => {
+    outerScope.dispose();
   });
 
   return placeholder;

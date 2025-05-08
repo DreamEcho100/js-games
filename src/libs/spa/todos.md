@@ -1,6 +1,9 @@
 # Todos
 
-- [ ] Figure out how to reconcile/diff-check on the dom-signals components, to avoid re-rendering the whole tree, losing focus, etc.
+- [x] `$switch` and `$toggle` proper cleanup.
+- [x] Figure out how to reconcile/diff-check on the dom-signals components, to avoid re-rendering the whole tree, losing focus, etc.
+- [ ] reactive children bug fix _(and use scopes)_.
+- [ ] the `appendChildren` and `removeChildren` _(no implemented yet)_ methods should be able to work with the view transition API.
 - [ ] Add support for view transitions.
 - [ ] Add support for error boundaries.
 - [ ] Add Resources & Async Data Handling
