@@ -368,7 +368,7 @@ function appendChild(element, child) {
 
       if (oldChild) {
         if (elementToBeInserted) {
-          oldChild.parentNode?.insertBefore(oldChild, elementToBeInserted);
+          oldChild.parentNode?.insertBefore(elementToBeInserted, oldChild);
         }
 
         oldChild.remove();
@@ -694,54 +694,123 @@ function $list(list, key, fn) {
  *
  * @param {() => boolean | undefined | null} condition - Signal value to determine visibility
  * @param {() => de100x.ChildPrimitive | de100x.ChildPrimitive[]} fn - Function to generate elements
+ * @param {"remove"|"keep"} [behaviorOnUnmount] - Behavior on unmount _("remove" | "keep")_, not implemented for now
  * @returns {de100x.ChildPrimitive}
  * @description
  * Creates a toggle component that shows or hides elements based on a signal value.
  * The `fn` function is called to generate the elements to be shown or hidden.
  * The elements are removed from the DOM when not visible.
  */
-function $toggle(condition, fn) {
+function $toggle(condition, fn, behaviorOnUnmount = "remove") {
   const placeholder = document.createComment(`scope-${getScopeId()}-visible`);
-  createScope(() => {
-    /** @type {(Element|Text)[]} */
-    let currentElems = [];
-    let isUnmounted = false;
+
+  const outerScope = createScope(() => {
+    let isOuterUnmounted = false;
     const shouldShowMemo = createMemo(() => !!condition());
     /** @type {boolean|undefined} */
     let prevShouldShow;
+    let shouldShow = false;
 
-    createEffect(() => {
-      const shouldShow = shouldShowMemo();
+    /** @type {(Element|Text)[]} */
+    let currentElems = [];
+
+    // /** @type {DocumentFragment|null} */
+    // let cachedFragment = null;
+
+    function clearCurrentElems() {
+      const shouldRemove = behaviorOnUnmount === "remove";
+
+      if (shouldRemove) {
+        for (const elem of currentElems) {
+          elem.remove();
+        }
+        currentElems.length = 0;
+      } else {
+        throw new Error(
+          "Behavior on unmount other than 'remove' is not implemented yet.",
+        );
+      }
+    }
+
+    /** @param {boolean} currentShouldShow  */
+    function render(currentShouldShow) {
+      clearCurrentElems();
+      const _result = fn();
+      const elems = Array.isArray(_result) ? _result : [_result];
+      const fragment = document.createDocumentFragment();
+
+      normalizeChildren({
+        children: elems,
+        onNormalize: (options) => {
+          currentElems[options.counter] = options.elementToBeInserted;
+        },
+        fragment,
+      });
+
+      elems.length = 0;
 
       queueMicrotask(() => {
-        if (isUnmounted) {
+        if (isOuterUnmounted) {
           return;
         }
 
-        if (prevShouldShow === shouldShow) {
-          return;
-        }
-
-        if (shouldShow) {
-          currentElems = [];
-          const _result = fn();
-          const elems = Array.isArray(_result) ? _result : [_result];
-          const fragment = document.createDocumentFragment();
-
-          normalizeChildren({
-            children: elems,
-            onNormalize: (options) => {
-              currentElems[options.counter] = options.elementToBeInserted;
-            },
-            fragment,
-          });
-
-          elems.length = 0;
+        if (currentShouldShow) {
           placeholder.parentNode?.insertBefore(fragment, placeholder);
         } else {
-          for (const elem of currentElems) {
-            elem.remove();
+          clearCurrentElems();
+        }
+      });
+    }
+
+    function createInnerScope() {
+      return createScope(() => {
+        render(shouldShow);
+
+        onScopeCleanup(() => {
+          clearCurrentElems();
+        });
+      });
+    }
+
+    let innerScope = createInnerScope();
+
+    function shouldOuterHaltInitUpdate() {
+      return isOuterUnmounted || prevShouldShow === shouldShowMemo.peek();
+    }
+
+    createEffect(() => {
+      shouldShow = shouldShowMemo();
+
+      queueMicrotask(() => {
+        if (shouldOuterHaltInitUpdate()) {
+          return;
+        }
+
+        if (behaviorOnUnmount === "remove") {
+          if (shouldShow) {
+            innerScope = createInnerScope();
+          } else {
+            innerScope.dispose();
           }
+        } else {
+          // Needs to mark the scope effects and it's nested scopes effects as inactive/halted/stopped
+          // and then remove the elements from the DOM while caching them if the condition is false
+          // if (behaviorOnUnmount === "keep") {
+          //   if (!shouldShow && currentElems.length > 0) {
+          //     // Store elements in a cached fragment
+          //     cachedFragment = document.createDocumentFragment();
+          //     for (const elem of currentElems) {
+          //       cachedFragment.appendChild(elem);
+          //     }
+          //   } else if (shouldShow && cachedFragment) {
+          //     // Restore from cache
+          //     placeholder.parentNode?.insertBefore(cachedFragment, placeholder);
+          //     cachedFragment = null;
+          //   }
+          // }
+          throw new Error(
+            "Behavior on unmount other than 'remove' is not implemented yet.",
+          );
         }
 
         prevShouldShow = shouldShow;
@@ -749,12 +818,13 @@ function $toggle(condition, fn) {
     });
 
     onScopeCleanup(() => {
-      isUnmounted = true;
-      for (const elem of currentElems) {
-        elem.remove();
-      }
-      currentElems = [];
+      isOuterUnmounted = true;
+      innerScope.dispose();
     });
+  });
+
+  onScopeCleanup(() => {
+    outerScope.dispose();
   });
 
   return placeholder;

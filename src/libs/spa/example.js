@@ -19,8 +19,9 @@ t.h1({});
  *
  * @param {{
  * 	newTodoText: SignalValue<string>
- *  getFilteredTodos: () => Todo[]
  *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
+ *  getFilteredTodosSize: () => number
+ *  getCompletedFilteredTodosSize: () => number
  * }} props
  */
 function Header(props) {
@@ -40,11 +41,17 @@ function Header(props) {
  *
  * @param {{
  * 	newTodoText: SignalValue<string>
- *  getFilteredTodos: () => Todo[]
  *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
+ *  getFilteredTodosSize: () => number
+ *  getCompletedFilteredTodosSize: () => number
  * }} props
  */
-function NewTodoInput({ newTodoText, getFilteredTodos, updateTodos }) {
+function NewTodoInput({
+  newTodoText,
+  updateTodos,
+  getCompletedFilteredTodosSize,
+  getFilteredTodosSize,
+}) {
   /** @param {string} text  */
   function addTodo(text) {
     if (!text.trim()) return;
@@ -86,27 +93,32 @@ function NewTodoInput({ newTodoText, getFilteredTodos, updateTodos }) {
       }),
     ),
     $toggle(
-      () => getFilteredTodos().length > 0,
+      () => getFilteredTodosSize() > 0,
       () =>
         t.button(
           {
             className: "text-gray-400 hover:text-gray-700 transition-colors",
             onclick: () => {
-              const allCompleted = getFilteredTodos().every(
-                (todo) => todo.completed,
-              );
+              const allCompleted =
+                getCompletedFilteredTodosSize() === getFilteredTodosSize();
               toggleAll(!allCompleted);
             },
             ariaLabel: () => {
-              const allCompleted = getFilteredTodos().every(
-                (todo) => todo.completed,
-              );
+              const allCompleted =
+                getCompletedFilteredTodosSize() === getFilteredTodosSize();
               return allCompleted
                 ? "Mark all as incomplete"
                 : "Mark all as complete";
             },
           },
-          "▼ Mark",
+          () => {
+            const allCompleted =
+              getCompletedFilteredTodosSize() === getFilteredTodosSize();
+            console.log("___ allCompleted", allCompleted);
+            return allCompleted
+              ? "▼ Mark all as incomplete"
+              : "▼ Mark all as complete";
+          },
         ),
     ),
   );
@@ -286,15 +298,17 @@ function Main({ filteredTodosSignal, updateTodos }) {
  * @param {{
  *  getTodos: () => Todo[]
  *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
- *  remainingCount: MemoValue<number>
+ *  filteredRemainingCount: MemoValue<number>
  *  hasCompleted: MemoValue<boolean>
  *  filter: SignalValue<string>
+ *  getFilteredTodosSize: () => number
+ *  getCompletedFilteredTodosSize: () => number
  * }} props
  */
 function Footer({
   getTodos,
   updateTodos,
-  remainingCount,
+  filteredRemainingCount,
   hasCompleted,
   filter,
 }) {
@@ -310,16 +324,12 @@ function Footer({
           className:
             "flex flex-wrap justify-between items-center text-sm text-gray-500 py-2 px-2",
         },
-        t.span(
-          { className: "mr-4 my-1" },
-          () => {
-            const count = remainingCount();
-            return `${count} item${count !== 1 ? "s" : ""} left`;
-          },
-          `${remainingCount.peek()} item${
-            remainingCount.peek() !== 1 ? "s" : ""
-          } left`,
-        ),
+        t.span({ className: "mr-4 my-1" }, () => {
+          const count = filteredRemainingCount();
+          return `${count} item${count !== 1 ? "s" : ""} left  ${count} item${
+            count !== 1 ? "s" : ""
+          } left`;
+        }),
         t.div(
           { className: "flex space-x-1 my-1" },
           FilterButton({ filterName: "all", label: "All", filter }),
@@ -394,11 +404,17 @@ function TodoApp() {
           return allTodos;
       }
     });
-    const remainingCount = createMemo(() => {
-      return todos().filter((todo) => !todo.completed).length;
+    const filteredTodosSize = createMemo(() => {
+      return filteredTodos().length;
+    });
+    const completedFilteredTodosSize = createMemo(() => {
+      return filteredTodos().filter((todo) => todo.completed).length;
+    });
+    const filteredRemainingCount = createMemo(() => {
+      return filteredTodos().filter((todo) => !todo.completed).length;
     });
     const hasCompleted = createMemo(() => {
-      return todos().some((todo) => todo.completed);
+      return filteredTodos().some((todo) => todo.completed);
     });
 
     // // Persist to localStorage whenever todos change
@@ -432,8 +448,9 @@ function TodoApp() {
       },
       Header({
         newTodoText,
-        getFilteredTodos: filteredTodos,
         updateTodos: updateTodos,
+        getCompletedFilteredTodosSize: completedFilteredTodosSize,
+        getFilteredTodosSize: filteredTodosSize,
       }),
       Main({
         filteredTodosSignal: filteredTodos,
@@ -442,9 +459,11 @@ function TodoApp() {
       Footer({
         getTodos: todos,
         updateTodos: updateTodos,
-        remainingCount,
+        filteredRemainingCount,
         hasCompleted,
         filter,
+        getCompletedFilteredTodosSize: completedFilteredTodosSize,
+        getFilteredTodosSize: filteredTodosSize,
       }),
       Info(),
     );
