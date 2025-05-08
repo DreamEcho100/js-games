@@ -6,11 +6,16 @@
  * @returns {string}
  */
 export function reduceToString(arr, callbackfn) {
-  let acc = "";
+	let acc = "";
 
-  for (let i = 0; i < arr.length; i++) {
-    acc += callbackfn(arr[i], i, arr);
-  }
+	for (let i = 0; i < arr.length; i++) {
+		acc += callbackfn(arr[i], i, arr);
+	}
 
-  return acc;
+	return acc;
 }
+
+//const t = {
+//	1: 1,
+//	2: 2,
+//};

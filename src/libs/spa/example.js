@@ -26,10 +26,10 @@ t.h1({});
  */
 function Header(props) {
   return t.header(
-    { className: "mb-4" },
+    { className: "grid gap-4" },
     t.h1(
       {
-        className: "text-5xl text-center text-gray-600 font-thin mb-6",
+        className: "text-5xl text-center text-gray-600 font-thin",
       },
       "todos",
     ),
@@ -75,7 +75,7 @@ function NewTodoInput({
   }
 
   return t.div(
-    { className: "relative" },
+    { className: "relative grid gap-2" },
     t.form(
       {
         className: "flex",
@@ -97,7 +97,8 @@ function NewTodoInput({
       () =>
         t.button(
           {
-            className: "text-gray-400 hover:text-gray-700 transition-colors",
+            className:
+              "w-fit text-gray-400 hover:text-gray-700 transition-colors",
             onclick: () => {
               const allCompleted =
                 getCompletedFilteredTodosSize() === getFilteredTodosSize();
@@ -178,14 +179,14 @@ function TodoItem({ getTodo, updateTodos }) {
   return t.li(
     {
       className:
-        "group flex items-center border-b py-3 px-2 transition-all hover:bg-gray-50",
+        "group flex items-center border-b py-2 px-2 transition-all hover:bg-gray-50 max-w-full",
     },
     $toggle(
       () => !getTodo().editing,
       () => [
         t.div(
           {
-            className: "flex items-center flex-1",
+            className: "flex items-center flex-1 max-w-[90%] ",
           },
           t.input({
             type: "checkbox",
@@ -203,8 +204,8 @@ function TodoItem({ getTodo, updateTodos }) {
               className: () =>
                 `flex-1 text-lg ${
                   getTodo().completed
-                    ? "line-through text-gray-400"
-                    : "text-gray-700"
+                    ? "line-through text-gray-400 py-0.5 truncate"
+                    : "text-gray-700 py-0.5 truncate"
                 }`,
               ondblclick: () => editTodo(getTodo().id),
             },
@@ -214,7 +215,7 @@ function TodoItem({ getTodo, updateTodos }) {
         t.button(
           {
             className:
-              "opacity-90 group-hover:opacity-100 text-red-500 hover:text-red-700 px-2 transition-opacity",
+              "opacity-90 group-hover:opacity-100 text-red-500 hover:text-red-700 px-2 transition-opacity shrink-0",
             onclick: () => removeTodo(getTodo().id),
             ariaLabel: `Delete ${getTodo().text}`,
           },
@@ -245,7 +246,7 @@ function TodoItem({ getTodo, updateTodos }) {
           },
           t.input({
             className:
-              "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg text-gray-700",
+              "w-full px-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg text-gray-700",
             value: getTodo().text,
             onblur: (e) => updateTodoText(getTodo().id, e.target.value),
             ref: (el) =>
@@ -267,13 +268,13 @@ function TodoItem({ getTodo, updateTodos }) {
  */
 function Main({ filteredTodosSignal, updateTodos }) {
   return t.section(
-    { className: "mb-6" },
+    { className: "max-w-full overflow-hidden" },
     $toggle(
       () => filteredTodosSignal().length > 0,
       () =>
         t.ul(
           {
-            className: "divide-y divide-gray-200 border-t border-b",
+            className: "divide-y divide-gray-200 border-t border-b max-w-full",
           },
           $list(
             filteredTodosSignal,
@@ -302,13 +303,13 @@ function Main({ filteredTodosSignal, updateTodos }) {
  *  hasCompleted: MemoValue<boolean>
  *  filter: SignalValue<string>
  *  getFilteredTodosSize: () => number
- *  getCompletedFilteredTodosSize: () => number
  * }} props
  */
 function Footer({
   getTodos,
   updateTodos,
   filteredRemainingCount,
+  getFilteredTodosSize,
   hasCompleted,
   filter,
 }) {
@@ -322,13 +323,16 @@ function Footer({
       t.footer(
         {
           className:
-            "flex flex-wrap justify-between items-center text-sm text-gray-500 py-2 px-2",
+            "flex flex-wrap justify-between items-center text-sm text-gray-500 px-2",
         },
         t.span({ className: "mr-4 my-1" }, () => {
-          const count = filteredRemainingCount();
-          return `${count} item${count !== 1 ? "s" : ""} left  ${count} item${
-            count !== 1 ? "s" : ""
-          } left`;
+          const remaining = filteredRemainingCount();
+          const total = getFilteredTodosSize();
+          const completed = total - remaining;
+
+          return `${completed} item${
+            completed !== 1 ? "s" : ""
+          } left  ${total} item${total !== 1 ? "s" : ""} left`;
         }),
         t.div(
           { className: "flex space-x-1 my-1" },
@@ -374,10 +378,10 @@ function FilterButton({ filterName, label, filter }) {
 
 function Info() {
   return t.footer(
-    { className: "mt-8 text-center text-sm text-gray-500" },
+    { className: "text-center text-sm text-gray-500" },
     t.p({}, "Double-click to edit a todo"),
     t.p(
-      { className: "mt-2" },
+      {},
       "Created using tailwindcss, a custom DOM generator, and a custom signal library.",
     ),
   );
@@ -444,7 +448,7 @@ function TodoApp() {
     const appContainer = t.div(
       {
         className:
-          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full",
+          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4",
       },
       Header({
         newTodoText,
@@ -462,7 +466,6 @@ function TodoApp() {
         filteredRemainingCount,
         hasCompleted,
         filter,
-        getCompletedFilteredTodosSize: completedFilteredTodosSize,
         getFilteredTodosSize: filteredTodosSize,
       }),
       Info(),
@@ -485,8 +488,8 @@ export function initializeTodoApp(parent) {
     // Add Tailwind CSS
     const tailwindLink = document.createElement("link");
     tailwindLink.rel = "stylesheet";
-    tailwindLink.href =
-      "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+    // tailwindLink.href =
+    //   "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
     document.head.appendChild(tailwindLink);
 
     // Add font

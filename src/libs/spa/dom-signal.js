@@ -335,13 +335,13 @@ function setTagAttributeNS(
 // TODO: Should handle scopes too
 
 /**
- * @param {Element} element
+ * @param {Element|DocumentFragment} parentElement
  * @param {de100x.Child} child
  */
-function appendChild(element, child) {
+function appendChild(parentElement, child) {
   if (child == null) return;
   if (Array.isArray(child)) {
-    appendChildren(element, child);
+    appendChildren(parentElement, child);
     return;
   }
 
@@ -349,16 +349,16 @@ function appendChild(element, child) {
     /** @type {Element|Text|null|undefined} */
     let oldChild;
 
-    // Todo: use a scope for better cleanup
+    // TODO: use a scope for better cleanup
     createEffect(() => {
       const newChild = child();
 
       if (Array.isArray(newChild)) {
-        return appendChildren(element, newChild);
+        return appendChildren(parentElement, newChild);
       }
 
       if (typeof newChild === "function") {
-        return appendChild(element, newChild);
+        return appendChild(parentElement, newChild);
       }
 
       const elementToBeInserted = /** @type {Element} */ (
@@ -376,15 +376,108 @@ function appendChild(element, child) {
         oldChild = elementToBeInserted;
       } else {
         if (newChild) {
-          element.append(elementToBeInserted);
+          parentElement.append(elementToBeInserted);
         }
         oldChild = elementToBeInserted;
       }
     });
+
+    const outerScope = createScope(() => {
+      /** @type {HTMLCollection|(Element|Text)[]|Element|Text|null|undefined} */
+      let prevChild;
+
+      // The flow here is:
+      // - A two tier scope structure
+      // - The outer scope is for the child function, to manage the lifecycle of the child if it happens to have a signal
+      // - The inner scope is for the child rendering, it
+      //   - It will try to append the child to the parent element if there is no previous child/children
+      //   - If there is a previous child/children, it will append the new child before the previous child/children, then remove the previous child/children
+      //   - In case it's an array, it will create a document fragment and append the children to it using appendChildren which will keep calling recursively between it and the appendChild function until it's done
+      //   - Then it will append the document fragment to the parent element, and remove the previous child/children
+      /** @param {de100x.Child} newChild */
+      const createInnerScope = (newChild) => {
+        return createScope(() => {
+          if (Array.isArray(newChild)) {
+            return appendChildren(parentElement, newChild);
+          }
+
+          /** @type {Element|DocumentFragment} */
+          let elementToBeInserted;
+
+          if (typeof newChild === "function") {
+            // return appendChild(element, newChild);
+            elementToBeInserted = document.createDocumentFragment();
+            appendChildren(
+              elementToBeInserted,
+              /** @type {de100x.Child[]} */ (newChild()),
+            );
+          } else {
+            elementToBeInserted = /** @type {Element} */ (
+              typeof newChild === "string" || typeof newChild === "number"
+                ? document.createTextNode(String(newChild))
+                : newChild
+            );
+          }
+
+          if (elementToBeInserted instanceof DocumentFragment) {
+            prevChild = elementToBeInserted.children;
+            parentElement.append(elementToBeInserted);
+          } else if (prevChild) {
+            if (
+              Array.isArray(prevChild) ||
+              prevChild instanceof HTMLCollection
+            ) {
+              prevChild[0].parentNode?.insertBefore(
+                elementToBeInserted,
+                prevChild[0],
+              );
+              for (const elem of prevChild) elem.remove();
+            } else {
+              prevChild.parentNode?.insertBefore(
+                elementToBeInserted,
+                prevChild,
+              );
+              prevChild.remove();
+            }
+
+            prevChild = elementToBeInserted;
+          } else if (parentElement instanceof DocumentFragment) {
+            parentElement.append(elementToBeInserted);
+          } else {
+            parentElement.appendChild(elementToBeInserted);
+            prevChild = elementToBeInserted;
+          }
+        });
+      };
+
+      /** @type {ScopeResult<void>|undefined} */
+      let innerScope;
+
+      createEffect(() => {
+        const newChild = child();
+
+        innerScope?.dispose();
+        createInnerScope(newChild);
+
+        if (Array.isArray(prevChild) || prevChild instanceof HTMLCollection)
+          for (const elem of prevChild) elem.remove();
+        else if (prevChild) prevChild.remove();
+      });
+
+      onScopeCleanup(() => {
+        innerScope?.dispose();
+
+        if (Array.isArray(prevChild) || prevChild instanceof HTMLCollection)
+          for (const elem of prevChild) elem.remove();
+        else if (prevChild) prevChild.remove();
+      });
+    });
+
+    onScopeCleanup(outerScope.dispose);
     return;
   }
 
-  element.append(
+  parentElement.append(
     typeof child === "string" || typeof child === "number"
       ? document.createTextNode(String(child))
       : child,
@@ -392,7 +485,7 @@ function appendChild(element, child) {
 }
 
 /**
- * @param {Element} element
+ * @param {Element|DocumentFragment} element
  * @param {de100x.Child[]} children
  */
 function appendChildren(element, children) {
