@@ -1,4 +1,5 @@
-import "./dom.d.ts";
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="./dom.d.ts" />
 
 /**
  * @import {
@@ -24,10 +25,10 @@ import "./dom.d.ts";
 
 import {
   appendChildren,
-  setGeneralTagAttribute,
-  setTagAttribute,
-  setTagAttributeNS,
-} from "./dom-signals.ts";
+  setSpecialElementAttribute,
+  setStandardAttribute,
+  setNamespacedAttribute,
+} from "./dom-signals.js";
 
 /**
  * Returns an element with namespace namespace. Its namespace prefix will be everything before ":" (U+003E) in qualifiedName or null. Its local name will be everything after ":" (U+003E) in qualifiedName or qualifiedName.
@@ -81,7 +82,7 @@ function createHTMLElement(tagName, attributes, ...children) {
     for (const key in attributes) {
       if (
         !Object.prototype.hasOwnProperty.call(attributes, key) ||
-        setGeneralTagAttribute(
+        setSpecialElementAttribute(
           element,
           key,
           attributes[/** @type {keyof AttrsForHTMLTag<TTagName>} */ (key)],
@@ -89,7 +90,7 @@ function createHTMLElement(tagName, attributes, ...children) {
       ) {
         continue;
       }
-      setTagAttribute(
+      setStandardAttribute(
         element,
         /** @type {string} */ (key),
         attributes[/** @type {keyof AttrsForHTMLTag<TTagName>} */ (key)],
@@ -162,7 +163,7 @@ function createNamespacedElement(namespace, tagName, attributes, ...children) {
     for (const key in attributes) {
       if (
         !Object.prototype.hasOwnProperty.call(attributes, key) ||
-        setGeneralTagAttribute(
+        setSpecialElementAttribute(
           /** @type {TElementNS} */ (element),
           key,
           attributes[
@@ -173,7 +174,7 @@ function createNamespacedElement(namespace, tagName, attributes, ...children) {
         continue;
       }
 
-      setTagAttributeNS(
+      setNamespacedAttribute(
         namespace,
         /** @type {TElementNS} */ (element),
         key,

@@ -32,7 +32,7 @@ declare namespace de100x {
      * @param valueOrReactive - Value or reactive getter function
      * @returns True if attribute was handled, false if it should use standard setAttribute
      */
-    export function setGeneralTagAttribute(
+    export function setSpecialElementAttribute(
       element: Element,
       attributeName: string,
       valueOrReactive: unknown,
@@ -49,7 +49,7 @@ declare namespace de100x {
      * @param valueOrReactive - Value or reactive getter function
      * @returns Always returns true (for consistent API)
      */
-    export function setTagAttribute(
+    export function setStandardAttribute(
       element: Element,
       attributeName: string,
       valueOrReactive: unknown,
@@ -65,7 +65,7 @@ declare namespace de100x {
      * @param attributeName - Name of the attribute
      * @param valueOrReactive - Value or reactive getter function
      */
-    export function setTagAttributeNS(
+    export function setNamespacedAttribute(
       namespace: string,
       element: Element,
       attributeName: string,

@@ -1,4 +1,5 @@
-import "./dom.d.ts";
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="./dom-signals.d.ts" />
 
 /**
  * @import de100x from "./dom.js";
@@ -192,18 +193,105 @@ function setSpecialElementAttribute(element, attributeName, valueOrReactive) {
       return true;
     }
 
-    // Handle form element values
+    /*
+# DOM Properties vs Attributes: Why Direct Assignment Matters
+
+The special handling for element properties like `value`, `checked`, and others in your code is necessary due to a fundamental distinction in how browsers handle DOM attributes versus DOM properties.
+
+## The Attribute-Property Gap
+
+When working with DOM elements, there are two parallel systems:
+
+1. **HTML Attributes** - The string values you declare in HTML markup
+   ```html
+   <input type="text" value="initial value">
+   ```
+
+2. **DOM Properties** - The JavaScript object properties on DOM element objects
+   ```javascript
+   element.value = "updated value";
+   ```
+
+While these often seem connected, they don't always stay synchronized, which creates these problems:
+
+## Why Direct Assignment Is Required
+
+Take the `value` property as an example:
+
+```javascript
+// This updates what the user SEES in the field
+inputElement.value = "New text";
+
+// This only updates the attribute, NOT necessarily what the user sees
+inputElement.setAttribute("value", "New text");
+```
+
+This difference exists because:
+
+1. **Initial vs Current State**: Attributes generally represent the *initial state* from HTML, while properties represent the *current state* including user interactions.
+
+2. **Type Differences**: Attributes are always strings, while properties can be booleans, numbers, objects, etc.
+
+## Common Problem Cases
+
+| Property | Problem with setAttribute |
+|----------|--------------------------|
+| `value` | Doesn't update the visible input value after user interaction |
+| `checked` | Doesn't toggle checkboxes visually |
+| `selectedIndex` | Won't change the visible selected option |
+| `disabled` | May not disable the element properly |
+| `indeterminate` | Has no attribute equivalent at all |
+
+## How Browsers Handle Them
+
+When a browser parses HTML:
+1. It creates the HTML element from attributes
+2. It initializes corresponding DOM properties from attributes
+3. After that, properties and attributes can diverge:
+   - User interactions update properties, not attributes
+   - Some properties never sync back to attributes
+
+By directly setting properties, your library ensures that both the internal state and the visible UI state stay synchronized, which is critical for a reactive framework that needs to reliably update what users see.
+      */
+
+    // Handle more properties that need direct assignment
+    case "selectedIndex":
+    case "readOnly":
+    case "indeterminate":
+    case "htmlFor":
+    case "textContent":
+    case "volume":
+    case "currentTime":
+    case "checked":
     case "value": {
       handleReactiveValue(valueOrReactive, (value) => {
         if (value == null) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          element.value = "";
+          element[attributeName] = "";
           return;
         }
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        element.value = /** @type {string} */ (value);
+        element[attributeName] = /** @type {string} */ (value);
+      });
+      return true;
+    }
+
+    // Handle more properties that need direct assignment
+    case "selected":
+    case "disabled":
+    case "muted": {
+      handleReactiveValue(valueOrReactive, (value) => {
+        if (value == null) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          element[attributeName] = false;
+          return;
+        }
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        element[attributeName] = value;
       });
       return true;
     }
@@ -1261,9 +1349,9 @@ function $switch(
 
 // Export public API
 export {
-  setSpecialElementAttribute as setGeneralTagAttribute,
-  setStandardAttribute as setTagAttribute,
-  setNamespacedAttribute as setTagAttributeNS,
+  setSpecialElementAttribute,
+  setStandardAttribute,
+  setNamespacedAttribute,
   appendChildren,
   $list,
   $toggle,

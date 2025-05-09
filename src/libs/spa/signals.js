@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="./signals.d.ts" />
+
 /**
  * Reactive Signals Library
  *
