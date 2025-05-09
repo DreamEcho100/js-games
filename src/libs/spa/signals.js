@@ -1,6 +1,27 @@
+/**
+ * Reactive Signals Library
+ *
+ * A fine-grained reactivity system inspired by SolidJS and React Signals,
+ * providing automatic dependency tracking and efficient updates.
+ *
+ * Core primitives:
+ * - Signals: Reactive state containers
+ * - Effects: Side effects that automatically track dependencies
+ * - Memos: Cached computations that update only when dependencies change
+ * - Scopes: Nested reactive environments with lifecycle management
+ * - Contexts: Value propagation through the reactive tree
+ */
+
+/**
+ * Node type constants that identify the role of each reactive node
+ * @type {Object.<string, number>}
+ */
 const NODE_TYPE = {
+  /** Primitive value container that can notify observers */
   SIGNAL: 0,
+  /** Side effect with automatic dependency tracking */
   EFFECT: 1,
+  /** Cached computation with dependency tracking */
   MEMO: 2,
 };
 
@@ -11,91 +32,73 @@ const NODE_TYPE = {
 
 /**
  * @typedef {object} Scope
- * @property {number} id - unique identifier
- * @property {string} [name] - optional name for debugging
- * @property {number} depth - depth of the scope in the tree
- * @property {number} nextSignalId - next signal ID to be assigned
- * @property {number} batchDepth - current batch depth
- * @property {ReactiveNode<any> | null} activeObserver - current active observer
- * @property {Set<ReactiveNode<any>>} pendingEffects - set of pending effects
- * @property {Set<ReactiveNode<any>>} nodes - set of all nodes (signals, memos, effects)
- * @property {boolean} pendingMicrotask - whether a microtask is pending
- * @property {Scope[]} nextScopes - child scopes
- * @property {Scope | null} prevScope - parent scope
- * @property {(() => void)[]} cleanups - array of cleanup functions
- * @property {Map<symbol, SignalValue<any>>} contexts - Map of context values
+ * @property {number} id - Unique identifier for the scope
+ * @property {string} [name] - Optional name for debugging and tracing
+ * @property {number} depth - Nesting level of the scope in the tree
+ * @property {number} nextSignalId - Counter for generating unique signal IDs
+ * @property {number} batchDepth - Current batch operation depth to defer updates
+ * @property {ReactiveNode<any> | null} activeObserver - Currently executing node that tracks dependencies
+ * @property {Set<ReactiveNode<any>>} pendingEffects - Effects waiting to be executed
+ * @property {Set<ReactiveNode<any>>} nodes - All nodes (signals, memos, effects) owned by this scope
+ * @property {boolean} pendingMicrotask - Whether a microtask is scheduled for batch updates
+ * @property {Scope[]} nextScopes - Child scopes for hierarchical cleanup
+ * @property {Scope | null} prevScope - Parent scope for hierarchical navigation
+ * @property {(() => void)[]} cleanups - Cleanup functions to run on scope disposal
+ * @property {Map<symbol, SignalValue<any>>} contexts - Context values available in this scope
  */
 
 /**
  * @template TValue
  * @typedef {object} ReactiveNode
- * @property {number} id
- * @property {number} version - incremented when value changes
- * @property {Map<ReactiveNode<any>, number>} sources - dependencies + version seen
- * @property {Set<ReactiveNode<any>>} observers - who depends on me
- * @property {() => TValue} [compute] - how to calculate value
- * @property {TValue} value - cached value (for signals/computeds)
- * @property {(() => void) | void} [cleanup] - cleanup function (for effects)
- * @property {() => void} [onDirty] - how to rerun when dirty
- * @property {boolean} [dirty]
- * @property {any} [error]
- * @property {string} [name] - for debugging and cycle detection
- * @property {(typeof NODE_TYPE)[keyof typeof NODE_TYPE]} type - type of node
- * @property {((a: TValue, b: TValue) => boolean) | undefined} [equals]
- * @property {Scope} scopeRef - reference to the current scope
+ * @property {number} id - Unique identifier
+ * @property {number} version - Incremented on each value change to detect staleness
+ * @property {Map<ReactiveNode<any>, number>} sources - Dependencies mapped to the version when last accessed
+ * @property {Set<ReactiveNode<any>>} observers - Reactive nodes that depend on this one
+ * @property {() => TValue} [compute] - Function to recalculate value (for memos/effects)
+ * @property {TValue} value - Current cached value
+ * @property {(() => void) | void} [cleanup] - Function to clean up resources between executions
+ * @property {() => void} [onDirty] - Custom handler for when node becomes dirty
+ * @property {boolean} [dirty] - Whether the node needs recomputation
+ * @property {any} [error] - Last error during computation if any
+ * @property {string} [name] - Name for debugging and cycle detection
+ * @property {(typeof NODE_TYPE)[keyof typeof NODE_TYPE]} type - Type of node (SIGNAL, EFFECT, MEMO)
+ * @property {((a: TValue, b: TValue) => boolean) | undefined} [equals] - Custom equality function
+ * @property {Scope} scopeRef - Reference to the owning scope for cleanup
  */
-// interface SignalOptions<TValue> {
-//   equals?: (a: TValue, b: TValue) => boolean;
-//   name?: string;
-// }
+
 /**
  * @template TValue
  * @typedef {object} SignalOptions
- * @property {((a: TValue, b: TValue) => boolean) | undefined} [equals] - custom equality check
- * @property {string | undefined} [name] - name for debugging
+ * @property {((a: TValue, b: TValue) => boolean) | undefined} [equals] - Custom equality check to prevent unnecessary updates
+ * @property {string | undefined} [name] - Name for debugging and error reporting
  */
-// interface BaseSignalValue<TValue> {
-//   _debug?: {
-//     node: ReactiveNode<TValue>;
-//     peek: () => TValue;
-//     dirty: () => boolean | undefined;
-//     id: number;
-//     name: string | undefined;
-//     createdAt?: string; // for stack trace
-//   };
-//   peek: () => TValue;
-// }
+
 /**
  * @template TValue
  * @typedef {object} BaseSignalValue
- * @property {object} [_debug] - debug information
- * @property {ReactiveNode<TValue>} [_debug.node] - node reference
- * @property {() => TValue} [_debug.peek] - function to peek value
- * @property {() => boolean | undefined} [_debug.dirty] - function to check if dirty
- * @property {number} [_debug.id] - node ID
- * @property {string | undefined} [_debug.name] - node name
- * @property {string | undefined} [_debug.createdAt] - stack trace
- * @property {() => TValue} peek - function to get the current value
+ * @property {object} [_debug] - Debug information (only in development)
+ * @property {ReactiveNode<TValue>} [_debug.node] - Reference to internal node
+ * @property {() => TValue} [_debug.peek] - Function to get value without tracking
+ * @property {() => boolean | undefined} [_debug.dirty] - Function to check if needs recomputation
+ * @property {number} [_debug.id] - Node ID for debugging
+ * @property {string | undefined} [_debug.name] - Node name for debugging
+ * @property {string | undefined} [_debug.createdAt] - Stack trace for debugging
+ * @property {() => TValue} peek - Function to get current value without tracking dependencies
  */
-// interface SignalValue<TValue> extends BaseSignalValue<TValue> {
-//   (): TValue;
-//   set(value: TValue): void;
-//   update(fn: (value: TValue) => TValue): void;
-// }
+
 /**
  * @template TValue
  * @typedef {() => TValue} BaseGetter
  */
+
 /**
  * @template TValue
  * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue> & {
- *  set: (value: TValue) => void
- *  update(fn: (value: TValue) => TValue): void;
+ *  set: (value: TValue) => void;
+ *  update: (fn: (value: TValue) => TValue) => void;
  * }} SignalValue
  */
-// interface MemoValue<TValue> {
-//   (): TValue;
-// }
+
 /**
  * @template TValue
  * @typedef {BaseGetter<TValue> & BaseSignalValue<TValue>} MemoValue
@@ -104,17 +107,23 @@ const NODE_TYPE = {
 /**
  * @template TValue
  * @typedef {{
- *			id: symbol;
- *			defaultValue: TValue | SignalValue<TValue>;
- *			Provider: <TReturn>(valueOrSignal: SignalValue<TValue> | TValue, fn: () => TReturn) => TReturn;
- * 			DeferredProvider: <TReturn>(valueOrSignal: SignalValue<TValue> | TValue) => (fn: () => TReturn) => TReturn;
- *	}} Context
+ *   id: symbol;
+ *   defaultValue: TValue | SignalValue<TValue>;
+ *   Provider: <TReturn>(valueOrSignal: SignalValue<TValue> | TValue, fn: () => TReturn) => TReturn;
+ *   DeferredProvider: <TReturn>(valueOrSignal: SignalValue<TValue> | TValue) => (fn: () => TReturn) => TReturn;
+ * }} Context
  */
 
 // Symbol used to access internal node (not exported)
 const SIGNAL = Symbol("signal");
 
+// Configuration constants
+const MAX_DEPENDENCIES = 10000; // Maximum dependencies a node can track before warnings
+const MAX_COMPUTATION_DEPTH = 10000; // Maximum recursive computation depth
+
+// Global state
 let nextScopeId = 0;
+
 /** @type {Scope} */
 let currentScope = {
   id: nextScopeId++,
@@ -128,20 +137,31 @@ let currentScope = {
   prevScope: null,
   nodes: new Set(),
   cleanups: [],
-  name: undefined,
+  name: "root",
   contexts: new Map(),
 };
+
 const rootScope = currentScope;
 
 /************************ ************************/
-/***************** Create Scope *****************/
+/*************  SCOPE MANAGEMENT  ***************/
 /************************ ************************/
 
 /**
- * 🧹 Dispose a scope and all its child scopes
+ * 🧹 Disposes a scope and all its resources
  *
- * @param {Scope} scope
+ * Recursively cleans up child scopes, runs cleanup functions,
+ * and removes relationships with parent scope.
+ *
+ * @param {Scope} scope - The scope to clean up
  * @returns {void}
+ *
+ * @description
+ * - Recursively disposes child scopes first
+ * - Disposes all reactive nodes owned by the scope
+ * - Clears context values
+ * - Runs registered cleanup functions
+ * - Detaches from parent scope
  */
 function disposeScope(scope) {
   // Recursively dispose child scopes first
@@ -150,12 +170,15 @@ function disposeScope(scope) {
   }
   scope.nextScopes = [];
 
+  // Dispose all nodes owned by this scope
   for (const node of scope.nodes) {
     disposeNode(node);
   }
-  // ???
+
+  // Clear context values
   scope.contexts.clear();
 
+  // Development warning for leaked nodes
   if (process.env.NODE_ENV !== "production" && scope.nodes.size > 0) {
     console.warn(
       `Scope "${scope.name ?? scope.id}" still had ${
@@ -163,11 +186,17 @@ function disposeScope(scope) {
       } nodes when disposed.`,
     );
   }
+
+  // Clear all state
   scope.nodes.clear();
   scope.pendingEffects.clear();
   scope.pendingMicrotask = false;
+
+  // Run cleanup functions registered with onScopeCleanup
   scope.cleanups.forEach((cleanup) => cleanup());
   scope.cleanups = [];
+
+  // Remove from parent scope's children
   if (scope.prevScope) {
     scope.prevScope.nextScopes = scope.prevScope.nextScopes.filter(
       (s) => s.id !== scope.id,
@@ -177,12 +206,39 @@ function disposeScope(scope) {
 }
 
 /**
- * 🧱 Create a new scope
+ * 🧱 Creates a new reactive scope
+ *
+ * Scopes provide isolated reactive environments with their own lifecycle.
+ * They enable modular component structures and proper cleanup of resources.
  *
  * @template TValue
- * @param {() => TValue} fn Function to run in the new scope
- * @param {{ detached?: boolean; name?: string; deferredProviders?: ReturnType<Context<any>['DeferredProvider']>[]  }} [options] Options for the scope
- * @returns {ScopeResult<TValue>} Result of the function and a dispose function
+ * @param {() => TValue} fn - Function to run within the new scope
+ * @param {{
+ *   detached?: boolean;
+ *   name?: string;
+ *   deferredProviders?: ReturnType<Context<any>['DeferredProvider']>[]
+ * }} [options] - Configuration options
+ * @returns {ScopeResult<TValue>} - Object with result and dispose function
+ *
+ * @example
+ * // Basic component with cleanup
+ * const component = createScope(() => {
+ *   const counter = createSignal(0);
+ *
+ *   // Setup DOM elements
+ *   const elem = document.createElement('div');
+ *   document.body.appendChild(elem);
+ *
+ *   // Register cleanup
+ *   onScopeCleanup(() => {
+ *     elem.remove();
+ *   });
+ *
+ *   return elem;
+ * });
+ *
+ * // Later, to clean up:
+ * component.dispose();
  */
 function createScope(fn, options) {
   const parentScope = currentScope;
@@ -204,18 +260,19 @@ function createScope(fn, options) {
     contexts: new Map(),
   };
 
+  // Add to parent's child scopes for later cleanup
   if (!options?.detached) {
     parentScope.nextScopes.push(newScope);
   }
 
-  // $switch to new scope
+  // Make this the active scope for reactive operations
   currentScope = newScope;
 
   /** @type {any} */
   let result;
   try {
     if (options?.deferredProviders) {
-      // Apply each lazy provider
+      // Apply each context provider in sequence
       for (const lazyProvider of options.deferredProviders) {
         if (!result) {
           result = lazyProvider;
@@ -230,7 +287,8 @@ function createScope(fn, options) {
       result = fn();
     }
   } finally {
-    currentScope = parentScope; // Restore parent scope
+    // Always restore the parent scope, even if an error occurred
+    currentScope = parentScope;
   }
 
   return {
@@ -242,11 +300,25 @@ function createScope(fn, options) {
 }
 
 /**
- * 🧹 Cleanup function
+ * 🧹 Registers a function to run when scope is disposed
  *
- * @param {() => void} fn Function to run on cleanup
- * @throws {Error} If called outside of a scope
+ * Use this to clean up resources like DOM nodes, event listeners,
+ * timers, or other side effects when a scope is unmounted.
+ *
+ * @param {() => void} fn - Cleanup function to register
+ * @throws {Error} If called outside of a reactive scope
  * @returns {void}
+ *
+ * @example
+ * createScope(() => {
+ *   // Create a timer
+ *   const intervalId = setInterval(() => console.log('tick'), 1000);
+ *
+ *   // Register cleanup to prevent memory leaks
+ *   onScopeCleanup(() => {
+ *     clearInterval(intervalId);
+ *   });
+ * });
  */
 function onScopeCleanup(fn) {
   if (currentScope?.cleanups) {
@@ -259,20 +331,44 @@ function onScopeCleanup(fn) {
   }
 }
 
+/**
+ * 🔢 Gets the current scope's unique identifier
+ *
+ * Useful for generating unique IDs for elements in templates.
+ *
+ * @returns {number} The current scope's ID
+ *
+ * @example
+ * createScope(() => {
+ *   const scopeId = getScopeId();
+ *   const buttonId = `button-${scopeId}`;
+ *
+ *   document.body.innerHTML = `<button id="${buttonId}">Click me</button>`;
+ *   document.getElementById(buttonId).addEventListener('click', handleClick);
+ * });
+ */
 function getScopeId() {
   return currentScope.id;
 }
+
 /************************ ************************/
-/***************** Create Signal *****************/
+/***********  REACTIVE PRIMITIVES  **************/
 /************************ ************************/
 
 /**
- * 🧱 Create a fresh node
+ * 🧱 Creates a new reactive node
+ *
+ * Internal utility for creating the underlying data structure for
+ * signals, effects, and memos.
  *
  * @template TValue
- * @param {TValue} val Initial value
- * @param {{ name?: string; equals?: (a: TValue, b: TValue) => boolean; type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE]; }} options Options for the node
- * @returns {ReactiveNode<TValue>} The created node
+ * @param {TValue} val - Initial value for the node
+ * @param {{
+ *   name?: string;
+ *   equals?: (a: TValue, b: TValue) => boolean;
+ *   type: (typeof NODE_TYPE)[keyof typeof NODE_TYPE];
+ * }} options - Node configuration
+ * @returns {ReactiveNode<TValue>} The created reactive node
  */
 function createNode(val, options) {
   /** @type {ReactiveNode<TValue>} */
@@ -291,17 +387,32 @@ function createNode(val, options) {
     ...options,
   };
 
+  // Register with current scope for lifecycle management
   currentScope.nodes.add(node);
 
   return node;
 }
 
 /**
- * 🛑 Read a value without tracking dependencies
+ * 🛑 Reads a value without tracking dependencies
+ *
+ * This prevents the current effect/memo from depending on
+ * signals read within the provided function.
  *
  * @template TValue
- * @param {() => TValue} fn Function to execute
+ * @param {() => TValue} fn - Function to execute without tracking
  * @returns {TValue} The result of the function
+ *
+ * @example
+ * // Effect that only depends on `name`, not `counter`
+ * createEffect(() => {
+ *   const nameVal = name();
+ *
+ *   // Read counter without creating a dependency
+ *   const counterVal = untrack(() => counter());
+ *
+ *   console.log(`Name: ${nameVal}, Counter: ${counterVal}`);
+ * });
  */
 function untrack(fn) {
   const prevObserver = currentScope.activeObserver;
@@ -313,17 +424,18 @@ function untrack(fn) {
   }
 }
 
-// Add to options
-const MAX_DEPENDENCIES = 10000;
-
 /**
- * 🧭 Track a read dependency
+ * 🧭 Tracks access to a reactive node
+ *
+ * Internal function that establishes dependency relationships when
+ * signals are accessed during effects or memo executions.
  *
  * @template TValue
- * @param {ReactiveNode<TValue>} sourceNode The node to track
+ * @param {ReactiveNode<TValue>} sourceNode - Node being accessed
  * @returns {void}
  */
 function trackAccess(sourceNode) {
+  // Development check for accessing disposed nodes
   if (
     process.env.NODE_ENV !== "production" &&
     sourceNode.compute === undefined &&
@@ -336,7 +448,9 @@ function trackAccess(sourceNode) {
     );
   }
 
+  // Only track if there's an active observer
   if (currentScope.activeObserver) {
+    // Development check for excessive dependencies
     if (
       process.env.NODE_ENV !== "production" &&
       currentScope.activeObserver.sources.size >= MAX_DEPENDENCIES
@@ -349,64 +463,75 @@ function trackAccess(sourceNode) {
       return;
     }
 
-    // ✅ Prevent duplicate tracking
+    // Prevent duplicate tracking of the same source
     if (!currentScope.activeObserver.sources.has(sourceNode)) {
+      // Record the current version seen by the observer
       currentScope.activeObserver.sources.set(sourceNode, sourceNode.version);
+      // Add observer to source's observers for notifications
       sourceNode.observers.add(currentScope.activeObserver);
     }
   }
 }
 
 /**
- * 🧹 Flush pending effects on the scope and it's children scopes recursively
+ * 🧹 Recursively flushes pending effects
  *
- * @param {Scope} scope The scope to flush
+ * Processes all queued effects in the current scope and its children.
+ *
+ * @param {Scope} scope - The scope to process
  * @returns {void}
  */
 function flushPendingEffects(scope) {
+  // First, run all pending effects in this scope
   for (const effect of scope.pendingEffects) {
     runNode(effect);
   }
   scope.pendingEffects.clear();
 
+  // Then recursively process child scopes
   for (const child of scope.nextScopes) {
     flushPendingEffects(child);
   }
 }
 
 /**
- * ⏳ Schedule flush of pending effects
+ * ⏳ Schedules processing of pending effects
+ *
+ * Queues a microtask to run all pending effects, ensuring
+ * batched updates and preventing redundant executions.
  *
  * @returns {void}
  */
 function scheduleMicrotask() {
+  // Skip if already scheduled or nothing to do
   if (currentScope.pendingMicrotask || currentScope.pendingEffects.size === 0) {
     return;
   }
 
   currentScope.pendingMicrotask = true;
   queueMicrotask(() => {
-    // Check if scope has been disposed
+    // Skip if scope was disposed while waiting
     if (!currentScope.prevScope && currentScope.id !== rootScope.id) {
-      return; // Scope has been disposed
+      return;
     }
     currentScope.pendingMicrotask = false;
-    // for (const effect of currentScope.pendingEffects) runNode(effect);
-    // currentScope.pendingEffects.clear();
 
-    // Instead of only currentScope → flush all scopes recursively
+    // Process all scopes recursively for complete update propagation
     flushPendingEffects(currentScope);
   });
 }
 
 /**
- * 📣 Notify observers of a change
+ * 📣 Notifies observers when a node's value changes
+ *
+ * Marks dependent computations as dirty and schedules effects for re-execution.
  *
  * @template TValue
- * @param {ReactiveNode<TValue>} node The node to notify
+ * @param {ReactiveNode<TValue>} node - The node with the changed value
  * @returns {void}
  */
 function notifyObservers(node) {
+  // Development logging
   if (process.env.NODE_ENV !== "production") {
     console.log(`📣 notifyObservers: ${node.name ?? `Node_${node.id}`}`);
   }
@@ -416,12 +541,14 @@ function notifyObservers(node) {
 
   for (const observer of observers) {
     if (!observer.dirty) {
-      // Avoid redundant notifications
+      // Mark as dirty to prevent redundant notifications
       observer.dirty = true;
-      // ✅ If the observer knows how to reschedule itself, do that
+
+      // Use custom notification strategy if available
       if (observer.onDirty) {
         observer.onDirty();
       } else {
+        // Default strategy: add to pending effects and schedule if not batching
         currentScope.pendingEffects.add(observer);
         if (currentScope.batchDepth === 0) {
           scheduleMicrotask();
@@ -432,28 +559,38 @@ function notifyObservers(node) {
 }
 
 /**
- * 🧹 Dispose a node
+ * 🧹 Disposes a reactive node and cleans up resources
  *
- * @param {ReactiveNode<any>} node The node to dispose
+ * Releases all resources associated with a node, including
+ * running cleanup functions and removing from the dependency graph.
+ *
+ * @param {ReactiveNode<any>} node - Node to dispose
  * @returns {void}
  */
 function disposeNode(node) {
+  // Run the node's cleanup function if it exists
   if (node.cleanup) {
     node.cleanup();
     node.cleanup = undefined;
   }
+
+  // Remove dependencies on other nodes
   cleanupSources(node);
 
-  // Make sure this node is removed from all observers
+  // Remove from observers' dependency lists
   for (const observer of node.observers) {
     observer.sources.delete(node);
   }
   node.observers.clear();
 
+  // Remove from scope's tracking
   node.scopeRef.pendingEffects.delete(node);
   node.scopeRef.nodes.delete(node);
+
+  // Clear computation function to mark as disposed
   node.compute = undefined;
 
+  // Development warning for nodes with lingering relationships
   if (process.env.NODE_ENV !== "production") {
     if (node.observers.size > 0 || node.sources.size > 0) {
       console.warn(
@@ -465,23 +602,47 @@ function disposeNode(node) {
   }
 }
 
+// Default equality function for value comparison
 const defaultEquals = Object.is;
 
 /**
- * @param {*} item
- * @returns {item is SignalValue<any>}
+ * Checks if a value is a reactive signal
+ *
+ * @param {*} item - Value to check
+ * @returns {item is SignalValue<any>} True if the item is a signal
  */
 function isSignal(item) {
   return typeof item === "function" && SIGNAL in item;
 }
 
 /**
- * 🌱 Signal primitive
+ * 🌱 Creates a reactive signal
+ *
+ * Signals are the core primitive for storing reactive state.
+ * When a signal's value changes, all effects that depend on it
+ * are automatically scheduled for re-execution.
  *
  * @template TValue
- * @param {TValue} initialValue Initial value
- * @param {SignalOptions<TValue>} [options] Options for the signal
+ * @param {TValue} initialValue - Starting value for the signal
+ * @param {SignalOptions<TValue>} [options] - Configuration options
  * @returns {SignalValue<TValue>} The created signal
+ *
+ * @example
+ * // Basic counter with custom label
+ * const count = createSignal(0, { name: 'counter' });
+ * const doubled = createMemo(() => count() * 2);
+ *
+ * // Reading values
+ * console.log(count()); // 0
+ * console.log(doubled()); // 0
+ *
+ * // Updating values (automatically updates dependents)
+ * count.set(5);
+ * console.log(doubled()); // 10
+ *
+ * // Updating based on previous value
+ * count.update(prev => prev + 1);
+ * console.log(count()); // 6
  */
 function createSignal(initialValue, options) {
   const node = createNode(initialValue, {
@@ -492,6 +653,7 @@ function createSignal(initialValue, options) {
 
   /** @type {SignalValue<TValue>} */
   const signal = Object.assign(
+    // Getter function - called when signal is invoked as a function
     () => {
       trackAccess(node);
       return node.value;
@@ -499,6 +661,7 @@ function createSignal(initialValue, options) {
     {
       /** @param {TValue} newValue */
       set: (newValue) => {
+        // Skip update if value hasn't changed according to equals function
         if ((node.equals ?? defaultEquals)(node.value, newValue)) {
           return;
         }
@@ -514,6 +677,7 @@ function createSignal(initialValue, options) {
     },
   );
 
+  // Add debug information in development
   if (process.env.NODE_ENV !== "production") {
     signal._debug = {
       node,
@@ -525,28 +689,30 @@ function createSignal(initialValue, options) {
     };
   }
 
+  // Register automatic cleanup when scope is disposed
   onScopeCleanup(() => disposeNode(node));
 
   return signal;
 }
 
 /************************ ************************/
-/***************** Create Effect *****************/
+/**********  COMPUTED DEPENDENCIES  *************/
 /************************ ************************/
 
 /**
- * 🔄 Core computation logic
- * Runs a memo/effect and handles dependency tracking + cleanup
- *
- * @type {Set<ReactiveNode<any>>} node The node to run
+ * Stack to track computation nesting for cycle detection
+ * @type {Set<ReactiveNode<any>>}
  */
 const computationStack = new Set();
 
 /**
- * 🔁 Remove source links from a node
+ * 🔁 Removes dependencies from a node
+ *
+ * Cleans up all tracked dependencies, ensuring both sides of
+ * the dependency relationship are updated.
  *
  * @template TValue
- * @param {ReactiveNode<TValue>} node The node to clean up
+ * @param {ReactiveNode<TValue>} node - Node to clean up
  * @returns {void}
  */
 function cleanupSources(node) {
@@ -559,18 +725,21 @@ function cleanupSources(node) {
   node.sources = new Map();
 }
 
-const MAX_COMPUTATION_DEPTH = 10000;
-
 /**
- * 🔁 Run a node and handle cycles
+ * 🔁 Executes a node's computation
+ *
+ * Core function that handles the execution of effects and memos,
+ * manages dependency tracking, and detects circular dependencies.
  *
  * @template TValue
- * @param {ReactiveNode<TValue>} node The node to run
- * @returns {boolean} Whether the node was successfully run
+ * @param {ReactiveNode<TValue>} node - Node to run
+ * @returns {boolean} Whether the node's value changed
  */
 function runNode(node) {
+  // Skip if node was disposed
   if (!node.compute) return false;
 
+  // Check for excessive recursion
   if (
     process.env.NODE_ENV !== "production" &&
     computationStack.size > MAX_COMPUTATION_DEPTH
@@ -584,7 +753,7 @@ function runNode(node) {
     return false;
   }
 
-  // 🔁 Detect cycles
+  // Detect circular dependencies
   if (computationStack.has(node)) {
     let cycle = "";
     for (const n of computationStack) {
@@ -595,19 +764,21 @@ function runNode(node) {
     const error = new Error(`⚠️ Cycle reference detected: ${cycle}`);
     console.warn(error);
     node.error = error;
-    node.dirty = false; // ✅ Stop further propagation
+    node.dirty = false;
 
     // Clean up incomplete dependencies to prevent further issues
     cleanupSources(node);
     return false;
   }
 
+  // Add to computation stack to track cycles
   computationStack.add(node);
 
   // Clean up previous dependencies before recomputing
   const prevCleanup = node.cleanup;
   cleanupSources(node);
 
+  // Set up for dependency tracking
   const prevObserver = currentScope.activeObserver;
   currentScope.activeObserver = node;
 
@@ -616,11 +787,11 @@ function runNode(node) {
     prevCleanup?.();
     node.cleanup = undefined;
 
+    // Compute new value
     const newValue = node.compute();
-    const valueChanged = !((node && node.equals) ?? defaultEquals)(
-      node.value,
-      newValue,
-    );
+
+    // Determine if value has changed
+    const valueChanged = !(node.equals ?? defaultEquals)(node.value, newValue);
 
     // For effect nodes, store result but don't notify (they're terminal)
     if (node.type === NODE_TYPE.EFFECT) {
@@ -637,6 +808,7 @@ function runNode(node) {
     node.error = undefined;
     return valueChanged;
   } catch (error) {
+    // Handle errors during computation
     node.error = error;
     node.dirty = false; // Prevent continuous retries on error
     console.warn(
@@ -645,18 +817,35 @@ function runNode(node) {
     );
     return false;
   } finally {
+    // Always clean up, even if an error occurred
     computationStack.delete(node);
     currentScope.activeObserver = prevObserver;
   }
 }
 
 /**
- * 👁️ Effect
+ * 👁️ Creates an effect
+ *
+ * Effects are side-effects that automatically track their dependencies
+ * and re-run when any dependency changes. Unlike signals and memos,
+ * effects don't have a return value accessible to other reactive code.
  *
  * @template TValue
- * @param {() => TValue} fn Function to run as an effect
- * @param {SignalOptions<TValue>} [options] Options for the effect
- * @returns {() => void} Disposal function to clean up the effect
+ * @param {() => TValue} fn - Effect function to run
+ * @param {SignalOptions<TValue>} [options] - Configuration options
+ * @returns {() => void} Function to manually dispose the effect
+ *
+ * @example
+ * // DOM updating effect
+ * const name = createSignal("World");
+ * const element = document.getElementById("greeting");
+ *
+ * createEffect(() => {
+ *   element.textContent = `Hello, ${name()}!`;
+ * });
+ *
+ * // The element will automatically update when name changes
+ * name.set("User"); // Element text becomes "Hello, User!"
  */
 function createEffect(fn, options) {
   const node = createNode(/** @type {TValue} */ (undefined), {
@@ -665,6 +854,8 @@ function createEffect(fn, options) {
     equals: options?.equals,
   });
   node.compute = fn;
+
+  // Development warning for potential issues
   if (process.env.NODE_ENV !== "production") {
     if (node.observers.size > 0 || node.sources.size > 0) {
       console.warn(
@@ -689,7 +880,7 @@ function createEffect(fn, options) {
   // Initial run
   runNode(node);
 
-  // Return disposal function
+  // Create disposal function
   const dispose = () => {
     // Clean up the effect
     if (node.cleanup) {
@@ -706,30 +897,55 @@ function createEffect(fn, options) {
     // Remove compute function to mark as disposed
     node.compute = undefined;
   };
+
+  // Register automatic cleanup when scope is disposed
   onScopeCleanup(() => dispose());
+
   return dispose;
 }
 
 /**
- * 🔁 Update a node if necessary
+ * 🔁 Updates a node if it's marked as dirty
+ *
+ * Internal function used by memos to ensure fresh values.
  *
  * @template TValue
- * @param {ReactiveNode<TValue>} node The node to update
+ * @param {ReactiveNode<TValue>} node - Node to update if needed
  * @returns {boolean} Whether the node was updated
  */
 function updateIfNecessary(node) {
   if (!node.compute || !node.dirty) return false;
-
   return runNode(node);
 }
 
 /**
- * 🔁 Memo
+ * 🔁 Creates a memoized value
+ *
+ * Memos are cached computations that automatically update when their
+ * dependencies change. They're perfect for derived values that are
+ * expensive to calculate.
  *
  * @template TValue
- * @param {() => TValue} fn Function to run as a memo
- * @param {SignalOptions<TValue>} [options] Options for the memo
- * @returns {MemoValue<TValue>} The created memo
+ * @param {() => TValue} fn - Function to compute the value
+ * @param {SignalOptions<TValue>} [options] - Configuration options
+ * @returns {MemoValue<TValue>} The memoized value
+ *
+ * @example
+ * // Filtered list that only recalculates when dependencies change
+ * const items = createSignal([1, 2, 3, 4, 5]);
+ * const threshold = createSignal(3);
+ *
+ * // This computation only runs when items or threshold change
+ * const filteredItems = createMemo(() => {
+ *   console.log('Filtering items'); // Only logs when dependencies change
+ *   return items().filter(n => n > threshold());
+ * });
+ *
+ * console.log(filteredItems()); // [4, 5]
+ * console.log(filteredItems()); // [4, 5] (no recalculation)
+ *
+ * threshold.set(2); // Triggers recalculation
+ * console.log(filteredItems()); // [3, 4, 5]
  */
 function createMemo(fn, options) {
   const node = createNode(/** @type {TValue} */ (undefined), {
@@ -740,7 +956,7 @@ function createMemo(fn, options) {
   node.compute = fn;
 
   /**
-   * Create memo function that acts like a signal
+   * Create memo function that acts like a signal getter
    * @type {MemoValue<TValue>}
    */
   const memo = Object.assign(
@@ -755,6 +971,7 @@ function createMemo(fn, options) {
     },
   );
 
+  // Add debug properties in development
   if (process.env.NODE_ENV !== "production") {
     memo._debug = {
       node,
@@ -769,17 +986,32 @@ function createMemo(fn, options) {
   // Initial computation
   runNode(node);
 
+  // Register automatic cleanup when scope is disposed
   onScopeCleanup(() => disposeNode(node));
 
   return memo;
 }
 
 /**
- * 📦 Batch signals
+ * 📦 Batches multiple signal updates
+ *
+ * Defers effect execution until all updates in the batch are complete,
+ * which improves performance when making multiple related changes.
  *
  * @template TValue
- * @param {() => TValue} fn Function to run in batch
+ * @param {() => TValue} fn - Function containing multiple signal updates
  * @returns {TValue} The result of the function
+ *
+ * @example
+ * // Update multiple related signals efficiently
+ * batchSignals(() => {
+ *   // These won't trigger effects until the batch completes
+ *   firstName.set("John");
+ *   lastName.set("Doe");
+ *   age.set(30);
+ * });
+ *
+ * // Without batching, each set would trigger effects immediately
  */
 function batchSignals(fn) {
   currentScope.batchDepth++;
@@ -794,21 +1026,25 @@ function batchSignals(fn) {
 }
 
 /************************ ************************/
-/***************** Create Context *****************/
+/**************  CONTEXT SYSTEM  ****************/
 /************************ ************************/
 
 /**
+ * Context provider implementation for passing values down the scope tree
+ *
  * @template TValue
  * @template TReturn
- * @param {symbol} id
- * @param {SignalValue<TValue>} value
- * @param {(() => TReturn)} fn
+ * @param {symbol} id - Context identifier
+ * @param {SignalValue<TValue>} value - Signal containing the context value
+ * @param {(() => TReturn)} fn - Function to run with the provided context
+ * @returns {TReturn} The result of the function
  */
 function provideContext(id, value, fn) {
   const parentScope = currentScope;
   const previousValue = parentScope.contexts.get(id);
   const hadPrevValue = parentScope.contexts.has(id);
 
+  // Set the new context value
   parentScope.contexts.set(id, value);
 
   try {
@@ -830,10 +1066,30 @@ function provideContext(id, value, fn) {
 }
 
 /**
+ * 🌳 Creates a context for passing values down the scope tree
+ *
+ * Contexts allow passing values to deeply nested components without
+ * explicit prop drilling. They're perfect for theme data, authentication
+ * state, and other app-wide or section-specific data.
+ *
  * @template TValue
- * @param {SignalValue<TValue>|TValue} defaultValue
- * @param {{ name?: string }} [options]
- * @returns {Context<TValue>}
+ * @param {SignalValue<TValue>|TValue} defaultValue - Default value if no provider is found
+ * @param {{ name?: string }} [options] - Configuration options
+ * @returns {Context<TValue>} The created context
+ *
+ * @example
+ * // Create a theme context
+ * const ThemeContext = createContext({ mode: 'light' });
+ *
+ * // Provide it at the root level
+ * createScope(() => {
+ *   const theme = createSignal({ mode: 'dark' });
+ *
+ *   return ThemeContext.Provider(theme, () => {
+ *     // Child components can now consume the theme
+ *     return renderApp();
+ *   });
+ * });
  */
 function createContext(defaultValue, options) {
   const id = Symbol(options?.name ?? "context");
@@ -872,9 +1128,25 @@ function createContext(defaultValue, options) {
 }
 
 /**
+ * 🔍 Gets a context value from the current scope or ancestors
+ *
+ * Retrieves the current value of a context, walking up the scope tree
+ * to find the nearest provider. Falls back to default value if no provider
+ * is found.
+ *
  * @template TValue
- * @param {Context<TValue>} context
- * @returns {SignalValue<TValue>}
+ * @param {Context<TValue>} context - The context to read
+ * @returns {SignalValue<TValue>} Signal containing the context value
+ *
+ * @example
+ * // Inside a deeply nested component
+ * function UserProfile() {
+ *   const theme = getContext(ThemeContext);
+ *
+ *   createEffect(() => {
+ *     console.log(`Current theme: ${theme().mode}`);
+ *   });
+ * }
  */
 function getContext(context) {
   const id = context.id;
@@ -889,6 +1161,7 @@ function getContext(context) {
     }
     scope = scope.prevScope;
 
+    // Development warnings when falling back to default
     if (
       process.env.NODE_ENV !== "production" &&
       !scope // Check if it's the root scope parent (null)
@@ -926,12 +1199,26 @@ function getContext(context) {
 }
 
 /**
+ * 🔍 Gets a derived value from a context
+ *
+ * Creates a memo that selects a specific part of a context value,
+ * updating only when the selected part changes.
  *
  * @template TValue
  * @template TSelectorReturn
- * @param {Context<TValue>} context
- * @param {(state: TValue) => TSelectorReturn} selector
- * @returns
+ * @param {Context<TValue>} context - The context to read from
+ * @param {(state: TValue) => TSelectorReturn} selector - Function to extract the needed data
+ * @returns {MemoValue<TSelectorReturn>} Memoized selected value
+ *
+ * @example
+ * // Theme context contains { mode, colors, fontSizes }
+ * // Only select the mode, ignoring other changes
+ * const themeMode = getContextSelector(ThemeContext, theme => theme.mode);
+ *
+ * createEffect(() => {
+ *   // Only runs when theme.mode changes, not other theme properties
+ *   console.log(`Current mode: ${themeMode()}`);
+ * });
  */
 function getContextSelector(context, selector) {
   const value = getContext(context);
@@ -943,6 +1230,7 @@ export {
   disposeScope,
   onScopeCleanup,
   getScopeId,
+  isSignal,
   createSignal,
   createEffect,
   createMemo,
@@ -952,109 +1240,3 @@ export {
   getContext,
   getContextSelector,
 };
-
-// // example of usage
-// function createScope2() {
-//   return createScope(() => {
-//     const counter = createSignal(0);
-//     const scopeId = getScopeId();
-
-//     const secondScopeSection = document.createElement("div");
-//     const incrementButton = document.createElement("button");
-//     incrementButton.textContent = "Increment";
-//     incrementButton.addEventListener("click", () => {
-//       counter.set(counter() + 1);
-//     });
-//     secondScopeSection.appendChild(incrementButton);
-//     const decrementButton = document.createElement("button");
-//     decrementButton.textContent = "Decrement";
-//     decrementButton.addEventListener("click", () => {
-//       counter.set(counter() - 1);
-//     });
-//     secondScopeSection.appendChild(decrementButton);
-//     const resetButton = document.createElement("button");
-//     resetButton.textContent = "Reset";
-//     resetButton.addEventListener("click", () => {
-//       counter.set(0);
-//     });
-//     secondScopeSection.appendChild(resetButton);
-//     const counterDisplay = document.createElement("h2");
-//     counterDisplay.id = `second-scope-counter-${scopeId}`;
-//     counterDisplay.textContent = `Second Scope Counter: ${counter.peek()}`;
-//     secondScopeSection.appendChild(counterDisplay);
-//     createEffect(() => {
-//       counterDisplay.textContent = `Second Scope Counter: ${counter()}`;
-//     });
-//     onScopeCleanup(() => {
-//       secondScopeSection.remove();
-//     });
-
-//     return secondScopeSection;
-//   });
-// }
-
-// batchSignals(() => {
-//   createScope(() => {
-//     const scopeId = getScopeId();
-//     const counter = createSignal(0);
-//     const increment = () => {
-//       counter.set(counter() + 1);
-//     };
-//     const decrement = () => {
-//       counter.set(counter() - 1);
-//     };
-//     const reset = () => {
-//       counter.set(0);
-//     };
-//     const double = createMemo(() => counter() * 2);
-
-//     document.body.innerHTML = `
-// 		<div>
-// 			<h1 id=${`counter-${scopeId}`}>Counter: ${counter.peek()}</h1>
-// 			<button id=${`increment-${scopeId}`}>Increment</button>
-// 			<button id=${`decrement-${scopeId}`}>Decrement</button>
-// 			<button id=${`reset-${scopeId}`}>Reset</button>
-// 			<p id=${`double-${scopeId}`}>Double: ${double.peek()}</p>
-// 		</div>
-// 		<hr />
-// 		<section>
-// 			<h1>Second Scope Toggle</h1>
-// 			<button id=${`toggleSecondScope-${scopeId}`}>Toggle Second Scope</button>
-// 		</section>
-// 	`;
-//     document
-//       .getElementById(`increment-${scopeId}`)
-//       ?.addEventListener("click", increment);
-//     document
-//       .getElementById(`decrement-${scopeId}`)
-//       ?.addEventListener("click", decrement);
-//     document
-//       .getElementById(`reset-${scopeId}`)
-//       ?.addEventListener("click", reset);
-
-//     /** @type {ReturnType<typeof createScope2> | null} */
-//     let secondScope;
-//     document
-//       .getElementById(`toggleSecondScope-${scopeId}`)
-//       ?.addEventListener("click", () => {
-//         if (secondScope) {
-//           secondScope.dispose();
-//           secondScope = null;
-//         } else {
-//           secondScope = createScope2();
-//           document.body.appendChild(secondScope.result);
-//         }
-//       });
-
-//     createEffect(() => {
-//       const element = document.getElementById(`counter-${scopeId}`);
-
-//       if (element) element.textContent = `Counter: ${counter()}`;
-//     });
-//     createEffect(() => {
-//       const element = document.getElementById(`double-${scopeId}`);
-
-//       if (element) element.textContent = `Double: ${double()}`;
-//     });
-//   });
-// });

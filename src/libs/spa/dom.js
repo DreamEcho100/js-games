@@ -1,139 +1,33 @@
+import "./dom.d.ts";
+
 /**
- * @namespace de100x
+ * @import {
+ *  TagNameHTMLPropsMap,
+ *  AttrsForHTMLTag,
+ *  TChild,
+ *  NS,
+ *  TagName2ElementMap,
+ *  AttrsForNSElement,
+ *  GetNSElementByNS,
+ *  TElementNS,
+ *  TagNameSVGPropsMap,
+ *  TagNameMathMLPropsMap,
+ *  TagNameXHTMLPropsMap,
+ *  TagsHTMLProxy,
+ *  TagSVGMapProxy,
+ *  TagMathMLMapProxy,
+ *  TagXHTMLMapProxy,
+ *  TagsProxy,
+ * } from "./dom.ts";
  */
+/** @export * from "./dom.d.ts"; */
 
 import {
   appendChildren,
   setGeneralTagAttribute,
   setTagAttribute,
   setTagAttributeNS,
-} from "./dom-signal";
-
-/**
- *
- * @typedef {string|number|Node|undefined|null} de100x.ChildPrimitive
- * @typedef {de100x.ChildPrimitive|de100x.ChildPrimitive[]|(() => de100x.Child)} de100x.Child
- */
-
-const SVG_NS = "http://www.w3.org/2000/svg";
-const MathML_NS = "http://www.w3.org/1998/Math/MathML";
-const XHTML_NS = "http://www.w3.org/1999/xhtml";
-
-/**
- * @typedef {typeof SVG_NS | typeof MathML_NS | typeof XHTML_NS} de100xNS
- */
-
-/**
- * @typedef {HTMLElementTagNameMap} de100x.TagNameHTMLPropsMap
- * @typedef {HTMLElementEventMap} de100x.TagNameHTMLElementEventMap
- *
- * @typedef {SVGElementTagNameMap} de100x.TagNameSVGPropsMap
- * @typedef {SVGElementEventMap} de100x.TagNameSVGElementEventMap
- *
- * @typedef {MathMLElementTagNameMap} de100x.TagNameMathMLPropsMap
- * @typedef {MathMLElementEventMap} de100x.TagNameMathMLElementEventMap
- *
- * @typedef {HTMLElementTagNameMap} de100x.TagNameXHTMLPropsMap
- * @typedef {de100x.TagNameHTMLPropsMap | de100x.TagNameSVGPropsMap | de100x.TagNameMathMLPropsMap | de100x.TagNameXHTMLPropsMap} de100x.TagName2ElementMap
- */
-
-/**
- * @template {de100xNS} TNS
- * @typedef {TNS extends typeof SVG_NS ? keyof de100x.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof de100x.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof de100x.TagNameXHTMLPropsMap : never} de100x.GetNSElementTagNameMapByNS
- */
-
-/**
- * @template {de100xNS} TNS
- * @typedef {TNS extends typeof SVG_NS ? SVGElementTagNameMap :
- *  TNS extends typeof MathML_NS ? MathMLElementTagNameMap :
- *  TNS extends typeof XHTML_NS ? HTMLElementTagNameMap :
- *  never
- * } de100x.GetNSElementByNS<TNS>
- */
-
-/**
- * @typedef {de100x.TagNameHTMLPropsMap[keyof de100x.TagNameHTMLPropsMap]} de100x.HTMLElement
- * @typedef {de100x.TagNameSVGPropsMap[keyof de100x.TagNameSVGPropsMap]} de100x.SVGElement
- * @typedef {de100x.TagNameMathMLPropsMap[keyof de100x.TagNameMathMLPropsMap]} de100x.MathMLElement
- * @typedef {de100x.TagNameXHTMLPropsMap[keyof de100x.TagNameXHTMLPropsMap]} de100x.XHTMLElement
- * @typedef {de100x.SVGElement | de100x.MathMLElement | de100x.XHTMLElement} de100x.ElementNS
- * @typedef {de100x.ElementNS | de100x.HTMLElement} de100x.Element
- */
-
-/**
- * @template TValue
- * @typedef {TValue | null | undefined} de100x.Nullable
- */
-/**
- * @template TValueOrCb
- * @typedef {de100x.Nullable<TValueOrCb> | (() => de100x.Nullable<TValueOrCb>)} de100x.NullableOrCb
- */
-
-/**
- * @template {Element} Elem
- *
- * @typedef {{
- * 	dangerouslySetInnerHTML?: { __html: string };
- *  dataSet?: de100x.NullableOrCb<({ [key: string]: de100x.NullableOrCb<string> })>;
- *  ariaSet?: de100x.NullableOrCb<({ [key in keyof ARIAMixin]: de100x.NullableOrCb<ARIAMixin[key]> })>;
- *  style?: de100x.NullableOrCb<({ [key in keyof de100x.HTMLElement["style"]]?: de100x.NullableOrCb<de100x.HTMLElement["style"][key]> })>;
- *  ref?: { current: Elem } | ((element: Elem) => void);
- *  [`data-*`]?: de100x.NullableOrCb<string>;
- *  [`aria-*`]?: de100x.NullableOrCb<string>;
- * }} de100x.SharedAttributes
- */
-
-/**
- * @template {Record<string, any>} TElemMap
- * @template {Record<string, any>} TEventMap
- * @template {keyof TElemMap} TTagName
- * @typedef {{
- *   [K in keyof TEventMap as `on${K & string}`]?:
- * 		((event: TEventMap[K] & { target: TElemMap[TTagName] }) => void) |
- * 		[(event: TEventMap[K] & { target: TElemMap[TTagName] }) => void,
- * 	   boolean | AddEventListenerOptions | { onAdd: boolean | AddEventListenerOptions; onRemove: boolean | EventListenerOptions | AddEventListenerOptions}
- * 		];
- * }} de100x.GetEventMapForTag
- */
-
-/**
- * @template {Record<string, any>} TElemMap
- * @template {Record<string, any>} TEventMap
- * @template {keyof TElemMap} TTagName
- * @typedef {{
- *   [Key in keyof TElemMap[TTagName] as (
- *     NonNullable<TElemMap[TTagName][Key]> extends (object | ((...params: any[]) => any)) ? never :
- *     Key
- *   )]?:  TElemMap[TTagName][Key] | (() => TElemMap[TTagName][Key]);
- * }
- * & de100x.GetEventMapForTag<TElemMap, TEventMap, TTagName>
- * & de100x.SharedAttributes<TElemMap[TTagName]>} de100x.GetAttrsForTag
- */
-
-/**
- * @template {keyof de100x.TagNameHTMLPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameHTMLPropsMap, de100x.TagNameHTMLElementEventMap, TTagName>} de100x.AttrsForHTMLTag
- */
-/**
- * @template {keyof de100x.TagNameSVGPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName>} de100x.AttrsForSvgTag
- */
-/**
- * @template {keyof de100x.TagNameMathMLPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName>} de100x.AttrsForMathMLTag
- */
-
-/**
- * @template {keyof de100x.TagNameXHTMLPropsMap} TTagName
- * @typedef {de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName>} de100x.AttrsForXHTMLTag
- */
-
-// de100x.GetNSAttr
-/**
- * @template {de100xNS} TNS
- * @template {keyof de100x.TagName2ElementMap} TTagName
- * @typedef {TNS extends typeof SVG_NS ? TTagName extends keyof de100x.TagNameSVGPropsMap ? de100x.GetAttrsForTag<de100x.TagNameSVGPropsMap, de100x.TagNameSVGElementEventMap, TTagName> : never : TNS extends typeof MathML_NS ? TTagName extends keyof de100x.TagNameMathMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameMathMLPropsMap, de100x.TagNameMathMLElementEventMap, TTagName> : never : TNS extends typeof XHTML_NS ? TTagName extends keyof de100x.TagNameXHTMLPropsMap ? de100x.GetAttrsForTag<de100x.TagNameXHTMLPropsMap, de100x.TagNameXHTMLPropsMap, TTagName> : never : never} de100x.AttrsForNSElement
- */
+} from "./dom-signals.ts";
 
 /**
  * Returns an element with namespace namespace. Its namespace prefix will be everything before ":" (U+003E) in qualifiedName or null. Its local name will be everything after ":" (U+003E) in qualifiedName or qualifiedName.
@@ -153,17 +47,32 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/createElementNS)
  */
 
+// XML namespace constants
+const SVG_NS = "http://www.w3.org/2000/svg";
+const MathML_NS = "http://www.w3.org/1998/Math/MathML";
+const XHTML_NS = "http://www.w3.org/1999/xhtml";
+
 /**
- * Create an element with the given tag name, attributes, and children.
+ * Creates an HTML element with attributes and children
  *
- * @template {keyof de100x.TagNameHTMLPropsMap} TTagName
+ * @template {keyof TagNameHTMLPropsMap} TTagName
+ * @param {TTagName} tagName - HTML tag name (e.g., 'div', 'span')
+ * @param {AttrsForHTMLTag<TTagName>} [attributes] - Element attributes and event handlers
+ * @param {...TChild} children - TChild content (elements, text, or reactive functions)
+ * @returns {HTMLElementTagNameMap[TTagName]} The created DOM element
  *
- * @param {TTagName} tagName - The name of the element to create.
- * @param {de100x.AttrsForHTMLTag<TTagName>} [attributes] - An object containing attributes to set on the element.
- * @param {...de100x.Child} children - An array of child elements or text nodes to append to the created element.
- * @returns {HTMLElementTagNameMap[TTagName]} The created element.
+ * @description
+ * Core function for creating HTML elements with proper attribute handling and
+ * automatic children appending. Similar to React.createElement but for vanilla JS.
+ *
+ * - Handles standard HTML attributes, event handlers, and special properties
+ * - Sets up reactive bindings for signal-based attributes
+ * - Normalizes and appends all children with appropriate DOM operations
+ *
+ * For better developer experience, use element factory functions (t.div, t.span, etc.)
+ * instead of calling this directly.
  */
-function tag(tagName, attributes, ...children) {
+function createHTMLElement(tagName, attributes, ...children) {
   // 1. Create the element
   const element = document.createElement(tagName);
 
@@ -175,9 +84,7 @@ function tag(tagName, attributes, ...children) {
         setGeneralTagAttribute(
           element,
           key,
-          attributes[
-            /** @type {keyof de100x.AttrsForHTMLTag<TTagName>} */ (key)
-          ],
+          attributes[/** @type {keyof AttrsForHTMLTag<TTagName>} */ (key)],
         )
       ) {
         continue;
@@ -185,7 +92,7 @@ function tag(tagName, attributes, ...children) {
       setTagAttribute(
         element,
         /** @type {string} */ (key),
-        attributes[/** @type {keyof de100x.AttrsForHTMLTag<TTagName>} */ (key)],
+        attributes[/** @type {keyof AttrsForHTMLTag<TTagName>} */ (key)],
       );
     }
   }
@@ -195,32 +102,58 @@ function tag(tagName, attributes, ...children) {
 
   return element;
 }
+
 /**
- * Takes a tag name and returns a function _(`tag`)_ that creates elements of that type.
- * This is useful for creating custom elements with specific attributes and children.
+ * Creates a factory function for a specific HTML element type
  *
  * @template {keyof HTMLElementTagNameMap} TTagName
- * @param {TTagName} tagName - The name of the element to create.
- * @returns {(attributes?: de100x.AttrsForHTMLTag<TTagName>, ...children: de100x.Child[]) => HTMLElementTagNameMap[TTagName]} A function that creates an element of the specified type.
+ * @param {TTagName} tagName - The HTML tag to create a factory for
+ * @returns {(attributes?: AttrsForHTMLTag<TTagName>, ...children: TChild[]) => HTMLElementTagNameMap[TTagName]}
+ *
+ * @description
+ * Returns a specialized function for creating a specific element type, offering:
+ *
+ * - More concise element creation syntax (t.div() vs createHTMLElement('div'))
+ * - Better type inference for element-specific attributes
+ * - Consistent API with less repetition in component code
+ *
+ * These factories are automatically created and cached by the tag proxy system.
+ *
+ * @example
+ * const divFactory = htmlElementFactory('div');
+ * const container = divFactory({className: 'container'}, 'Hello world');
  */
-function tagFactory(tagName) {
+function htmlElementFactory(tagName) {
   return function (attributes, ...children) {
-    return tag(tagName, attributes, ...children);
+    return createHTMLElement(tagName, attributes, ...children);
   };
 }
+
 /**
- * Create an element with the given tag name, attributes, and children.
+ * Creates an element with a specific XML namespace
  *
- * @template {de100xNS} TNS
- * @template {keyof de100x.TagName2ElementMap} TTagName
+ * @template {NS} TNS
+ * @template {keyof TagName2ElementMap} TTagName
+ * @param {TNS} namespace - XML namespace URI (SVG_NS, MathML_NS, XHTML_NS)
+ * @param {TTagName} tagName - Element tag name
+ * @param {AttrsForNSElement<TNS, TTagName>} [attributes] - Element attributes
+ * @param {...TChild} children - TChild content
+ * @returns {GetNSElementByNS<TNS>[TTagName]} The namespaced element
  *
- * @param {TNS} namespace - The namespace URI for the element.
- * @param {TTagName} tagName - The name of the element to create.
- * @param {de100x.AttrsForNSElement<TNS, TTagName>} [attributes] - An object containing attributes to set on the element.
- * @param {...de100x.Child} children - An array of child elements or text nodes to append to the created element.
- * @returns {de100x.GetNSElementByNS<TNS>[TTagName]} The created element.
+ * @description
+ * Creates elements in non-HTML namespaces like SVG, MathML, and XHTML.
+ * Properly handles namespace-specific attributes and ensures correct
+ * element creation with createElementNS.
+ *
+ * This is essential for:
+ * - SVG graphics (paths, circles, etc.)
+ * - MathML for mathematical notation
+ * - XML-based documents with mixed namespaces
+ *
+ * For better developer experience, use t(SVG_NS).path() syntax instead
+ * of calling this directly.
  */
-function tagNS(namespace, tagName, attributes, ...children) {
+function createNamespacedElement(namespace, tagName, attributes, ...children) {
   // 1. Create the element
   const element = document.createElementNS(namespace, tagName);
 
@@ -230,10 +163,10 @@ function tagNS(namespace, tagName, attributes, ...children) {
       if (
         !Object.prototype.hasOwnProperty.call(attributes, key) ||
         setGeneralTagAttribute(
-          /** @type {de100x.ElementNS} */ (element),
+          /** @type {TElementNS} */ (element),
           key,
           attributes[
-            /** @type {keyof de100x.AttrsForNSElement<TNS, TTagName>} */ (key)
+            /** @type {keyof AttrsForNSElement<TNS, TTagName>} */ (key)
           ],
         )
       ) {
@@ -242,11 +175,9 @@ function tagNS(namespace, tagName, attributes, ...children) {
 
       setTagAttributeNS(
         namespace,
-        /** @type {de100x.ElementNS} */ (element),
+        /** @type {TElementNS} */ (element),
         key,
-        attributes[
-          /** @type {keyof de100x.AttrsForNSElement<TNS, TTagName>} */ (key)
-        ],
+        attributes[/** @type {keyof AttrsForNSElement<TNS, TTagName>} */ (key)],
       );
     }
   }
@@ -254,27 +185,38 @@ function tagNS(namespace, tagName, attributes, ...children) {
   // 3. Append children
   appendChildren(element, children);
 
-  return /** @type {de100x.GetNSElementByNS<TNS>[TTagName]} */ (
+  return /** @type {GetNSElementByNS<TNS>[TTagName]} */ (
     /** @type {unknown} */ (element)
   );
 }
+
 /**
- * Takes a tag name and returns a function _(`tag`)_ that creates elements of that type.
- * This is useful for creating custom elements with specific attributes and children.
+ * Creates a factory function for a specific namespaced element type
  *
- * @template {de100xNS} TNS
- * @template {TNS extends typeof SVG_NS ? keyof de100x.TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof de100x.TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof de100x.TagNameXHTMLPropsMap : never} TTagName
+ * @template {NS} TNS
+ * @template {TNS extends typeof SVG_NS ? keyof TagNameSVGPropsMap : TNS extends typeof MathML_NS ? keyof TagNameMathMLPropsMap : TNS extends typeof XHTML_NS ? keyof TagNameXHTMLPropsMap : never} TTagName
+ * @param {TNS} namespace - XML namespace URI (SVG_NS, MathML_NS, XHTML_NS)
+ * @param {TTagName} tagName - Element tag name in the specified namespace
+ * @returns {(attributes?: AttrsForNSElement<TNS,TTagName>, ...children: TChild[]) => GetNSElementByNS<TNS>[TTagName]}
  *
- * @param {TNS} namespace - The namespace URI for the element.
- * @param {TTagName} tagName - The name of the element to create.
- * @returns {(attributes?: de100x.AttrsForNSElement<TNS,TTagName>, ...children: de100x.Child[]) => de100x.GetNSElementByNS<TNS>[TTagName]} A function that creates an element of the specified type.
+ * @description
+ * Returns a specialized function for creating elements of a specific type
+ * within a specific namespace. This enables concise and type-safe creation
+ * of namespaced elements like SVG shapes.
+ *
+ * These factories are automatically created and cached by the namespace-specific
+ * proxy systems.
+ *
+ * @example
+ * const svgPathFactory = namespacedElementFactory(SVG_NS, 'path');
+ * const path = svgPathFactory({d: 'M10 10 H 90 V 90 H 10 Z', fill: 'none', stroke: 'black'});
  */
-function tagNSFactory(namespace, tagName) {
+function namespacedElementFactory(namespace, tagName) {
   return function (attributes, ...children) {
     if (typeof tagName !== "string") {
       throw new Error(`Invalid tag name: ${tagName}`);
     }
-    return tagNS(
+    return createNamespacedElement(
       namespace,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -285,155 +227,162 @@ function tagNSFactory(namespace, tagName) {
   };
 }
 
-/**
- * @typedef {{ [TagName in keyof HTMLElementTagNameMap]: ReturnType<typeof tagFactory<TagName>> }} TagsHTMLProxy
- */
-
-/**
- * @type {Record<string, any>}
- */
-const _basicTagsCache = {};
-/**
- * @type {TagsHTMLProxy}
- */
-const tagsHTMLProxy = new Proxy(
-  /** @type {TagsHTMLProxy} */ (_basicTagsCache),
+/** @type {Record<string, any>} */
+const _htmlElementCache = {};
+/** @type {TagsHTMLProxy} */
+const htmlElementsProxy = new Proxy(
+  /** @type {TagsHTMLProxy} */ (_htmlElementCache),
   {
     /**
      * @template {keyof HTMLElementTagNameMap} TTagName
-     *
-     * @param {TagsHTMLProxy} _target - The target object, used for caching.
-     * @param {TTagName} tagName - The name of the element to create.
-     * @returns
+     * @param {TagsHTMLProxy} _target - The target object, used for caching
+     * @param {TTagName} tagName - HTML tag name to create factory for
+     * @returns {(attributes?: AttrsForHTMLTag<TTagName>, ...children: TChild[]) => HTMLElementTagNameMap[TTagName]}
      */
     get(_target, tagName) {
-      if (!(tagName in _basicTagsCache)) {
-        /** @type {Record<string,any>} */ (_basicTagsCache)[tagName] =
-          tagFactory(tagName);
+      if (!(tagName in _htmlElementCache)) {
+        /** @type {Record<string,any>} */ (_htmlElementCache)[tagName] =
+          htmlElementFactory(tagName);
       }
 
-      return _basicTagsCache[tagName];
+      return _htmlElementCache[tagName];
     },
   },
 );
 
-// TODO: Make one for each ns for now
-/**
- * @typedef {{ [TagName in keyof de100x.TagNameSVGPropsMap]: ReturnType<typeof tagNSFactory<typeof SVG_NS, TagName>> }} TagSVGMapProxy
- */
 /** @type {Record<string, any>} */
-const _svgsTagsCache = {};
-/**
- * @type {TagSVGMapProxy}
- */
-const svgTagsProxy = new Proxy(/** @type {TagSVGMapProxy} */ (_svgsTagsCache), {
-  /**
-   * @template {keyof de100x.TagNameSVGPropsMap} TTagName
-   *
-   * @param {TagSVGMapProxy} _target - The target object, used for caching.
-   * @param {TTagName} tagName - The name of the element to create.
-   */
-  get(_target, tagName) {
-    if (!(tagName in _svgsTagsCache)) {
-      /** @type {Record<string,any>} */ (_svgsTagsCache)[tagName] =
-        tagNSFactory(SVG_NS, tagName);
-    }
-
-    return _svgsTagsCache[tagName];
-  },
-});
-/**
- * @typedef {{ [TagName in keyof de100x.TagNameMathMLPropsMap]: ReturnType<typeof tagNSFactory<typeof MathML_NS, TagName>> }} TagMathMLMapProxy
- */
-/** @type {Record<string, any>} */
-const _mathMLsTagsCache = {};
-/**
- * @type {TagMathMLMapProxy}
- */
-const mathMLTagsProxy = new Proxy(
-  /** @type {TagMathMLMapProxy} */ (_mathMLsTagsCache),
+const _svgElementsCache = {};
+/** @type {TagSVGMapProxy} */
+const svgElementsProxy = new Proxy(
+  /** @type {TagSVGMapProxy} */ (_svgElementsCache),
   {
     /**
-     * @template {keyof de100x.TagNameMathMLPropsMap} TTagName
-     *
-     * @param {TagMathMLMapProxy} _target - The target object, used for caching.
-     * @param {TTagName} tagName - The name of the element to create.
+     * @template {keyof TagNameSVGPropsMap} TTagName
+     * @param {TagSVGMapProxy} _target - The target object, used for caching
+     * @param {TTagName} tagName - SVG tag name to create factory for
      */
     get(_target, tagName) {
-      if (!(tagName in _mathMLsTagsCache)) {
-        /** @type {Record<string,any>} */ (_mathMLsTagsCache)[tagName] =
-          tagNSFactory(MathML_NS, tagName);
+      if (!(tagName in _svgElementsCache)) {
+        /** @type {Record<string,any>} */ (_svgElementsCache)[tagName] =
+          namespacedElementFactory(SVG_NS, tagName);
       }
 
-      return _mathMLsTagsCache[tagName];
+      return _svgElementsCache[tagName];
     },
   },
 );
-/**
- * @typedef {{ [TagName in keyof de100x.TagNameXHTMLPropsMap]: ReturnType<typeof tagNSFactory<typeof XHTML_NS, TagName>> }} TagXHTMLMapProxy
- */
+
 /** @type {Record<string, any>} */
-const _xhtmlsTagsCache = {};
-/**
- * @type {TagXHTMLMapProxy}
- */
-const xhtmlTagsProxy = new Proxy(
-  /** @type {TagXHTMLMapProxy} */ (_xhtmlsTagsCache),
+const _mathMLElementsCache = {};
+/** @type {TagMathMLMapProxy} */
+const mathMLElementsProxy = new Proxy(
+  /** @type {TagMathMLMapProxy} */ (_mathMLElementsCache),
   {
     /**
-     * @template {keyof de100x.TagNameXHTMLPropsMap} TTagName
-     *
-     * @param {TagXHTMLMapProxy} _target - The target object, used for caching.
-     * @param {TTagName} tagName - The name of the element to create.
+     * @template {keyof TagNameMathMLPropsMap} TTagName
+     * @param {TagMathMLMapProxy} _target - The target object, used for caching
+     * @param {TTagName} tagName - MathML tag name to create factory for
      */
     get(_target, tagName) {
-      if (!(tagName in _xhtmlsTagsCache)) {
-        /** @type {Record<string,any>} */ (_xhtmlsTagsCache)[tagName] =
-          tagNSFactory(XHTML_NS, tagName);
+      if (!(tagName in _mathMLElementsCache)) {
+        /** @type {Record<string,any>} */ (_mathMLElementsCache)[tagName] =
+          namespacedElementFactory(MathML_NS, tagName);
       }
 
-      return _xhtmlsTagsCache[tagName];
+      return _mathMLElementsCache[tagName];
     },
   },
 );
-/**
- * @typedef {TagsHTMLProxy & (<TNS extends de100xNS>(namespaceURI: TNS) => TNS extends typeof SVG_NS ? TagSVGMapProxy : TNS extends typeof MathML_NS ? TagMathMLMapProxy : TNS extends typeof XHTML_NS ? TagXHTMLMapProxy : never)} TagsProxy
- */
+
+/** @type {Record<string, any>} */
+const _xhtmlElementsCache = {};
+/** @type {TagXHTMLMapProxy} */
+const xhtmlElementsProxy = new Proxy(
+  /** @type {TagXHTMLMapProxy} */ (_xhtmlElementsCache),
+  {
+    /**
+     * @template {keyof TagNameXHTMLPropsMap} TTagName
+     * @param {TagXHTMLMapProxy} _target - The target object, used for caching
+     * @param {TTagName} tagName - XHTML tag name to create factory for
+     */
+    get(_target, tagName) {
+      if (!(tagName in _xhtmlElementsCache)) {
+        /** @type {Record<string,any>} */ (_xhtmlElementsCache)[tagName] =
+          namespacedElementFactory(XHTML_NS, tagName);
+      }
+
+      return _xhtmlElementsCache[tagName];
+    },
+  },
+);
 
 /**
+ * The universal element creation proxy
+ *
+ * Provides a unified, elegant API for creating DOM elements across all namespaces.
+ *
+ * - HTML elements: t.div(), t.span(), etc.
+ * - SVG elements: t(SVG_NS).path(), t(SVG_NS).circle(), etc.
+ * - MathML elements: t(MathML_NS).math(), etc.
+ * - XHTML elements: t(XHTML_NS).div(), etc.
+ *
+ * Benefits over direct DOM element creation:
+ * - Cleaner, more readable syntax
+ * - Automated attribute handling
+ * - Type checking for element-specific attributes
+ * - Proper namespace handling for mixed-namespace documents
+ * - Efficient factory caching for better performance
+ *
  * @type {TagsProxy}
+ *
+ * @example
+ * // Creating a component with mixed HTML and SVG
+ * function IconButton(props) {
+ *   return t.button(
+ *     { className: 'icon-button', onclick: props.onClick },
+ *     t.span({}, props.label),
+ *     t.svg({ width: 24, height: 24 },
+ *       t(SVG_NS).path({ d: props.iconPath, fill: 'currentColor' })
+ *     )
+ *   );
+ * }
  */
-const tagsProxy = new Proxy(
+const elementCreator = new Proxy(
   /** @type {TagsProxy} */ (/** @type {unknown} */ (() => {})),
   {
     /**
-     * @template {keyof HTMLElementTagNameMap} TTagName
+     * Handles property access for HTML element factories (t.div, t.span, etc.)
      *
-     * @param {any} _target - The target object, used for caching.
-     * @param {TTagName} tagName - The name of the element to create.
-     * @returns
+     * @template {keyof HTMLElementTagNameMap} TTagName
+     * @param {any} _target - The target object (unused)
+     * @param {TTagName} tagName - HTML tag name to create factory for
+     * @returns {(attributes?: AttrsForHTMLTag<TTagName>, ...children: TChild[]) => HTMLElementTagNameMap[TTagName]}
      */
     get(_target, tagName) {
-      if (tagName in _basicTagsCache) {
-        return _basicTagsCache[tagName];
+      if (tagName in _htmlElementCache) {
+        return _htmlElementCache[tagName];
       }
-      return tagsHTMLProxy[tagName];
+      return htmlElementsProxy[tagName];
     },
+
     /**
-     * @param {any} _target - The target object, used for caching.
-     * @param {any} _thisArg
-     * @param {any} argArray - The arguments passed to the function.
+     * Handles function calls to select a namespace (t(SVG_NS), etc.)
+     *
+     * @param {any} _target - The target object (unused)
+     * @param {any} _thisArg - The this context (unused)
+     * @param {any} argArray - The arguments array with namespace as first item
+     * @returns {TagSVGMapProxy|TagMathMLMapProxy|TagXHTMLMapProxy} Namespace-specific proxy
      */
     apply(_target, _thisArg, argArray) {
       const namespaceURI = argArray[0];
 
       switch (namespaceURI) {
         case SVG_NS:
-          return svgTagsProxy;
+          return svgElementsProxy;
         case MathML_NS:
-          return mathMLTagsProxy;
+          return mathMLElementsProxy;
         case XHTML_NS:
-          return xhtmlTagsProxy;
+          return xhtmlElementsProxy;
         default:
           if (typeof namespaceURI !== "string") {
             throw new Error(`Unsupported namespace URI: ${namespaceURI}`);
@@ -444,189 +393,11 @@ const tagsProxy = new Proxy(
             );
           }
 
-          return tagsHTMLProxy;
+          return /** @type {ReturnType<TagsProxy>} */ (htmlElementsProxy);
       }
     },
   },
 );
 
-export { tagsProxy };
-
-/*
-TODO:
-
-Now, I'm thinking of adding other features, foe example
-
-Marked with `?` at the end of the line needs further investigation and consideration.
-
-- [x] `ref` _(object|function)_ to get a reference to the element
-- [x] `style` _(object)_ to set CSS styles
-- [x] `dataSet` _(object)_ to set data attributes
-- [x] `ariaSet` _(object)_ to set ARIA attributes
-- [x] `data-*` attributes
-- [x] `aria-*` attributes
-- [x] `dangerouslySetInnerHTML` to set inner HTML
-- [ ] The implementation here could cause an issue for `setAttribute` vs `setAttributeNS` usage, needs to think of another way
-- [x] `on*` attributes to set event listeners
-- [ ] - Research the following, and how to implement their missing types
-	- [ ] `setAttribute` vs `setAttributeNS`
-	- [ ] svg, "http://www.w3.org/2000/svg", HTMLCollectionOf<SVGElement>;
-	- [ ] xhtml, "http://www.w3.org/1999/xhtml", HTMLCollectionOf<de100x.HTMLElement>;
-	- [ ] math, "http://www.w3.org/1998/Math/MathML", HTMLCollectionOf<MathMLElement>;
-	- [ ] https://github.com/vanilla-extract-css/vanilla-extract/tree/master
-	- [ ] https://github.com/nivekcode/svg-to-ts
-	- [ ] https://github.com/nicojs/typed-html
-	- [ ] https://github.com/falsandtru/typed-dom
-- [ ] Bindings / Signal Integration
-	- [ ] Creates a state management system with reactive bindings
-	- [ ] Allows DOM creation and manipulation with a simple API
-	- [ ] Provides a way to bind state to DOM elements
-	- [ ] Tracks dependencies and automatically updates the DOM when state changes
-- [ ] Garbage Collection
-- [ ] Allow any tag name with a default type of HTMLElement or Element
-
-- [ ] Fragment Support, to create a document fragment?
-- [ ] `key` to identify elements in a list?
-- [ ] Portal Support?
-- [ ] Custom Components (Function-based Elements)?
-- [ ] Dynamic Tag Factories (tag("my-tag"))?
-
-
-Give a list of other ideas for now
-*/
-// {
-// const h = tagsProxy;
-// const svg = tagsProxy(SVG_NS);
-// const math = tagsProxy(MathML_NS);
-// const xhtml = tagsProxy(XHTML_NS);
-
-// console.log(h);
-// console.log(svg);
-
-// const element = h.div(
-//   {
-//     className: "bg-red-500",
-//     style: {
-//       color: "white",
-//       backgroundColor: "red",
-//     },
-//     onclick: () => {
-//       console.log("clicked");
-//     },
-//   },
-//   h.p({}, "Hello World"),
-//   h.input({
-//     oninput: (e) => console.log(e.target.value),
-//   }),
-//   h.a({ href: "#" }, "Link"),
-//   h.button({}, "Click me"),
-//   h.canvas({
-//     width: 100,
-//     height: 100,
-//     style: {
-//       backgroundColor: "blue",
-//     },
-//     onload: (e) => {
-//       const ctx = /** @type {CanvasRenderingContext2D} */ (
-//         e.target.getContext("2d")
-//       );
-//       if (!ctx) return;
-
-//       const animate = () => {
-//         ctx.clearRect(0, 0, 100, 100);
-//         ctx.fillStyle = "red";
-//         ctx.fillRect(0, 0, 100, 100);
-//         requestAnimationFrame(animate);
-//       };
-//       animate();
-//     },
-//   }),
-// );
-// console.log(element);
-// // document.body.appendChild(element);
-
-// const svgElement = svg.svg(
-//   // Maybe make the props could either {attributes} be a 2 items tuple if [{attributes}, {attributesNS}] or pass a special object `ns: object` on the attributes
-//   {
-//     width: "100",
-//     height: "100",
-//   },
-//   svg.path({
-//     d: "M10 10 H 90 V 90 H 10 L 10 10",
-//     fill: "none",
-//     stroke: "black",
-//   }),
-// );
-// console.log(svgElement);
-// // document.body.appendChild(svgElement);
-
-// const mathElement = math.math(
-//   {
-//     style: {
-//       color: "blue",
-//       backgroundColor: "blue",
-//     },
-//     className: "bg-blue-500",
-//   },
-//   math.mrow(
-//     {},
-//     math.mi({}, "a"),
-//     math.mo({}, "+"),
-//     math.mi({}, "b"),
-//     math.mo({}, "="),
-//     math.mi({}, "c"),
-//   ),
-//   math.mrow(
-//     {},
-//     math.mi({}, "d"),
-//     math.mo({}, "+"),
-//     math.mi({}, "e"),
-//     math.mo({}, "="),
-//     math.mi({}, "f"),
-//   ),
-//   math.mrow(
-//     {},
-//     math.mi({}, "g"),
-//     math.mo({}, "+"),
-//     math.mi({}, "h"),
-//     math.mo({}, "="),
-//     math.mi({}, "i"),
-//   ),
-//   math.mrow(
-//     {},
-//     math.mi({}, "j"),
-//     math.mo({}, "+"),
-//     math.mi({}, "k"),
-//     math.mo({}, "="),
-//     math.mi({}, "l"),
-//   ),
-//   math.mrow(
-//     {},
-//     math.mi({}, "x"),
-//     math.mo({}, "+"),
-//     math.mi({}, "y"),
-//     math.mo({}, "="),
-//     math.mi({}, "z"),
-//   ),
-// );
-// console.log(mathElement);
-// // document.body.appendChild(mathElement);
-
-// const xhtmlElement = xhtml.div(
-//   {
-//     className: "bg-blue-500",
-//     style: {
-//       color: "white",
-//       backgroundColor: "blue",
-//     },
-//   },
-//   xhtml.p({}, "Hello World"),
-//   xhtml.input({
-//     oninput: (e) => console.log(e.target.value),
-//   }),
-//   xhtml.a({ href: "#" }, "Link"),
-//   xhtml.button({}, "Click me"),
-// );
-// console.log(xhtmlElement);
-// // document.body.appendChild(xhtmlElement);
-// }
+// We export as both the descriptive name and the concise name (t) for developer preference
+export { elementCreator, elementCreator as t };

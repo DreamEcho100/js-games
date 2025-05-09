@@ -3,7 +3,7 @@
 import initGameScreen from "#libs/core/dom.js";
 import { adjustCanvas, CanvasConfig } from "#libs/dom/index.js";
 import { scale2dSizeToFit } from "#libs/math.js";
-import { tagsProxy as t } from "#libs/spa/dom.js";
+import { t } from "#libs/spa/dom.js";
 import { generateSpriteAnimationStates } from "#libs/sprite.js";
 import { resolveBaseImportUrl } from "#libs/urls.js";
 

@@ -1,8 +1,8 @@
 /** @import { SignalValue, MemoValue } from "#libs/spa/signals"; */
 
 import { createSignal, createMemo, createScope } from "#libs/spa/signals.js";
-import { tagsProxy as t } from "#libs/spa/dom.js";
-import { $list, $toggle } from "#libs/spa/dom-signal.js";
+import { t } from "#libs/spa/dom.js";
+import { $list, $toggle } from "#libs/spa/dom-signals.js";
 
 t.h1({});
 
