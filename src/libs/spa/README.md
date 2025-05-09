@@ -9,6 +9,9 @@ A lightweight, type-safe reactive framework for creating Single Page Application
 - **Type Safety**: Full TypeScript support with JSDoc for pure JavaScript projects
 - **Modern Component Patterns**: Function-based components with hooks-like behavior
 - **Standards-Based**: Built directly on browser APIs, not abstractions
+- **Performance**: avoiding unnecessary features or providing alternative
+- **Simplicity**: clear mental model for users
+- **Flexibility**: letting users implement specialized behaviors that can easily work with the current system
 
 ## Core Architecture
 
@@ -288,11 +291,32 @@ function TodoApp() {
 - [x] Switch-based rendering with `$switch`
 - [x] Context system for value propagation
 - [x] Namespace support (SVG, MathML, XHTML)
+- [ ] Input Cursor Preservation
 - [ ] Error boundaries for isolated error handling
 - [ ] View Transition API integration for smooth UI transitions
 - [ ] Fragment support for more efficient component composition
+
+  ```javascript
+  // Special attribute approach
+  case "valuePreserveSelection": {
+    handleReactiveValue(valueOrReactive, (value) => {
+      if (value == null) return;
+      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        updateInputValuePreservingSelection(element, value);
+      }
+    });
+    return true;
+  }
+  ```
+
+- [ ] Expand on handling `ref`
+- [ ] Expand on handling `behaviorOnUnmount="keep"` on the `$toggle` and `switch` functions to
+  - Keep elements in DOM but hide them with CSS vs removing them from the dom, cach, and reusing them when needed.
+  - Allow animation state to persist?
+  - Provide memory/performance options to users
 - [ ] Generic element support for any tag name
 - [ ] Proper namespace attribute handling
+- [ ] Web Component Handling?
 - [ ] Additional reactive components:
   - [ ] `$portal` - Render content outside the DOM hierarchy
   - [ ] `$errorBoundary` - Isolate and handle UI errors

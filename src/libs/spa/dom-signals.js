@@ -133,6 +133,27 @@ function handleReactiveValue(valueOrReactive, onValue) {
 }
 
 /**
+ *
+ * @param {HTMLInputElement|HTMLTextAreaElement} input
+ * @param {*} newValue
+ */
+function updateInputValuePreservingSelection(input, newValue) {
+  if (document.activeElement === input) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const direction = input.selectionDirection ?? "none";
+
+    input.value = newValue == null ? "" : newValue;
+
+    if (document.activeElement === input) {
+      input.setSelectionRange(start, end, direction);
+    }
+  } else {
+    input.value = newValue == null ? "" : newValue;
+  }
+}
+
+/**
  * 🧩 Processes special element attributes/properties
  *
  * Handles attributes that need special treatment beyond simple setAttribute:
@@ -158,11 +179,8 @@ function setSpecialElementAttribute(element, attributeName, valueOrReactive) {
         valueOrReactive,
         // Handle style as string
         (value) => {
-          if (value == null) {
-            element.style.cssText = "";
-            return;
-          }
-          element.style.cssText = /** @type {string} */ (value);
+          element.style.cssText =
+            value == null ? "" : /** @type {string} */ (value);
         },
         // Handle style as object with properties
         (propertyName, propertyValue) => {
@@ -177,84 +195,75 @@ function setSpecialElementAttribute(element, attributeName, valueOrReactive) {
       return true;
     }
 
-    // Handle className (class attribute)
-    case "className": {
-      handleReactiveValue(valueOrReactive, (value) => {
-        if (value == null) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          element.className = "";
-          return;
-        }
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        element.className = /** @type {string} */ (value);
-      });
-      return true;
-    }
-
     /*
-# DOM Properties vs Attributes: Why Direct Assignment Matters
+      # DOM Properties vs Attributes: Why Direct Assignment Matters
 
-The special handling for element properties like `value`, `checked`, and others in your code is necessary due to a fundamental distinction in how browsers handle DOM attributes versus DOM properties.
+      The special handling for element properties like `value`, `checked`, and others in your code is necessary due to a fundamental distinction in how browsers handle DOM attributes versus DOM properties.
 
-## The Attribute-Property Gap
+      ## The Attribute-Property Gap
 
-When working with DOM elements, there are two parallel systems:
+      When working with DOM elements, there are two parallel systems:
 
-1. **HTML Attributes** - The string values you declare in HTML markup
-   ```html
-   <input type="text" value="initial value">
-   ```
+      1. **HTML Attributes** - The string values you declare in HTML markup
+        ```html
+        <input type="text" value="initial value">
+        ```
 
-2. **DOM Properties** - The JavaScript object properties on DOM element objects
-   ```javascript
-   element.value = "updated value";
-   ```
+      2. **DOM Properties** - The JavaScript object properties on DOM element objects
+        ```javascript
+        element.value = "updated value";
+        ```
 
-While these often seem connected, they don't always stay synchronized, which creates these problems:
+      While these often seem connected, they don't always stay synchronized, which creates these problems:
 
-## Why Direct Assignment Is Required
+      ## Why Direct Assignment Is Required
 
-Take the `value` property as an example:
+      Take the `value` property as an example:
 
-```javascript
-// This updates what the user SEES in the field
-inputElement.value = "New text";
+      ```javascript
+      // This updates what the user SEES in the field
+      inputElement.value = "New text";
 
-// This only updates the attribute, NOT necessarily what the user sees
-inputElement.setAttribute("value", "New text");
-```
+      // This only updates the attribute, NOT necessarily what the user sees
+      inputElement.setAttribute("value", "New text");
+      ```
 
-This difference exists because:
+      This difference exists because:
 
-1. **Initial vs Current State**: Attributes generally represent the *initial state* from HTML, while properties represent the *current state* including user interactions.
+      1. **Initial vs Current State**: Attributes generally represent the *initial state* from HTML, while properties represent the *current state* including user interactions.
 
-2. **Type Differences**: Attributes are always strings, while properties can be booleans, numbers, objects, etc.
+      2. **Type Differences**: Attributes are always strings, while properties can be booleans, numbers, objects, etc.
 
-## Common Problem Cases
+      ## Common Problem Cases
 
-| Property | Problem with setAttribute |
-|----------|--------------------------|
-| `value` | Doesn't update the visible input value after user interaction |
-| `checked` | Doesn't toggle checkboxes visually |
-| `selectedIndex` | Won't change the visible selected option |
-| `disabled` | May not disable the element properly |
-| `indeterminate` | Has no attribute equivalent at all |
+      | Property | Problem with setAttribute |
+      |----------|--------------------------|
+      | `value` | Doesn't update the visible input value after user interaction |
+      | `checked` | Doesn't toggle checkboxes visually |
+      | `selectedIndex` | Won't change the visible selected option |
+      | `disabled` | May not disable the element properly |
+      | `indeterminate` | Has no attribute equivalent at all |
 
-## How Browsers Handle Them
+      ## How Browsers Handle Them
 
-When a browser parses HTML:
-1. It creates the HTML element from attributes
-2. It initializes corresponding DOM properties from attributes
-3. After that, properties and attributes can diverge:
-   - User interactions update properties, not attributes
-   - Some properties never sync back to attributes
+      When a browser parses HTML:
+      1. It creates the HTML element from attributes
+      2. It initializes corresponding DOM properties from attributes
+      3. After that, properties and attributes can diverge:
+        - User interactions update properties, not attributes
+        - Some properties never sync back to attributes
 
-By directly setting properties, your library ensures that both the internal state and the visible UI state stay synchronized, which is critical for a reactive framework that needs to reliably update what users see.
+      By directly setting properties, your library ensures that both the internal state and the visible UI state stay synchronized, which is critical for a reactive framework that needs to reliably update what users see.
       */
 
     // Handle more properties that need direct assignment
+    case "className":
+    case "tabIndex":
+    case "scrollTop":
+    case "scrollLeft":
+    case "defaultValue":
+    case "defaultChecked":
+    case "contentDocument":
     case "selectedIndex":
     case "readOnly":
     case "indeterminate":
@@ -262,18 +271,14 @@ By directly setting properties, your library ensures that both the internal stat
     case "textContent":
     case "volume":
     case "currentTime":
-    case "checked":
-    case "value": {
+    case "playbackRate":
+    case "value":
+    case "checked": {
       handleReactiveValue(valueOrReactive, (value) => {
-        if (value == null) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          element[attributeName] = "";
-          return;
-        }
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        element[attributeName] = /** @type {string} */ (value);
+        element[attributeName] =
+          value == null ? "" : /** @type {string} */ (value);
       });
       return true;
     }
@@ -283,15 +288,9 @@ By directly setting properties, your library ensures that both the internal stat
     case "disabled":
     case "muted": {
       handleReactiveValue(valueOrReactive, (value) => {
-        if (value == null) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          element[attributeName] = false;
-          return;
-        }
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        element[attributeName] = value;
+        element[attributeName] = value == null ? false : value;
       });
       return true;
     }
@@ -302,23 +301,19 @@ By directly setting properties, your library ensures that both the internal stat
         valueOrReactive,
         // Handle dataset as complete object
         (value) => {
-          if (value == null) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            element.dataset = {};
-            return;
-          }
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          element.dataset = /** @type {Record<string, string>} */ (value);
+          element.dataset =
+            value == null
+              ? {}
+              : /** @type {Record<string, string>} */ (
+                  /**  @type {unknown} */ (value)
+                );
         },
         // Handle individual dataset properties
         (key, value) => {
-          if (value == null) {
-            element.dataset[key] = "";
-            return;
-          }
-          element.dataset[key] = /** @type {string} */ (value);
+          element.dataset[key] =
+            value == null ? "" : /** @type {string} */ (value);
         },
       );
       return true;
@@ -365,11 +360,8 @@ By directly setting properties, your library ensures that both the internal stat
         },
         // Handle individual aria attributes
         (key, value) => {
-          if (value == null) {
-            element[/** @type {AriaKey} */ (key)] = "";
-            return;
-          }
-          element[/** @type {AriaKey} */ (key)] = /** @type {string} */ (value);
+          element[/** @type {AriaKey} */ (key)] =
+            value == null ? "" : /** @type {string} */ (value);
         },
       );
 
@@ -383,11 +375,7 @@ By directly setting properties, your library ensures that both the internal stat
     // Handle innerHTML with security warning
     case "dangerouslySetInnerHTML": {
       handleReactiveValue(valueOrReactive, (value) => {
-        if (value == null) {
-          element.innerHTML = "";
-          return;
-        }
-        element.innerHTML = /** @type {string} */ (value);
+        element.innerHTML = value == null ? "" : /** @type {string} */ (value);
       });
       return true;
     }
