@@ -387,19 +387,19 @@ function setSpecialElementAttribute(element, attributeName, valueOrReactive) {
           valueOrReactive
         );
 
-      document.startViewTransition(() => {
-        if (typeof refValue === "function") {
-          refValue(element);
-        } else if (
-          refValue &&
-          typeof refValue === "object" &&
-          "current" in refValue
-        ) {
-          refValue.current = element;
-        }
-        return true;
-      });
+      // document.startViewTransition(() => {
+      if (typeof refValue === "function") {
+        refValue(element);
+      } else if (
+        refValue &&
+        typeof refValue === "object" &&
+        "current" in refValue
+      ) {
+        refValue.current = element;
+      }
       return true;
+      // });
+      // return true;
     }
   }
 

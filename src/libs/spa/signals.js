@@ -1105,10 +1105,15 @@ function createContext(defaultValue, options) {
      * @param {() => TReturn} fn
      */
     Provider: (valueOrSignal, fn) => {
-      const value = isSignal(valueOrSignal)
-        ? valueOrSignal
-        : createSignal(valueOrSignal);
-      return provideContext(id, value, fn);
+      const contextProviderScope = createScope(() => {
+        const value = isSignal(valueOrSignal)
+          ? valueOrSignal
+          : createSignal(valueOrSignal);
+        return provideContext(id, value, fn);
+      });
+
+      onScopeCleanup(contextProviderScope.dispose);
+      return contextProviderScope.result;
     },
     /**
      * @param {SignalValue<TValue>|TValue} valueOrSignal
@@ -1120,10 +1125,15 @@ function createContext(defaultValue, options) {
        * @param {() => TReturn} fn
        */
       (fn) => {
-        const value = isSignal(valueOrSignal)
-          ? valueOrSignal
-          : createSignal(valueOrSignal);
-        return provideContext(id, value, fn);
+        const contextProviderScope = createScope(() => {
+          const value = isSignal(valueOrSignal)
+            ? valueOrSignal
+            : createSignal(valueOrSignal);
+          return provideContext(id, value, fn);
+        });
+
+        onScopeCleanup(contextProviderScope.dispose);
+        return contextProviderScope.result;
       },
   };
 
