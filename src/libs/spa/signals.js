@@ -196,7 +196,7 @@ function disposeScope(scope) {
   scope.pendingMicrotask = false;
 
   // Run cleanup functions registered with onScopeCleanup
-  scope.cleanups.forEach((cleanup) => cleanup());
+  for (const cleanup of scope.cleanups) cleanup();
   scope.cleanups = [];
 
   // Remove from parent scope's children

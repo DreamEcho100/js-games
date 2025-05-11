@@ -286,11 +286,12 @@ function TodoApp() {
 - [x] Event handling with options support
 - [x] Special attribute handling (style, className, data-*, aria-*)
 - [x] Reference system to get DOM element instances
-- [x] Efficient list rendering with key-based reconciliation
+- [x] Efficient list rendering with key-based reconciliation `$list`
 - [x] Conditional rendering with `$toggle`
 - [x] Switch-based rendering with `$switch`
 - [x] Context system for value propagation
 - [x] Namespace support (SVG, MathML, XHTML)
+- [ ] Use `createScope` for context provider
 - [ ] Input Cursor Preservation
 - [ ] Error boundaries for isolated error handling
 - [ ] View Transition API integration for smooth UI transitions

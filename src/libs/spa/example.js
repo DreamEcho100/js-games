@@ -4,8 +4,6 @@ import { createSignal, createMemo, createScope } from "#libs/spa/signals.js";
 import { t } from "#libs/spa/dom.js";
 import { $list, $toggle } from "#libs/spa/dom-signals.js";
 
-t.h1({});
-
 /**
  * @typedef {{
  * 	completed?: boolean;
@@ -421,12 +419,6 @@ function TodoApp() {
       return filteredTodos().some((todo) => todo.completed);
     });
 
-    // // Persist to localStorage whenever todos change
-    // createEffect(() => {
-    //   const currentTodos = todos();
-    //   localStorage.setItem("todos", JSON.stringify(currentTodos));
-    // });
-
     // Helper functions
     /** @returns {Todo[]} */
     function loadFromLocalStorage() {
@@ -472,7 +464,7 @@ function TodoApp() {
     );
 
     return appContainer;
-  }).result;
+  });
 }
 
 /**
@@ -483,7 +475,7 @@ export function initializeTodoApp(parent) {
   // Mount the app to the DOM
   document.addEventListener("DOMContentLoaded", () => {
     const app = TodoApp();
-    (parent ?? document.body).appendChild(app);
+    (parent ?? document.body).appendChild(app.result);
 
     // Add Tailwind CSS
     const tailwindLink = document.createElement("link");
