@@ -72,6 +72,13 @@ function NewTodoInput({
     updateTodos((current) => current.map((todo) => ({ ...todo, completed })));
   }
 
+  function shuffleTodos() {
+    updateTodos((current) => {
+      const shuffled = [...current].sort(() => Math.random() - 0.5);
+      return shuffled;
+    });
+  }
+
   return t.div(
     { className: "relative grid gap-2" },
     t.form(
@@ -90,34 +97,50 @@ function NewTodoInput({
         oninput: (e) => newTodoText.set(e.target.value),
       }),
     ),
-    $toggle(
-      () => getFilteredTodosSize() > 0,
-      () =>
-        t.button(
-          {
-            className:
-              "w-fit text-gray-400 hover:text-gray-700 transition-colors",
-            onclick: () => {
-              const allCompleted =
-                getCompletedFilteredTodosSize() === getFilteredTodosSize();
-              toggleAll(!allCompleted);
+    t.div(
+      { className: "flex justify-between items-center" },
+      $toggle(
+        () => getFilteredTodosSize() > 0,
+        () =>
+          t.button(
+            {
+              className:
+                "w-fit text-gray-400 hover:text-gray-700 transition-colors",
+              onclick: () => {
+                const allCompleted =
+                  getCompletedFilteredTodosSize() === getFilteredTodosSize();
+                toggleAll(!allCompleted);
+              },
+              ariaLabel: () => {
+                const allCompleted =
+                  getCompletedFilteredTodosSize() === getFilteredTodosSize();
+                return allCompleted
+                  ? "Mark all as incomplete"
+                  : "Mark all as complete";
+              },
             },
-            ariaLabel: () => {
+            () => {
               const allCompleted =
                 getCompletedFilteredTodosSize() === getFilteredTodosSize();
               return allCompleted
-                ? "Mark all as incomplete"
-                : "Mark all as complete";
+                ? "▼ Mark all as incomplete"
+                : "▼ Mark all as complete";
             },
+          ),
+      ),
+      t.div(
+        {
+          className: "flex justify-end items-center",
+        },
+        t.button(
+          {
+            className: "text-gray-500 hover:text-gray-700",
+            onclick: shuffleTodos,
+            ariaLabel: "Shuffle todos",
           },
-          () => {
-            const allCompleted =
-              getCompletedFilteredTodosSize() === getFilteredTodosSize();
-            return allCompleted
-              ? "▼ Mark all as incomplete"
-              : "▼ Mark all as complete";
-          },
+          "🔀",
         ),
+      ),
     ),
   );
 }
@@ -435,27 +458,12 @@ function TodoApp() {
       });
     }
 
-    function shuffleTodos() {
-      updateTodos((current) => {
-        const shuffled = [...current].sort(() => Math.random() - 0.5);
-        return shuffled;
-      });
-    }
-
     // Main app container
     const appContainer = t.div(
       {
         className:
-          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4 relative",
+          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4",
       },
-      t.button(
-        {
-          className: "absolute top-4 right-4 text-gray-500 hover:text-gray-700",
-          onclick: shuffleTodos,
-          ariaLabel: "Shuffle todos",
-        },
-        "🔀",
-      ),
       Header({
         newTodoText,
         updateTodos: updateTodos,
