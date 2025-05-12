@@ -1,6 +1,11 @@
 /** @import { SignalValue, MemoValue } from "#libs/spa/signals"; */
 
-import { createSignal, createMemo, createScope } from "#libs/spa/signals.js";
+import {
+  createSignal,
+  createMemo,
+  createScope,
+  createEffect,
+} from "#libs/spa/signals.js";
 import { t } from "#libs/spa/dom.js";
 import { $list, $toggle } from "#libs/spa/dom-signals.js";
 
@@ -18,10 +23,11 @@ import { $list, $toggle } from "#libs/spa/dom-signals.js";
 /**
  *
  * @param {{
- * 	newTodoText: SignalValue<string>
- *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
- *  getFilteredTodosSize: () => number
- *  getCompletedFilteredTodosSize: () => number
+ * 	newTodoText: SignalValue<string>;
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void;
+ *  getFilteredTodosSize: () => number;
+ *  getCompletedFilteredTodosSize: () => number;
+ *  getIsInitializing: SignalValue<boolean>;
  * }} props
  */
 function Header(props) {
@@ -40,10 +46,11 @@ function Header(props) {
 /**
  *
  * @param {{
- * 	newTodoText: SignalValue<string>
- *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
- *  getFilteredTodosSize: () => number
- *  getCompletedFilteredTodosSize: () => number
+ * 	newTodoText: SignalValue<string>;
+ *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void;
+ *  getFilteredTodosSize: () => number;
+ *  getCompletedFilteredTodosSize: () => number;
+ *  getIsInitializing: SignalValue<boolean>;
  * }} props
  */
 function NewTodoInput({
@@ -51,6 +58,7 @@ function NewTodoInput({
   updateTodos,
   getCompletedFilteredTodosSize,
   getFilteredTodosSize,
+  getIsInitializing,
 }) {
   /** @param {string} text  */
   function addTodo(text) {
@@ -88,6 +96,11 @@ function NewTodoInput({
         className: "flex",
         onsubmit: (e) => {
           e.preventDefault();
+          const isInitializing = getIsInitializing.peek();
+          if (isInitializing) {
+            return;
+          }
+
           addTodo(newTodoText());
         },
       },
@@ -420,33 +433,36 @@ function FilterButton({ filterName, label, todoStatusFilter }) {
 }
 
 // Helper functions
-/** @returns {Todo[]} */
+/** @returns {Todo[]|undefined} */
 function loadFromLocalStorage() {
   try {
     const saved = localStorage.getItem("todos");
-    return saved ? JSON.parse(saved) : [];
+    return saved && JSON.parse(saved);
   } catch (e) {
     console.error("Error loading todos from localStorage", e);
-    return [];
+    return undefined;
   }
 }
-/** @returns {TodoStatusFilter} */
+/** @returns {TodoStatusFilter|undefined} */
 function loadTodoStatusFilter() {
   try {
     const saved = localStorage.getItem("todoStatusFilter");
-    return saved ? JSON.parse(saved) : "all";
+    return saved && JSON.parse(saved);
   } catch (e) {
     console.error("Error loading todos from localStorage", e);
-    return "all";
+    return undefined;
   }
 }
 
 function TodoApp() {
   return createScope(() => {
     // State management
-    const todos = createSignal(loadFromLocalStorage());
-    const todoStatusFilter = createSignal(loadTodoStatusFilter());
+    const todos = createSignal(/** @type {Todo[]} */ ([]));
+    const todoStatusFilter = createSignal(
+      /** @type {TodoStatusFilter} */ ("all"),
+    );
     const newTodoText = createSignal("");
+    const isInitializing = createSignal(true);
 
     // Derived state
     const filteredTodos = createMemo(() => {
@@ -486,6 +502,18 @@ function TodoApp() {
       });
     }
 
+    createEffect(() => {
+      const savedTodos = loadFromLocalStorage();
+      if (savedTodos) {
+        todos.set(savedTodos);
+      }
+      const savedFilter = loadTodoStatusFilter();
+      if (savedFilter) {
+        todoStatusFilter.set(savedFilter);
+      }
+      isInitializing.set(false);
+    });
+
     // Main app container
     const appContainer = t.div(
       {
@@ -497,10 +525,12 @@ function TodoApp() {
         updateTodos,
         getCompletedFilteredTodosSize: completedFilteredTodosSize,
         getFilteredTodosSize: filteredTodosSize,
+        getIsInitializing: isInitializing,
       }),
       Main({
         filteredTodosSignal: filteredTodos,
         updateTodos,
+        getFilteredTodosSize: filteredTodosSize,
       }),
       Footer({
         getTodos: todos,
@@ -508,6 +538,7 @@ function TodoApp() {
         filteredRemainingCount,
         hasCompleted,
         todoStatusFilter,
+        getFilteredTodosSize: filteredTodosSize,
         getFilteredTodosSize: filteredTodosSize,
       }),
     );

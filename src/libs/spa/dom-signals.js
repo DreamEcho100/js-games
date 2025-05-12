@@ -1068,7 +1068,7 @@ function $list(list, key, renderItem) {
               }
             }
           }
-
+          ("hydration vs resumebility");
           // If no new next element found, use the placeholder
           if (!hasNewNextElement) {
             prevAnchor = placeholder;

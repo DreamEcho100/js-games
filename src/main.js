@@ -1,4 +1,4 @@
-import { initializeTodoApp } from "#/libs/spa/example";
+import { initializeTodoApp } from "#libs/spa/examples/spa.js";
 /** @import { ScreenHandlerParams } from "#libs/types/core.js"; */
 
 // import "view-transitions-polyfill";
