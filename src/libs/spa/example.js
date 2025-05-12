@@ -438,7 +438,6 @@ function TodoApp() {
     function shuffleTodos() {
       updateTodos((current) => {
         const shuffled = [...current].sort(() => Math.random() - 0.5);
-        console.log("___ Shuffled todos:", shuffled);
         return shuffled;
       });
     }
@@ -447,7 +446,7 @@ function TodoApp() {
     const appContainer = t.div(
       {
         className:
-          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4",
+          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4 relative",
       },
       t.button(
         {

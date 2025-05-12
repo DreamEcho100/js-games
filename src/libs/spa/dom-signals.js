@@ -1047,6 +1047,7 @@ function $list(list, key, renderItem) {
           prevEntries.delete(nodeKey);
         } else {
           // Check for next existing element to insert properly, this should be working if there is `prevEntries`
+          let hasNewNextElement = false;
           if (prevEntries.size > 0) {
             for (let j = i + 1; j < maxLength; j++) {
               const nextItem = listValue[j];
@@ -1060,11 +1061,17 @@ function $list(list, key, renderItem) {
                   prevEntries.get(nextNodeKey)?.lastElementToBeInserted;
                 if (nextElement) {
                   prevAnchor = nextElement;
+                  hasNewNextElement = true;
                   break;
                 }
                 // If element not found, continue searching in later positions
               }
             }
+          }
+
+          // If no new next element found, use the placeholder
+          if (!hasNewNextElement) {
+            prevAnchor = placeholder;
           }
 
           // debugger;
