@@ -11,6 +11,8 @@ import { $list, $toggle } from "#libs/spa/dom-signals.js";
  *  id: number
  *  text: string
  * }} Todo
+ *
+ * @typedef {"all" | "active" | "completed"} TodoStatusFilter
  */
 
 /**
@@ -80,7 +82,7 @@ function NewTodoInput({
   }
 
   return t.div(
-    { className: "relative grid gap-2" },
+    { className: "relative grid gap-4" },
     t.form(
       {
         className: "flex",
@@ -199,7 +201,7 @@ function TodoItem({ getTodo, updateTodos }) {
   return t.li(
     {
       className:
-        "group flex items-center border-b py-2 px-2 transition-all hover:bg-gray-50 max-w-full",
+        "group flex items-center border-b py-2 px-2 transition-all hover:bg-gray-50 max-w-full last:border-b-0",
     },
     $toggle(
       () => !getTodo().editing,
@@ -211,7 +213,7 @@ function TodoItem({ getTodo, updateTodos }) {
           t.input({
             type: "checkbox",
             className:
-              "mr-3 h-5 w-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500",
+              "me-3 h-5 w-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500",
             checked: () => !!getTodo().completed,
             onchange: () => toggleTodo(getTodo().id),
             ariaLabel: () =>
@@ -321,7 +323,7 @@ function Main({ filteredTodosSignal, updateTodos }) {
  *  updateTodos: (cb: (value: Todo[]) => Todo[]) => void
  *  filteredRemainingCount: MemoValue<number>
  *  hasCompleted: MemoValue<boolean>
- *  filter: SignalValue<string>
+ *  todoStatusFilter: SignalValue<TodoStatusFilter>
  *  getFilteredTodosSize: () => number
  * }} props
  */
@@ -331,92 +333,124 @@ function Footer({
   filteredRemainingCount,
   getFilteredTodosSize,
   hasCompleted,
-  filter,
+  todoStatusFilter,
 }) {
   function clearCompleted() {
     updateTodos((current) => current.filter((todo) => !todo.completed));
   }
 
-  return $toggle(
-    () => getTodos().length > 0,
-    () =>
-      t.footer(
-        {
-          className:
-            "flex flex-wrap justify-between items-center text-sm text-gray-500 px-2",
-        },
-        t.span({ className: "mr-4 my-1" }, () => {
-          const remaining = filteredRemainingCount();
-          const total = getFilteredTodosSize();
-          const completed = total - remaining;
-
-          return `${completed} item${
-            completed !== 1 ? "s" : ""
-          } left  ${total} item${total !== 1 ? "s" : ""} left`;
-        }),
+  return t.footer(
+    { className: "grid gap-4" },
+    $toggle(
+      () => getTodos().length > 0,
+      () =>
         t.div(
-          { className: "flex space-x-1 my-1" },
-          FilterButton({ filterName: "all", label: "All", filter }),
-          FilterButton({ filterName: "active", label: "Active", filter }),
-          FilterButton({ filterName: "completed", label: "Completed", filter }),
-        ),
-        $toggle(hasCompleted, () =>
-          t.button(
-            {
-              className:
-                "my-1 text-gray-500 hover:text-gray-700 hover:underline transition-colors",
-              onclick: clearCompleted,
-            },
-            "Clear completed",
+          {
+            className:
+              "flex flex-col gap-2 justify-center text-sm text-gray-500",
+          },
+          t.p({}, () => {
+            const remaining = filteredRemainingCount();
+            const total = getFilteredTodosSize();
+            const completed = total - remaining;
+
+            return `${completed} item${
+              completed !== 1 ? "s" : ""
+            } left  ${total} item${total !== 1 ? "s" : ""} left`;
+          }),
+          t.div(
+            { className: "flex gap-x-1" },
+            [
+              { filterName: /** @type {const} */ ("all"), label: "All" },
+              { filterName: /** @type {const} */ ("active"), label: "Active" },
+              {
+                filterName: /** @type {const} */ ("completed"),
+                label: "Completed",
+              },
+            ].map(({ filterName, label }) =>
+              FilterButton({ filterName, label, todoStatusFilter }),
+            ),
+          ),
+          $toggle(hasCompleted, () =>
+            t.button(
+              {
+                className:
+                  "w-fit text-gray-500 hover:text-gray-700 hover:underline transition-colors",
+                onclick: clearCompleted,
+              },
+              "Clear completed",
+            ),
           ),
         ),
+    ),
+    t.div(
+      { className: "text-center text-sm text-gray-500" },
+      t.p({}, "Double-click to edit a todo"),
+      t.p(
+        {},
+        "Created using tailwindcss, a custom DOM generator, and a custom signal library.",
       ),
+    ),
   );
 }
 
 /**
  * @param {{
- * 	filterName: string;
+ * 	filterName: TodoStatusFilter;
  *  label: string;
- *  filter: SignalValue<string>;
+ *  todoStatusFilter: SignalValue<TodoStatusFilter>;
  * }} props
  */
-function FilterButton({ filterName, label, filter }) {
+function FilterButton({ filterName, label, todoStatusFilter }) {
   return t.button(
     {
       className: () =>
         `px-3 py-1 rounded-md ${
-          filter() === filterName
+          todoStatusFilter() === filterName
             ? "bg-blue-100 text-blue-700"
             : "hover:bg-gray-100"
         }`,
-      onclick: () => filter.set(filterName),
+      onclick: () => {
+        todoStatusFilter.set(filterName);
+        localStorage.setItem("todoStatusFilter", filterName);
+      },
     },
     label,
   );
 }
 
-function Info() {
-  return t.footer(
-    { className: "text-center text-sm text-gray-500" },
-    t.p({}, "Double-click to edit a todo"),
-    t.p(
-      {},
-      "Created using tailwindcss, a custom DOM generator, and a custom signal library.",
-    ),
-  );
+// Helper functions
+/** @returns {Todo[]} */
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem("todos");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.error("Error loading todos from localStorage", e);
+    return [];
+  }
+}
+/** @returns {TodoStatusFilter} */
+function loadTodoStatusFilter() {
+  try {
+    const saved = localStorage.getItem("todoStatusFilter");
+    return saved ? JSON.parse(saved) : "all";
+  } catch (e) {
+    console.error("Error loading todos from localStorage", e);
+    return "all";
+  }
 }
 
 function TodoApp() {
   return createScope(() => {
     // State management
-    const todos = createSignal(loadFromLocalStorage() || []);
-    const filter = createSignal("all"); // "all" | "active" | "completed"
+    const todos = createSignal(loadFromLocalStorage());
+    const todoStatusFilter = createSignal(loadTodoStatusFilter());
     const newTodoText = createSignal("");
 
     // Derived state
     const filteredTodos = createMemo(() => {
-      const currentFilter = filter();
+      const currentFilter = todoStatusFilter();
       const allTodos = todos();
 
       switch (currentFilter) {
@@ -441,12 +475,6 @@ function TodoApp() {
       return filteredTodos().some((todo) => todo.completed);
     });
 
-    // Helper functions
-    /** @returns {Todo[]} */
-    function loadFromLocalStorage() {
-      const saved = localStorage.getItem("todos");
-      return saved ? JSON.parse(saved) : [];
-    }
     /** @param {(value: Todo[]) => Todo[]} cb */
     function updateTodos(cb) {
       todos.update((prev) => {
@@ -462,27 +490,26 @@ function TodoApp() {
     const appContainer = t.div(
       {
         className:
-          "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4",
+          "max-w-lg mx-auto grid gap-4 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-8",
       },
       Header({
         newTodoText,
-        updateTodos: updateTodos,
+        updateTodos,
         getCompletedFilteredTodosSize: completedFilteredTodosSize,
         getFilteredTodosSize: filteredTodosSize,
       }),
       Main({
         filteredTodosSignal: filteredTodos,
-        updateTodos: updateTodos,
+        updateTodos,
       }),
       Footer({
         getTodos: todos,
-        updateTodos: updateTodos,
+        updateTodos,
         filteredRemainingCount,
         hasCompleted,
-        filter,
+        todoStatusFilter,
         getFilteredTodosSize: filteredTodosSize,
       }),
-      Info(),
     );
 
     return appContainer;
@@ -493,11 +520,23 @@ function TodoApp() {
  * Initialize the Todo app and mount it to the DOM.
  * @param {HTMLElement} [parent] - The parent element to mount the app to. Defaults to document.body.
  */
-export function initializeTodoApp(parent) {
+export function initializeTodoApp(parent = document.body) {
   // Mount the app to the DOM
   document.addEventListener("DOMContentLoaded", () => {
     const app = TodoApp();
     (parent ?? document.body).appendChild(app.result);
+
+    parent.classList.add(
+      "min-h-screen",
+      "flex",
+      "items-center",
+      "justify-center",
+      "p-4",
+      "overflow-hidden",
+      "antialiased",
+      "bg-gray-100",
+      "text-gray-800",
+    );
 
     // Add Tailwind CSS
     const tailwindLink = document.createElement("link");
@@ -514,13 +553,7 @@ export function initializeTodoApp(parent) {
     document.head.appendChild(fontLink);
 
     // Set basic styles for the body
-    document.body.classList.add(
-      "bg-gray-100",
-      "text-gray-800",
-      "min-h-screen",
-      "py-8",
-      "font-sans",
-    );
+    document.body.classList.add("font-sans");
     document.body.style.fontFamily = "'Inter', sans-serif";
   });
 }
