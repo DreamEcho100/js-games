@@ -137,6 +137,7 @@ function handleReactiveValue(valueOrReactive, onValue) {
  * @param {HTMLInputElement|HTMLTextAreaElement} input
  * @param {*} newValue
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function updateInputValuePreservingSelection(input, newValue) {
   if (document.activeElement === input) {
     const start = input.selectionStart;
@@ -848,13 +849,59 @@ function $list(list, key, renderItem) {
    *  oldEntry: NodeEntry
    *  prevAnchor: Node
    *  newNodes: Map<string|number, NodeEntry>
+   *  i: number
+   *  listValue: TValue
    * }} props - Update parameters
    */
   function updateExistingEntry(props) {
+    // // Reuse the old node by updating the signal value
+    // // Note: This leverages the signal's built-in equality check
+    // props.oldEntry.signal.set(props.item);
+    // props.prevAnchor = props.oldEntry.lastElementToBeInserted;
+    // props.newNodes.set(props.nodeKey, props.oldEntry);
     // Reuse the old node by updating the signal value
-    // Note: This leverages the signal's built-in equality check
     props.oldEntry.signal.set(props.item);
-    props.prevAnchor = props.oldEntry.lastElementToBeInserted;
+
+    // Get the element we need to reposition
+    const element = props.oldEntry.lastElementToBeInserted;
+
+    // First, check if this element needs repositioning
+    // by looking at what should come after it
+    /** @type {Element|Text|Comment|undefined} */
+    let insertBefore = placeholder;
+
+    // Check for next element in the updated array order
+    if (props.listValue.length > props.i + 1) {
+      for (let j = props.i + 1; j < props.listValue.length; j++) {
+        const nextItem = props.listValue[j];
+        const nextNodeKey =
+          typeof nextItem !== "undefined"
+            ? key(nextItem, j, props.listValue)
+            : undefined;
+
+        if (nextNodeKey && props.newNodes.has(nextNodeKey)) {
+          // Found the next element in new array order
+          insertBefore =
+            props.newNodes.get(nextNodeKey)?.lastElementToBeInserted;
+          if (insertBefore) {
+            break;
+          }
+        }
+      }
+    }
+
+    // Only reposition if the element isn't already in the right place
+    // This is an optimization to avoid unnecessary DOM operations
+    if (
+      insertBefore != null &&
+      element.nextSibling !== insertBefore &&
+      element.parentNode
+    ) {
+      element.parentNode.insertBefore(element, insertBefore);
+    }
+
+    // Update the prevAnchor for next items
+    props.prevAnchor = element;
     props.newNodes.set(props.nodeKey, props.oldEntry);
   }
 
@@ -900,6 +947,8 @@ function $list(list, key, renderItem) {
         nodeKey: props.nodeKey,
       });
 
+      const prevAnchor = props.prevAnchor;
+
       // Ensure DOM operations happen after initial rendering
       queueMicrotask(() => {
         // Skip if component was unmounted
@@ -914,7 +963,7 @@ function $list(list, key, renderItem) {
         }
 
         // Insert the new content before the anchor
-        props.prevAnchor.parentNode?.insertBefore(fragment, props.prevAnchor);
+        prevAnchor.parentNode?.insertBefore(fragment, prevAnchor);
 
         // Track the new entry
         props.newNodes.set(props.nodeKey, {
@@ -991,10 +1040,35 @@ function $list(list, key, renderItem) {
             nodeKey,
             oldEntry,
             prevAnchor,
+            i,
+            listValue,
           });
           // Track that we've processed this entry
           prevEntries.delete(nodeKey);
         } else {
+          // Check for next existing element to insert properly, this should be working if there is `prevEntries`
+          if (prevEntries.size > 0) {
+            for (let j = i + 1; j < maxLength; j++) {
+              const nextItem = listValue[j];
+              const nextNodeKey =
+                typeof nextItem !== "undefined"
+                  ? key(nextItem, j, listValue)
+                  : undefined;
+
+              if (nextNodeKey && prevEntries.has(nextNodeKey)) {
+                const nextElement =
+                  prevEntries.get(nextNodeKey)?.lastElementToBeInserted;
+                if (nextElement) {
+                  prevAnchor = nextElement;
+                  break;
+                }
+                // If element not found, continue searching in later positions
+              }
+            }
+          }
+
+          // debugger;
+
           // Create a new entry for this item
           createNewEntry({
             item,

@@ -113,7 +113,6 @@ function NewTodoInput({
           () => {
             const allCompleted =
               getCompletedFilteredTodosSize() === getFilteredTodosSize();
-            console.log("___ allCompleted", allCompleted);
             return allCompleted
               ? "▼ Mark all as incomplete"
               : "▼ Mark all as complete";
@@ -436,12 +435,28 @@ function TodoApp() {
       });
     }
 
+    function shuffleTodos() {
+      updateTodos((current) => {
+        const shuffled = [...current].sort(() => Math.random() - 0.5);
+        console.log("___ Shuffled todos:", shuffled);
+        return shuffled;
+      });
+    }
+
     // Main app container
     const appContainer = t.div(
       {
         className:
           "max-w-lg mx-auto my-8 bg-white rounded-lg shadow-xl p-6 w-80 max-w-full grid gap-4",
       },
+      t.button(
+        {
+          className: "absolute top-4 right-4 text-gray-500 hover:text-gray-700",
+          onclick: shuffleTodos,
+          ariaLabel: "Shuffle todos",
+        },
+        "🔀",
+      ),
       Header({
         newTodoText,
         updateTodos: updateTodos,
