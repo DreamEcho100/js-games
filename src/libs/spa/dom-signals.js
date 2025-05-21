@@ -797,7 +797,7 @@ let nextUpdateUIId = 0;
  * @param {() => void} cb
  * @param {'critical'|'visual'|'background'} priority
  */
-function updateUI(cb, priority) {
+function updateUI(cb, priority = "visual") {
   const updateId = nextUpdateUIId++;
 
   // Schedule new update
@@ -995,7 +995,7 @@ function $list(list, key, renderItem) {
 
         // Update the anchor for the next item
         props.prevAnchor = lastElementToBeInserted;
-      }, "visual");
+      });
 
       // Cleanup when this scope is disposed
       onScopeCleanup(() => {
@@ -1095,8 +1095,7 @@ function $list(list, key, renderItem) {
             prevAnchor = placeholder;
           }
 
-          // debugger;
-
+          // There should be a batching mechanism to avoid the delay of the DOM, for create and remove and reordering
           // Create a new entry for this item
           createNewEntry({
             item,
@@ -1114,7 +1113,7 @@ function $list(list, key, renderItem) {
 
       // Update the entries map for the next render
       prevEntries = newNodes;
-    }, "visual");
+    });
   });
 
   // Clean up all entries when unmounted
@@ -1207,7 +1206,7 @@ function $toggle(
         } else {
           clearCurrentElements();
         }
-      }, "visual");
+      });
     }
 
     /**
@@ -1256,7 +1255,7 @@ function $toggle(
         }
 
         prevShouldShow = shouldShow;
-      }, "visual");
+      });
     });
 
     // Clean up when outer scope is disposed
@@ -1357,7 +1356,7 @@ function $switch(
 
       renderCaseUpdateUIId = updateUI(() => {
         placeholder.parentNode?.insertBefore(fragment, placeholder);
-      }, "visual");
+      });
     }
 
     /**
@@ -1405,7 +1404,7 @@ function $switch(
         }
 
         prevValue = currentValue;
-      }, "visual");
+      });
     });
 
     // Clean up when outer scope is disposed
