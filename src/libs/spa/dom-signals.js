@@ -847,6 +847,7 @@ function cancelUpdateUI(id) {
 /**
  * @template {any[]} TValue
  * @param {SignalValue<TValue>|MemoValue<TValue>} list - Signal containing array data
+ * // TODO NOTE: Can the key be nullable?
  * @param {(item: TValue[number], index: number, items: TValue) => string|number} key - Function to generate a unique key for each item
  * @param {(item: SignalValue<TValue[number]>, index: number, items: TValue) => de100x.TChildPrimitive | de100x.TChildPrimitive[]} renderItem - Function to render an item
  * @returns {de100x.TChildPrimitive} A placeholder node that anchors the list
