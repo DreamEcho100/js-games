@@ -13,7 +13,7 @@ function $list(list, key, renderItem) {
   const keySetRef = { current: new Set() };
   
   // Main effect that reacts to list changes
-  createEffect(() => {
+  $effect(() => {
     const listValue = list();
     
     // Skip update if nothing meaningful has changed
@@ -79,7 +79,7 @@ Here's how to improve DOM operation batching:
 function createNewEntry(props) {
   const scope = createScope(() => {
     // Create a signal for this item that can be updated
-    const signal = createSignal(props.item);
+    const signal = $signal(props.item);
     
     // Render the item
     const elems = renderItem(signal, props.i, props.listValue);
@@ -154,7 +154,7 @@ function $list(list, key, renderItem) {
     const scope = createScope(() => {
       try {
         // Create a signal for this item that can be updated
-        const signal = createSignal(props.item);
+        const signal = $signal(props.item);
         signal(); // Read to establish initial value
         
         // Render the item (potential error point)
@@ -193,7 +193,7 @@ function $list(list, key, renderItem) {
           
           // Track as a normal entry so we can update/remove it properly
           props.newNodes.set(props.nodeKey, {
-            signal: createSignal(props.item), // Still track the signal
+            signal: $signal(props.item), // Still track the signal
             scope,
             lastElementToBeInserted: errorElement,
           });
@@ -255,7 +255,7 @@ For many applications, this isn't immediately necessary, but it's worth consider
 ```javascript
 // onItemMounted example using ref callback
 function TodoList() {
-  const todos = createSignal([/* items */]);
+  const todos = $signal([/* items */]);
   
   return $list(
     todos,
@@ -270,13 +270,13 @@ function TodoList() {
   );
 }
 
-// onItemUpdated example using createEffect
+// onItemUpdated example using $effect
 function TodoList() {
   return $list(
     todos,
     todo => todo.id,
     (todo) => {
-      createEffect(() => {
+      $effect(() => {
         // This runs when the item updates
         const value = todo();
         console.log('Item updated:', value);

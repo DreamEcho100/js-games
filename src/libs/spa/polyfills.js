@@ -19,19 +19,25 @@ export const startViewTransition =
     };
   });
 
-/** @type {typeof window.requestIdleCallback} */
-export const requestIdleCallback =
+export const requestIdleCallbackPolyfill =
   window.requestIdleCallback ??
-  function (callback) {
+  /**
+   * @param {IdleRequestCallback} cb
+   * @param {IdleRequestOptions|undefined} options
+   * @returns {number}
+   */
+  function (cb, options) {
     const start = Date.now();
     return /** @type {number} */ (
       /** @type {unknown} */ (
         setTimeout(() => {
-          callback({
+          cb({
             didTimeout: false,
             timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
           });
-        }, 1)
+        }, options?.timeout ?? ("deviceMemory" in navigator && typeof navigator.deviceMemory === "number" && navigator.deviceMemory < 4 ? 200 : 50))
       )
     );
   };
+export const cancelIdleCallbackPolyfill =
+  window.cancelIdleCallback ?? window.clearTimeout;

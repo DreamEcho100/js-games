@@ -1,11 +1,6 @@
 /** @import { SignalValue, MemoValue } from "#libs/spa/signals"; */
 
-import {
-  createSignal,
-  createMemo,
-  createScope,
-  createEffect,
-} from "#libs/spa/signals.js";
+import { $signal, $memo, createScope, $effect } from "#libs/spa/signals.js";
 import { t } from "#libs/spa/dom.js";
 import { $list, $toggle } from "#libs/spa/dom-signals.js";
 
@@ -457,15 +452,13 @@ function loadTodoStatusFilter() {
 function TodoApp() {
   return createScope(() => {
     // State management
-    const todos = createSignal(/** @type {Todo[]} */ ([]));
-    const todoStatusFilter = createSignal(
-      /** @type {TodoStatusFilter} */ ("all"),
-    );
-    const newTodoText = createSignal("");
-    const isInitializing = createSignal(true);
+    const todos = $signal(/** @type {Todo[]} */ ([]));
+    const todoStatusFilter = $signal(/** @type {TodoStatusFilter} */ ("all"));
+    const newTodoText = $signal("");
+    const isInitializing = $signal(true);
 
     // Derived state
-    const filteredTodos = createMemo(() => {
+    const filteredTodos = $memo(() => {
       const currentFilter = todoStatusFilter();
       const allTodos = todos();
 
@@ -478,16 +471,16 @@ function TodoApp() {
           return allTodos;
       }
     });
-    const filteredTodosSize = createMemo(() => {
+    const filteredTodosSize = $memo(() => {
       return filteredTodos().length;
     });
-    const completedFilteredTodosSize = createMemo(() => {
+    const completedFilteredTodosSize = $memo(() => {
       return filteredTodos().filter((todo) => todo.completed).length;
     });
-    const filteredRemainingCount = createMemo(() => {
+    const filteredRemainingCount = $memo(() => {
       return filteredTodos().filter((todo) => !todo.completed).length;
     });
-    const hasCompleted = createMemo(() => {
+    const hasCompleted = $memo(() => {
       return filteredTodos().some((todo) => todo.completed);
     });
 
@@ -495,14 +488,14 @@ function TodoApp() {
     function updateTodos(cb) {
       todos.update((prev) => {
         const newValue = cb(prev);
-        queueMicrotask(() => {
-          localStorage.setItem("todos", JSON.stringify(newValue));
-        });
+        queueMicrotask(() =>
+          localStorage.setItem("todos", JSON.stringify(newValue)),
+        );
         return newValue;
       });
     }
 
-    createEffect(() => {
+    $effect(() => {
       const savedTodos = loadFromLocalStorage();
       if (savedTodos) {
         todos.set(savedTodos);
@@ -530,7 +523,6 @@ function TodoApp() {
       Main({
         filteredTodosSignal: filteredTodos,
         updateTodos,
-        getFilteredTodosSize: filteredTodosSize,
       }),
       Footer({
         getTodos: todos,
@@ -538,7 +530,6 @@ function TodoApp() {
         filteredRemainingCount,
         hasCompleted,
         todoStatusFilter,
-        getFilteredTodosSize: filteredTodosSize,
         getFilteredTodosSize: filteredTodosSize,
       }),
     );

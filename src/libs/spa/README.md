@@ -23,7 +23,7 @@ This module provides a fine-grained reactivity system with automatic dependency 
 
 ```javascript
 // Create a reactive state container
-const count = createSignal(0);
+const count = $signal(0);
 
 // Read the value
 console.log(count()); // 0
@@ -34,10 +34,10 @@ count.set(5);
 count.update(n => n + 1);
 
 // Create a computed value that automatically updates
-const doubled = createMemo(() => count() * 2);
+const doubled = $memo(() => count() * 2);
 
 // Create an effect that runs when dependencies change
-createEffect(() => {
+$effect(() => {
   document.title = `Count: ${count()}`;
 });
 
@@ -164,8 +164,8 @@ Components are simple functions that accept props and return DOM elements:
 ```javascript
 function TodoItem({ todo, onToggle, onDelete }) {
   // Component-local state
-  const isEditing = createSignal(false);
-  const editText = createSignal(todo().text);
+  const isEditing = $signal(false);
+  const editText = $signal(todo().text);
   
   // Event handlers
   function handleSubmit(e) {
@@ -211,7 +211,7 @@ function TodoItem({ todo, onToggle, onDelete }) {
 }
 
 function TodoApp() {
-  const todos = createSignal([
+  const todos = $signal([
     { id: 1, text: "Learn this framework", completed: false }
   ]);
   
@@ -272,7 +272,7 @@ function TodoApp() {
 ## Best Practices
 
 1. **Localize State**: Keep state close to where it's used
-2. **Use Memos**: Cache expensive computations with `createMemo`
+2. **Use Memos**: Cache expensive computations with `$memo`
 3. **Clean Up Resources**: Register cleanup functions with `onScopeCleanup`
 4. **Batch Updates**: Use `batchSignals` for multiple related state changes
 5. **Leverage TypeScript**: Use type annotations for better tooling and safety
@@ -343,7 +343,7 @@ function TodoApp() {
 Simply import the library and start building:
 
 ```javascript
-import { createSignal, createEffect } from './libs/spa/signals.js';
+import { $signal, $effect } from './libs/spa/signals.js';
 import { t } from './libs/spa/dom.js';
 import { $toggle, $list } from './libs/spa/dom-signals.js';
 

@@ -43,7 +43,7 @@ const serverHtml = renderToString(() => App());
 
 // Client hydrates the existing DOM
 createScope(() => {
-  const todos = createSignal(initialData); // Need to recreate all signals
+  const todos = $signal(initialData); // Need to recreate all signals
   hydrateNode(document.getElementById('app'), App);
 });
 ```
@@ -920,8 +920,8 @@ Your fine-grained reactivity system uses signals that need to maintain identity 
 
 ```javascript
 // Challenge: How to serialize this while preserving identity
-const count = createSignal(0);
-const doubled = createMemo(() => count() * 2);
+const count = $signal(0);
+const doubled = $memo(() => count() * 2);
 ```
 
 You'll need to:
@@ -936,7 +936,7 @@ Your components use closures heavily:
 
 ```javascript
 function Counter() {
-  const count = createSignal(0);
+  const count = $signal(0);
   return t.button({ 
     onclick: () => count.update(n => n + 1) // This closure needs serialization
   }, () => count());
@@ -954,7 +954,7 @@ Your `createScope` pattern creates nested reactive scopes:
 
 ```javascript
 const outerScope = createScope(() => {
-  const localState = createSignal(0);
+  const localState = $signal(0);
   
   const innerScope = createScope(() => {
     // Uses localState from parent scope
@@ -1041,7 +1041,7 @@ $errorBoundary({ fallback: () => t.div({}, "Error") }, /* ... */)
    ```javascript
    // Server
    const signalRegistry = new Map();
-   const count = createSignal(0, { id: 'count-1' });
+   const count = $signal(0, { id: 'count-1' });
    signalRegistry.set('count-1', { value: 0, dependencies: [] });
    
    // Client
@@ -1135,8 +1135,8 @@ Each island still needs proper signal serialization and identity preservation, t
 ```javascript
 // Still need a way to serialize signal relationships
 function CounterIsland() {
-  const count = createSignal(0, { id: 'count' });
-  const doubled = createMemo(() => count() * 2, { id: 'doubled' });
+  const count = $signal(0, { id: 'count' });
+  const doubled = $memo(() => count() * 2, { id: 'doubled' });
   // How to capture this relationship in serialized state?
 }
 ```

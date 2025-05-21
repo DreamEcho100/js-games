@@ -39,12 +39,12 @@
   - 👁️ 7. Effects: Reacting to Changes
     - 7.1 What is an Effect?
     - 7.2 The Execution Flow
-    - 7.3 Implementing `createEffect`
+    - 7.3 Implementing `$effect`
     - 7.4 Managing Execution and Cleanup
   - 🧠 8. Memos: Cached Computations
     - 8.1 What is a Memo?
     - 8.2 The Update Process
-    - 8.3 Implementing `createMemo`
+    - 8.3 Implementing `$memo`
   - 🌐 9. Scopes: Managing Reactive Lifecycles
     - 9.1 What are Scopes?
     - 9.2 Creating a Scope
@@ -373,7 +373,7 @@ function createNode(val, options) {
 
 ### 4.3 Building the Signal Interface
 
-Now we can implement the `createSignal` function:
+Now we can implement the `$signal` function:
 
 ```javascript
 // Default equality function for value comparison
@@ -382,7 +382,7 @@ const defaultEquals = Object.is;
 /**
  * 🌱 Creates a reactive signal
  */
-function createSignal(initialValue, options) {
+function $signal(initialValue, options) {
   const node = createNode(initialValue, {
     name: options?.name,
     type: NODE_TYPE.SIGNAL,
@@ -721,13 +721,13 @@ When an effect runs:
 4. It registers itself as an observer of any signals/memos it accessed
 5. Later, when those dependencies change, the process repeats
 
-### 7.3 Implementing `createEffect`
+### 7.3 Implementing `$effect`
 
 ```javascript
 /**
  * 👁️ Creates an effect
  */
-function createEffect(fn, options) {
+function $effect(fn, options) {
   const node = createNode(/** @type {TValue} */ (undefined), {
     name: options?.name,
     type: NODE_TYPE.EFFECT,
@@ -894,7 +894,7 @@ When a memo is accessed:
 3. If not dirty, it returns the cached value
 4. It establishes a dependency relationship with the accessor
 
-### 8.3 Implementing `createMemo`
+### 8.3 Implementing `$memo`
 
 ```javascript
 /**
@@ -908,7 +908,7 @@ function updateIfNecessary(node) {
 /**
  * 🔁 Creates a memoized value
  */
-function createMemo(fn, options) {
+function $memo(fn, options) {
   const node = createNode(/** @type {TValue} */ (undefined), {
     name: options?.name,
     type: NODE_TYPE.MEMO,
@@ -1232,13 +1232,13 @@ function createContext(defaultValue, options) {
     Provider: (valueOrSignal, fn) => {
       const value = isSignal(valueOrSignal)
         ? valueOrSignal
-        : createSignal(valueOrSignal);
+        : $signal(valueOrSignal);
       return provideContext(id, value, fn);
     },
     DeferredProvider: (valueOrSignal) => (fn) => {
       const value = isSignal(valueOrSignal)
         ? valueOrSignal
-        : createSignal(valueOrSignal);
+        : $signal(valueOrSignal);
       return provideContext(id, value, fn);
     },
   };
@@ -1278,7 +1278,7 @@ function getContext(context) {
 
   // Return default if no provider found, wrapping in signal if needed
   return /** @type {SignalValue<TValue>}*/ (
-    isSignal(defaultValue) ? defaultValue : createSignal(defaultValue)
+    isSignal(defaultValue) ? defaultValue : $signal(defaultValue)
   );
 }
 ```
@@ -1295,7 +1295,7 @@ For efficiency, we can create selectors that only update when a specific part of
  */
 function getContextSelector(context, selector) {
   const value = getContext(context);
-  return createMemo(() => selector(value()));
+  return $memo(() => selector(value()));
 }
 ```
 
@@ -1422,7 +1422,7 @@ function benchmark(name, fn) {
 // Example:
 benchmark("Creating 1000 signals", () => {
   for (let i = 0; i < 1000; i++) {
-    createSignal(i);
+    $signal(i);
   }
 });
 ```
@@ -1435,8 +1435,8 @@ Our reactivity system shines for UI components:
 
 ```javascript
 function Counter({ initialCount = 0 }) {
-  const count = createSignal(initialCount);
-  const doubled = createMemo(() => count() * 2);
+  const count = $signal(initialCount);
+  const doubled = $memo(() => count() * 2);
   
   // DOM updates automatically when count changes
   return t.div(
@@ -1456,11 +1456,11 @@ For larger applications, our system works well for state management:
 ```javascript
 // Create a store
 function createStore(initialState) {
-  const state = createSignal(initialState);
+  const state = $signal(initialState);
   
   // Create selectors for specific parts
   function select(selector) {
-    return createMemo(() => selector(state()));
+    return $memo(() => selector(state()));
   }
   
   // Update functions
@@ -1486,7 +1486,7 @@ Our system works well for animations too:
 
 ```javascript
 function animateValue(from, to, duration) {
-  const value = createSignal(from);
+  const value = $signal(from);
   
   const startTime = performance.now();
   const animate = () => {
@@ -1506,7 +1506,7 @@ function animateValue(from, to, duration) {
 
 // Usage:
 const opacity = animateValue(0, 1, 500);
-createEffect(() => {
+$effect(() => {
   element.style.opacity = opacity();
 });
 ```

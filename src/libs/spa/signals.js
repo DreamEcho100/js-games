@@ -226,7 +226,7 @@ function disposeScope(scope) {
  * @example
  * // Basic component with cleanup
  * const component = createScope(() => {
- *   const counter = createSignal(0);
+ *   const counter = $signal(0);
  *
  *   // Setup DOM elements
  *   const elem = document.createElement('div');
@@ -408,7 +408,7 @@ function createNode(val, options) {
  *
  * @example
  * // Effect that only depends on `name`, not `counter`
- * createEffect(() => {
+ * $effect(() => {
  *   const nameVal = name();
  *
  *   // Read counter without creating a dependency
@@ -632,8 +632,8 @@ function isSignal(item) {
  *
  * @example
  * // Basic counter with custom label
- * const count = createSignal(0, { name: 'counter' });
- * const doubled = createMemo(() => count() * 2);
+ * const count = $signal(0, { name: 'counter' });
+ * const doubled = $memo(() => count() * 2);
  *
  * // Reading values
  * console.log(count()); // 0
@@ -647,7 +647,7 @@ function isSignal(item) {
  * count.update(prev => prev + 1);
  * console.log(count()); // 6
  */
-function createSignal(initialValue, options) {
+function $signal(initialValue, options) {
   const node = createNode(initialValue, {
     name: options?.name,
     type: NODE_TYPE.SIGNAL,
@@ -840,17 +840,17 @@ function runNode(node) {
  *
  * @example
  * // DOM updating effect
- * const name = createSignal("World");
+ * const name = $signal("World");
  * const element = document.getElementById("greeting");
  *
- * createEffect(() => {
+ * $effect(() => {
  *   element.textContent = `Hello, ${name()}!`;
  * });
  *
  * // The element will automatically update when name changes
  * name.set("User"); // Element text becomes "Hello, User!"
  */
-function createEffect(fn, options) {
+function $effect(fn, options) {
   const node = createNode(/** @type {TValue} */ (undefined), {
     name: options?.name,
     type: NODE_TYPE.EFFECT,
@@ -935,11 +935,11 @@ function updateIfNecessary(node) {
  *
  * @example
  * // Filtered list that only recalculates when dependencies change
- * const items = createSignal([1, 2, 3, 4, 5]);
- * const threshold = createSignal(3);
+ * const items = $signal([1, 2, 3, 4, 5]);
+ * const threshold = $signal(3);
  *
  * // This computation only runs when items or threshold change
- * const filteredItems = createMemo(() => {
+ * const filteredItems = $memo(() => {
  *   console.log('Filtering items'); // Only logs when dependencies change
  *   return items().filter(n => n > threshold());
  * });
@@ -950,7 +950,7 @@ function updateIfNecessary(node) {
  * threshold.set(2); // Triggers recalculation
  * console.log(filteredItems()); // [3, 4, 5]
  */
-function createMemo(fn, options) {
+function $memo(fn, options) {
   const node = createNode(/** @type {TValue} */ (undefined), {
     name: options?.name,
     type: NODE_TYPE.MEMO,
@@ -1086,7 +1086,7 @@ function provideContext(id, value, fn) {
  *
  * // Provide it at the root level
  * createScope(() => {
- *   const theme = createSignal({ mode: 'dark' });
+ *   const theme = $signal({ mode: 'dark' });
  *
  *   return ThemeContext.Provider(theme, () => {
  *     // Child components can now consume the theme
@@ -1108,7 +1108,7 @@ function createContext(defaultValue, options) {
       const contextProviderScope = createScope(() => {
         const value = isSignal(valueOrSignal)
           ? valueOrSignal
-          : createSignal(valueOrSignal);
+          : $signal(valueOrSignal);
         return provideContext(id, value, fn);
       });
 
@@ -1128,7 +1128,7 @@ function createContext(defaultValue, options) {
         const contextProviderScope = createScope(() => {
           const value = isSignal(valueOrSignal)
             ? valueOrSignal
-            : createSignal(valueOrSignal);
+            : $signal(valueOrSignal);
           return provideContext(id, value, fn);
         });
 
@@ -1156,7 +1156,7 @@ function createContext(defaultValue, options) {
  * function UserProfile() {
  *   const theme = getContext(ThemeContext);
  *
- *   createEffect(() => {
+ *   $effect(() => {
  *     console.log(`Current theme: ${theme().mode}`);
  *   });
  * }
@@ -1207,7 +1207,7 @@ function getContext(context) {
 
   // Return default if no provider found, wrapping in signal if needed
   return /** @type {SignalValue<TValue>}*/ (
-    isSignal(defaultValue) ? defaultValue : createSignal(defaultValue)
+    isSignal(defaultValue) ? defaultValue : $signal(defaultValue)
   );
 }
 
@@ -1228,14 +1228,14 @@ function getContext(context) {
  * // Only select the mode, ignoring other changes
  * const themeMode = getContextSelector(ThemeContext, theme => theme.mode);
  *
- * createEffect(() => {
+ * $effect(() => {
  *   // Only runs when theme.mode changes, not other theme properties
  *   console.log(`Current mode: ${themeMode()}`);
  * });
  */
 function getContextSelector(context, selector) {
   const value = getContext(context);
-  return createMemo(() => selector(value()));
+  return $memo(() => selector(value()));
 }
 
 export {
@@ -1244,9 +1244,9 @@ export {
   onScopeCleanup,
   getScopeId,
   isSignal,
-  createSignal,
-  createEffect,
-  createMemo,
+  $signal,
+  $effect,
+  $memo,
   batchSignals,
   untrack,
   createContext,

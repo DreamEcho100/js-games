@@ -18,12 +18,16 @@
  */
 
 import {
-  createEffect,
+  cancelIdleCallbackPolyfill,
+  requestIdleCallbackPolyfill,
+} from "./polyfills.js";
+import {
+  $effect,
   onScopeCleanup,
   getScopeId,
   createScope,
-  createSignal,
-  createMemo,
+  $signal,
+  $memo,
 } from "./signals.js";
 
 /**
@@ -51,7 +55,7 @@ import {
 function handleReactiveValueOrMap(valueOrReactive, onValue, onValueMap) {
   // Handle reactive functions (signal getters)
   if (typeof valueOrReactive === "function") {
-    createEffect(() => {
+    $effect(() => {
       const resolvedValue = valueOrReactive();
 
       // Handle object values (like style objects)
@@ -62,7 +66,7 @@ function handleReactiveValueOrMap(valueOrReactive, onValue, onValueMap) {
 
             // Handle nested reactive properties
             if (typeof propertyValue === "function") {
-              createEffect(() => {
+              $effect(() => {
                 const resolvedPropertyValue = propertyValue();
                 onValueMap(key, resolvedPropertyValue);
               });
@@ -91,7 +95,7 @@ function handleReactiveValueOrMap(valueOrReactive, onValue, onValueMap) {
 
         // Handle reactive property values
         if (typeof propertyValue === "function") {
-          createEffect(() => {
+          $effect(() => {
             const resolvedPropertyValue = propertyValue();
             onValueMap(key, resolvedPropertyValue);
           });
@@ -121,7 +125,7 @@ function handleReactiveValueOrMap(valueOrReactive, onValue, onValueMap) {
 function handleReactiveValue(valueOrReactive, onValue) {
   // Handle reactive getter functions
   if (typeof valueOrReactive === "function") {
-    createEffect(() => {
+    $effect(() => {
       const resolvedValue = valueOrReactive();
       onValue(resolvedValue);
     });
@@ -155,18 +159,6 @@ function updateInputValuePreservingSelection(input, newValue) {
 }
 
 /**
- * 🧩 Processes special element attributes/properties
- *
- * Handles attributes that need special treatment beyond simple setAttribute:
- * - style (as string or object)
- * - className
- * - value
- * - dataSet
- * - ariaSet
- * - dangerouslySetInnerHTML
- * - ref
- * - event handlers (on*)
- *
  * @param {de100x.TElement} element - DOM element to modify
  * @param {string} attributeName - Name of the attribute/property
  * @param {unknown} valueOrReactive - Value or reactive getter function
@@ -441,11 +433,6 @@ function setSpecialElementAttribute(element, attributeName, valueOrReactive) {
 }
 
 /**
- * 🧩 Sets a standard attribute on an element
- *
- * Handles both static and reactive attribute values, with special
- * handling for boolean attributes.
- *
  * @param {de100x.TElement} element - DOM element to modify
  * @param {string} attributeName - Name of the attribute
  * @param {unknown} valueOrReactive - Value or reactive getter function
@@ -470,10 +457,6 @@ function setStandardAttribute(element, attributeName, valueOrReactive) {
 }
 
 /**
- * 🧩 Sets a namespaced attribute on an element
- *
- * Used for attributes in XML namespaces like SVG and MathML.
- *
  * @param {string} namespace - Attribute namespace URI
  * @param {de100x.TElementNS} element - DOM element to modify
  * @param {string} attributeName - Name of the attribute
@@ -533,7 +516,7 @@ function appendChild(parentElement, child) {
     let oldChild;
 
     // Simple version (will be replaced by scope version below)
-    createEffect(() => {
+    $effect(() => {
       const newChild = child();
 
       if (Array.isArray(newChild)) {
@@ -652,7 +635,7 @@ function appendChild(parentElement, child) {
       let innerScope;
 
       // React to changes in the child function's result
-      createEffect(() => {
+      $effect(() => {
         const newChild = child();
 
         // Clean up previous render
@@ -691,10 +674,6 @@ function appendChild(parentElement, child) {
 }
 
 /**
- * 🌳 Appends multiple children to a parent element
- *
- * Processes each child with the appendChild function.
- *
  * @param {Element|DocumentFragment} element - Element to append to
  * @param {de100x.TChild[]} children - Children to append
  */
@@ -812,12 +791,60 @@ function normalizeChildren(options, counter = 0) {
   return counter;
 }
 
+const pendingUpdates = new Map();
+let nextUpdateUIId = 0;
 /**
- * 🧩 Renders a reactive list with efficient updates
- *
- * Creates a dynamic list from an array signal, efficiently reusing DOM nodes
- * when items move or change, based on their keys.
- *
+ * @param {() => void} cb
+ * @param {'critical'|'visual'|'background'} priority
+ */
+function updateUI(cb, priority) {
+  const updateId = nextUpdateUIId++;
+
+  // Schedule new update
+  let handle;
+
+  switch (priority) {
+    case "critical":
+      queueMicrotask(() => {
+        if (!pendingUpdates.has(updateId)) {
+          return;
+        }
+        cb();
+        pendingUpdates.delete(updateId);
+      });
+      break;
+    case "visual":
+      handle = requestAnimationFrame(() => {
+        cb();
+        pendingUpdates.delete(updateId);
+      });
+      break;
+    case "background":
+      handle = requestIdleCallbackPolyfill(
+        () => {
+          cb();
+          pendingUpdates.delete(updateId);
+        },
+        { timeout: 2000 },
+      );
+      break;
+  }
+
+  pendingUpdates.set(updateId, { priority, handle });
+  return updateId;
+}
+
+/** @param {number} id */
+function cancelUpdateUI(id) {
+  if (pendingUpdates.has(id)) {
+    const { priority, handle } = pendingUpdates.get(id);
+    if (priority === "visual") cancelAnimationFrame(handle);
+    else if (priority === "background") cancelIdleCallbackPolyfill(handle);
+    pendingUpdates.delete(id);
+  }
+}
+
+/**
  * @template {any[]} TValue
  * @param {SignalValue<TValue>|MemoValue<TValue>} list - Signal containing array data
  * @param {(item: TValue[number], index: number, items: TValue) => string|number} key - Function to generate a unique key for each item
@@ -838,7 +865,6 @@ function $list(list, key, renderItem) {
 
   /** @type {Map<string|number, NodeEntry>} */
   let prevEntries = new Map();
-  let isUnmounted = false;
 
   /**
    * Updates an existing node entry with new data but keeps the DOM nodes
@@ -920,7 +946,7 @@ function $list(list, key, renderItem) {
   function createNewEntry(props) {
     const scope = createScope(() => {
       // Create a signal for this item that can be updated
-      const signal = createSignal(props.item);
+      const signal = $signal(props.item);
       signal(); // Read to establish initial value
 
       // Render the item
@@ -950,12 +976,7 @@ function $list(list, key, renderItem) {
       const prevAnchor = props.prevAnchor;
 
       // Ensure DOM operations happen after initial rendering
-      queueMicrotask(() => {
-        // Skip if component was unmounted
-        if (isUnmounted) {
-          return;
-        }
-
+      const updateUIId = updateUI(() => {
         // If nothing was rendered, clean up and skip
         if (!lastElementToBeInserted) {
           scope.dispose();
@@ -974,10 +995,12 @@ function $list(list, key, renderItem) {
 
         // Update the anchor for the next item
         props.prevAnchor = lastElementToBeInserted;
-      });
+      }, "visual");
 
       // Cleanup when this scope is disposed
       onScopeCleanup(() => {
+        cancelUpdateUI(updateUIId);
+
         for (const [, elem] of childrenMemo) {
           elem.remove();
         }
@@ -1001,8 +1024,10 @@ function $list(list, key, renderItem) {
     }
   }
 
+  /** @type {number} */
+  let updateUIId;
   // Main effect that reacts to list changes
-  createEffect(() => {
+  $effect(() => {
     /** @type {Map<string|number, NodeEntry>} */
     const newNodes = new Map();
     const listValue = list();
@@ -1011,12 +1036,8 @@ function $list(list, key, renderItem) {
     const maxLength = Math.max(oldSize, newSize);
 
     // Use microtask to ensure DOM is ready
-    queueMicrotask(() => {
-      // Skip if component was unmounted
-      if (isUnmounted) {
-        return;
-      }
 
+    updateUIId = updateUI(() => {
       /** @type {Node} */
       let prevAnchor = placeholder;
 
@@ -1068,7 +1089,7 @@ function $list(list, key, renderItem) {
               }
             }
           }
-          ("hydration vs resumebility");
+
           // If no new next element found, use the placeholder
           if (!hasNewNextElement) {
             prevAnchor = placeholder;
@@ -1093,12 +1114,12 @@ function $list(list, key, renderItem) {
 
       // Update the entries map for the next render
       prevEntries = newNodes;
-    });
+    }, "visual");
   });
 
   // Clean up all entries when unmounted
   onScopeCleanup(() => {
-    isUnmounted = true;
+    cancelUpdateUI(updateUIId);
     for (const [, entry] of prevEntries) {
       entry.scope.dispose();
     }
@@ -1109,11 +1130,6 @@ function $list(list, key, renderItem) {
 }
 
 /**
- * 🧩 Renders content conditionally based on a signal
- *
- * Shows or hides content based on a boolean signal value.
- * Efficiently mounts/unmounts content when the condition changes.
- *
  * @param {() => boolean | undefined | null} condition - Signal that determines visibility
  * @param {() => de100x.TChildPrimitive | de100x.TChildPrimitive[]} renderContent - Function to render the content when visible
  * @param {object} [options] - Configuration options
@@ -1130,8 +1146,7 @@ function $toggle(
 
   // Create outer scope to manage the conditional rendering
   const outerScope = createScope(() => {
-    let isOuterUnmounted = false;
-    const shouldShowMemo = createMemo(() => !!condition());
+    const shouldShowMemo = $memo(() => !!condition());
     /** @type {boolean|undefined} */
     let prevShouldShow;
     let shouldShow = false;
@@ -1154,6 +1169,9 @@ function $toggle(
         );
       }
     }
+
+    /** @type {number} */
+    let renderToDomUpdateUIId;
 
     /**
      * Renders content to the DOM
@@ -1182,17 +1200,14 @@ function $toggle(
       elements.length = 0;
 
       // Add to DOM after rendering is complete
-      queueMicrotask(() => {
-        if (isOuterUnmounted) {
-          return;
-        }
 
+      renderToDomUpdateUIId = updateUI(() => {
         if (isVisible) {
           placeholder.parentNode?.insertBefore(fragment, placeholder);
         } else {
           clearCurrentElements();
         }
-      });
+      }, "visual");
     }
 
     /**
@@ -1204,6 +1219,7 @@ function $toggle(
 
         // Clean up when this scope is disposed
         onScopeCleanup(() => {
+          cancelUpdateUI(renderToDomUpdateUIId);
           clearCurrentElements();
         });
       });
@@ -1212,19 +1228,15 @@ function $toggle(
     // Initial render
     let innerScope = createContentScope();
 
-    /**
-     * Checks if we can skip updating
-     */
-    function shouldSkipUpdate() {
-      return isOuterUnmounted || prevShouldShow === shouldShowMemo.peek();
-    }
+    /** @type {number} */
+    let changeEffectUpdateUIId;
 
     // React to condition changes
-    createEffect(() => {
+    $effect(() => {
       shouldShow = shouldShowMemo();
 
-      queueMicrotask(() => {
-        if (shouldSkipUpdate()) {
+      changeEffectUpdateUIId = updateUI(() => {
+        if (prevShouldShow === shouldShowMemo.peek()) {
           return;
         }
 
@@ -1244,12 +1256,13 @@ function $toggle(
         }
 
         prevShouldShow = shouldShow;
-      });
+      }, "visual");
     });
 
     // Clean up when outer scope is disposed
     onScopeCleanup(() => {
-      isOuterUnmounted = true;
+      cancelUpdateUI(changeEffectUpdateUIId);
+      cancelUpdateUI(renderToDomUpdateUIId);
       innerScope.dispose();
     });
   });
@@ -1263,10 +1276,6 @@ function $toggle(
 }
 
 /**
- * 🧩 Renders different content based on a signal value
- *
- * Like a switch statement for reactive UI rendering.
- *
  * @template {string|number} TKey
  * @param {{ [Key in TKey]: () => de100x.TChildPrimitive | de100x.TChildPrimitive[] }} cases - Functions to render for each case
  * @param {SignalValue<TKey>|MemoValue<TKey>} condition - Signal that determines which case to render
@@ -1285,8 +1294,7 @@ function $switch(
 
   // Create outer scope to manage case rendering
   const outerScope = createScope(() => {
-    let isOuterUnmounted = false;
-    const valueMemo = createMemo(() => condition());
+    const valueMemo = $memo(() => condition());
 
     /** @type {TKey|undefined} */
     let prevValue;
@@ -1312,6 +1320,8 @@ function $switch(
       }
     }
 
+    /** @type {number} */
+    let renderCaseUpdateUIId;
     /**
      * Renders the appropriate case to the DOM
      *
@@ -1344,10 +1354,10 @@ function $switch(
       elements.length = 0;
 
       // Add to DOM after rendering is complete
-      queueMicrotask(() => {
-        if (isOuterUnmounted) return;
+
+      renderCaseUpdateUIId = updateUI(() => {
         placeholder.parentNode?.insertBefore(fragment, placeholder);
-      });
+      }, "visual");
     }
 
     /**
@@ -1362,6 +1372,7 @@ function $switch(
 
         // Clean up when this scope is disposed
         onScopeCleanup(() => {
+          cancelUpdateUI(renderCaseUpdateUIId);
           clearCurrentElements();
         });
       });
@@ -1370,19 +1381,15 @@ function $switch(
     // Initial render
     let innerScope = createCaseScope(valueMemo.peek());
 
-    /**
-     * Checks if we can skip updating
-     */
-    function shouldSkipUpdate() {
-      return isOuterUnmounted || prevValue === valueMemo.peek();
-    }
+    /** @type {number} */
+    let changeEffectUpdateUIId;
 
     // React to condition changes
-    createEffect(() => {
+    $effect(() => {
       currentValue = valueMemo();
 
-      queueMicrotask(() => {
-        if (shouldSkipUpdate()) return;
+      changeEffectUpdateUIId = updateUI(() => {
+        if (prevValue === valueMemo.peek()) return;
 
         if (behaviorOnUnmount === "remove") {
           // Dispose previous case's scope
@@ -1398,12 +1405,13 @@ function $switch(
         }
 
         prevValue = currentValue;
-      });
+      }, "visual");
     });
 
     // Clean up when outer scope is disposed
     onScopeCleanup(() => {
-      isOuterUnmounted = true;
+      cancelUpdateUI(changeEffectUpdateUIId);
+      cancelUpdateUI(renderCaseUpdateUIId);
       innerScope.dispose();
     });
   });

@@ -92,7 +92,7 @@ function addWithTransition(element, parent) {
 ```javascript
 // Example: Debounced search input
 function createDebouncedSearch(delay = 300) {
-  const searchQuery = createSignal('');
+  const searchQuery = $signal('');
   let timeoutId = null;
   
   function updateSearch(value) {
